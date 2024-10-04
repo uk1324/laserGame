@@ -1,0 +1,4 @@
+struct [[Json]] LevelWall {
+	Vec2 e0;
+	Vec2 e1;
+}
