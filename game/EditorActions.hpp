@@ -6,6 +6,7 @@
 
 enum class EditorActionType {
 	MODIFY_WALL,
+	MODIFY_LASER,
 	CREATE_ENTITY,
 	DESTROY_ENTITY,
 };
@@ -24,6 +25,7 @@ struct EditorActionModify : EditorAction {
 	T oldEntity, newEntity;
 };
 using EditorActionModifyWall = EditorActionModify<EditorWall, EditorActionType::MODIFY_WALL>;
+using EditorActionModifyLaser = EditorActionModify<EditorLaser, EditorActionType::MODIFY_LASER>;
 
 struct EditorActionCreateEntity : EditorAction {
 	EditorActionCreateEntity(EditorEntityId id);

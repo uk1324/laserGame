@@ -6,12 +6,29 @@ EditorWall EditorWall::DefaultInitialize::operator()() {
 	};
 }
 
+EditorLaser EditorLaser::DefaultInitialize::operator()() {
+	return EditorLaser{
+		.position = Vec2(0.0f),
+		.angle = 0.0f
+	};
+}
+
 EditorEntityId::EditorEntityId(const EditorWallId& id) 
 	: type(EditorEntityType::WALL) 
+	, index(id.index())
+	, version(id.version()) {}
+
+EditorEntityId::EditorEntityId(const EditorLaserId& id)
+	: type(EditorEntityType::LASER)
 	, index(id.index())
 	, version(id.version()) {}
 
 EditorWallId EditorEntityId::wall() const {
 	ASSERT(type == EditorEntityType::WALL);
 	return EditorWallId(index, version);
+}
+
+EditorLaserId EditorEntityId::laser() const {
+	ASSERT(type == EditorEntityType::LASER);
+	return EditorLaserId(index, version);
 }

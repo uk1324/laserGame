@@ -12,8 +12,20 @@ struct EditorWall {
 };
 using EditorWallId = EntityArrayId<EditorWall>;
 
+struct EditorLaser {
+	struct DefaultInitialize {
+		EditorLaser operator()();
+	};
+
+	Vec2 position;
+	f32 angle;
+};
+
+using EditorLaserId = EntityArrayId<EditorLaser>;
+
 enum class EditorEntityType {
 	WALL,
+	LASER,
 };
 
 struct EditorEntityId {
@@ -22,8 +34,10 @@ struct EditorEntityId {
 	u32 version;
 
 	explicit EditorEntityId(const EditorWallId& id);
+	explicit EditorEntityId(const EditorLaserId& id);
 
 	EditorWallId wall() const;
+	EditorLaserId laser() const;
 
 	bool operator==(const EditorEntityId&) const = default;
 };

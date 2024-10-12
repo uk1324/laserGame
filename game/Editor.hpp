@@ -8,6 +8,14 @@ struct Editor {
 	Editor();
 
 	void update(GameRenderer& renderer);
+	void undoRedoUpdate();
+
+	enum class Tool {
+		WALL,
+		LASER,
+	};
+
+	Tool selectedTool = Tool::WALL;
 
 	struct WallCreateTool {
 		std::optional<EditorWall> update(bool down, bool cancelDown, Vec2 cursorPos);
@@ -16,6 +24,7 @@ struct Editor {
 
 		std::optional<Vec2> endpoint;
 	} wallCreateTool;
+	void wallCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	struct WallGrabTool {
 		struct Grabbed {
@@ -26,6 +35,27 @@ struct Editor {
 		};
 		std::optional<Grabbed> grabbed;
 	} wallGrabTool;
+
+	void wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+
+	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+
+	struct LaserGrabTool {
+		enum class LaserPart {
+			ORIGIN, DIRECTION,
+		};
+
+		struct Grabbed {
+			EditorLaserId id;
+			LaserPart part;
+			EditorLaser grabStartState;
+			Vec2 offset;
+		};
+
+		std::optional<Grabbed> grabbed;
+	} laserGrabTool;
+
+	void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);
@@ -44,4 +74,5 @@ struct Editor {
 
 	Camera camera;
 	EntityArray<EditorWall, EditorWall::DefaultInitialize> walls;
+	EntityArray<EditorLaser, EditorLaser::DefaultInitialize> lasers;
 };

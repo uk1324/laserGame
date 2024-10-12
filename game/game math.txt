@@ -1,0 +1,51 @@
+Tangent to circle at point
+Let the circle center be C and the point on the circle be A.
+The normal is A - C
+The tangent is the normal rotated by 90 deg -(A.x - C.x) / (A.y - C.y) = (C.x - A.x) / (A.y - C.y)
+
+Circle through 2 points with a tangent given at at point.
+Let the given points be called A and B.
+If there is a circle passing through 2 points it the center of be equidistant to the points so the center has to lie on the perpendicular bisector of the segment A B.
+This line can be represented as ax + b
+We want to find an x that has tangent equal to t at A.
+The center C = (x0, ax0 + b)
+Using the formula above we get that the tangent of this circle at point is (x0 - A.x) / (A.y - ax0 - b)
+We want it to be equal to t
+We get the equation.
+(x0 - A.x) / (A.y - ax0 - b) = t
+Solving for x0 we get
+(x0 - A.x) = t * (A.y - ax0 - b)
+x0 - A.x = tA.y - tax0 - tb
+x0 (1 + ta) = tA.y - tb + A.x
+x0 = (tA.y - tb + A.x) / (1 + ta)
+
+https://www.desmos.com/calculator/iyocrry0ec
+
+Circle circle intersection
+https://stackoverflow.com/questions/3349125/circle-circle-intersection-points
+
+https://stackoverflow.com/questions/55816902/finding-the-intersection-of-two-circles
+
+https://math.libretexts.org/Bookshelves/Geometry/Geometry_with_an_Introduction_to_Cosmic_Topology_(Hitchman)/06%3A_Elliptic_Geometry/6.01%3A_Antipodal_Points
+
+
+https://en.wikipedia.org/wiki/Stereographic_projection
+A two-dimensional coordinate system on the stereographic plane is an alternative setting for spherical analytic geometry instead of spherical polar coordinates or three-dimensional cartesian coordinates. This is the spherical analog of the Poincaré disk model of the hyperbolic plane. 
+
+Formulas for projection and it's inverse
+https://en.wikipedia.org/wiki/Stereographic_projection#First_formulation
+
+To find the projection of an antipodal point you can just take a point apply inverse projection negate the 3d point and apply projection again.
+
+
+A line could be represented as 2 points in the circle and a boolean telling wether the line goes through the inside of the circle or outside.
+If a point goes out of the circle (by an isometry for example) then you flip the bool. If both points go out you don't change anything.
+To put a point back inside a circle you have to map it to it's antipodal point.
+
+
+
+The if a great circle passes through a point it also passes through the antipodal point, because of this in the model a line always passes through the antipodal points of the boundary circle.
+
+If we make a circle that passes through antipodal points of a circle then the circles will go from a straight line (infinite center) to overlapping the original circle. 
+It can be seen that always the shorter segment of a circle lies inside the boundary circle. 
+Because of this we can for example check if a point is between or outside the shereographic line by checking if it is in  between the endpoints of the actual line.
