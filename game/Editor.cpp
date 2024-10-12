@@ -13,6 +13,8 @@
 #include <game/Level.hpp>
 #include <game/Stereographic.hpp>
 
+const auto laserColor = Color3::CYAN;
+
 Editor::Editor()
 	: actions(EditorActions::make()) {
 
@@ -84,6 +86,8 @@ void Editor::update(GameRenderer& renderer) {
 	}
 	renderer.renderWalls();
 
+
+
 	for (const auto& laser : lasers) {
 		renderer.gfx.disk(laser->position, 0.02f, Color3::BLUE);
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, Color3::BLUE);
@@ -95,11 +99,12 @@ void Editor::update(GameRenderer& renderer) {
 		const auto boundaryIntersections = circleCircleIntersection(laserLine, boundary);
 
 		if (boundaryIntersections.has_value()) {
-			const auto rayEnd = dot((*boundaryIntersections)[0], laserDirection) > 0.0f
-				? (*boundaryIntersections)[0]
-				: (*boundaryIntersections)[1];
+			Vec2 boundaryIntersection = (*boundaryIntersections)[0];
+			Vec2 boundaryIntersectionWrappedAround = (*boundaryIntersections)[1];
 
-			/*renderer.stereographicSegment(laser->position, rayEnd, Color3::CYAN);*/
+			if (dot(boundaryIntersection - laser->position, laserDirection) < 0.0f) {
+				std::swap(boundaryIntersection, boundaryIntersectionWrappedAround);
+			}
 
 			for (const auto& wall : walls) {
 				const auto wallLine = stereographicLine(wall->endpoints[0], wall->endpoints[1]);
@@ -111,12 +116,10 @@ void Editor::update(GameRenderer& renderer) {
 				};
 				if (intersections.has_value()) {
 					std::optional<Intersection> closest;
+					std::optional<Intersection> closestToWrappedAround;
+
 					for (const auto& intersection : *intersections) {
 						if (const auto outsideBoundary = intersection.length() > 1.0f) {
-							continue;
-						}
-
-						if (dot(intersection - laser->position, laserDirection) < 0.0f) {
 							continue;
 						}
 
@@ -129,16 +132,38 @@ void Editor::update(GameRenderer& renderer) {
 						}
 
 						const auto distance = intersection.distanceTo(laser->position);
-						if (!closest.has_value() || distance < closest->distance) {
-							closest = Intersection{ intersection, distance };
+						const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
+
+						if (dot(intersection - laser->position, laserDirection) > 0.0f) {
+							if (!closest.has_value() || distance < closest->distance) {
+								closest = Intersection{ intersection, distance };
+							}
+						} else {
+							if (!closestToWrappedAround.has_value() 
+								|| distanceToWrappedAround < closestToWrappedAround->distance) {
+								closestToWrappedAround = Intersection{ intersection, distanceToWrappedAround };
+							}
 						}
 					}
 
 					if (closest.has_value()) {
-						renderer.stereographicSegment(laser->position, closest->position, Color3::CYAN);
+						renderer.stereographicSegment(laser->position, closest->position, laserColor);
+					} else if (closestToWrappedAround.has_value()) {
+						renderer.stereographicSegment(
+							laser->position,
+							boundaryIntersection, 
+							laserColor);
+
+						renderer.stereographicSegment(
+							boundaryIntersectionWrappedAround,
+							closestToWrappedAround->position,
+							laserColor);
+					} else {
+						renderer.stereographicSegment(laser->position, boundaryIntersection, laserColor);
+						renderer.stereographicSegment(laser->position, boundaryIntersectionWrappedAround, laserColor);
 					}
 
-					renderer.gfx.disk(laser->position, 0.01f, Color3::RED);
+					//renderer.gfx.disk(laser->position, 0.01f, Color3::RED);
 					//renderer.gfx.disk(intersection, 0.01f, Color3::RED);
 
 
