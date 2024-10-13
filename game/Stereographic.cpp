@@ -14,7 +14,7 @@ Vec2 toStereographic(Vec3 p) {
 
 Vec3 fromStereographic(Vec2 p) {
 	const auto d = p.x * p.x + p.y * p.y + 1.0f;
-	return Vec3(2.0f * p.x, 2.0f * p.y, (-1.0 + p.x * p.x + p.y * p.y)) / d;
+	return Vec3(2.0f * p.x, 2.0f * p.y, -1.0 + p.x * p.x + p.y * p.y) / d;
 }
 
 Vec2 antipodalPoint(Vec2 p) {

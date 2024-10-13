@@ -89,8 +89,19 @@ void Editor::update(GameRenderer& renderer) {
 	renderer.gfx.disk(Vec2(0.0f), 0.03f, Color3::GREEN);
 	for (const auto& wall : walls) {
 		renderer.wall(wall->endpoints[0], wall->endpoints[1]);
+
 	}
 	renderer.renderWalls();
+
+	auto drawIntersections = [&](const Circle& c) {
+		const auto result = circleCircleIntersection(boundary, c);
+		if (result.has_value()) {
+			for (const auto& p : *result) {
+				renderer.gfx.disk(p, 0.01f, Color3::RED);
+				renderer.gfx.disk(-p, 0.01f, Color3::BLUE);
+			}
+		}
+	};
 
 	for (auto mirror : mirrors) {
 		// The issue with this version is that you cannot specifiy the length easily. Maybe I am missing something idk.
@@ -112,7 +123,7 @@ void Editor::update(GameRenderer& renderer) {
 			//	}
 			//}
 
-
+			/*drawIntersections(*line);*/
 			renderer.gfx.circle(line->center, line->radius, 0.01f, Color3::YELLOW);
 		} else {
 			// Shouldn't happen when the points are p and it's antipodal point.
@@ -136,14 +147,24 @@ void Editor::update(GameRenderer& renderer) {
 
 		/*const auto result = Quat(mirror->normalAngle - a, c) * (Quat(halfLength, axis) * c);*/
 		const auto result = Quat(-b + a + PI<f32> / 2.0f, c) * (Quat(halfLength, axis) * c);
+		const auto result1 = Quat(-b + a + PI<f32> / 2.0f, c) * (Quat(-halfLength, axis) * c);
+		// Normalizing, because rotating introduces errors in the norm that the amplified by the projection. 
+		/*const auto p = toStereographic(result.normalized());
+		const auto pp = toStereographic(result1.normalized());*/
 		const auto p = toStereographic(result);
+		const auto pp = toStereographic(result1);
 		const auto l1 = result.length();
 
 		renderer.gfx.disk(p, 0.03f, Color3::RED);
 		renderer.gfx.disk(mirror->center, 0.03f, Color3::RED);
 
 		const auto l = stereographicLine(mirror->center, p);
+		const auto l2 = circleThroughPoints(mirror->center, p, pp);
 		renderer.gfx.circle(l.center, l.radius, 0.01f, Color3::GREEN);
+		renderer.gfx.circle(l2.center, l2.radius, 0.01f, Color3::GREEN);
+
+		//drawIntersections(l);
+		drawIntersections(l2);
 
 	}
 
