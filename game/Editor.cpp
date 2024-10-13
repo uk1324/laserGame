@@ -1,6 +1,7 @@
 #include "Editor.hpp"
 #include <engine/Math/Color.hpp>
 #include <engine/Window.hpp>
+#include <engine/Math/Constants.hpp>
 #include <engine/Input/Input.hpp>
 #include <game/LevelData.hpp>
 #include <game/Constants.hpp>
@@ -10,6 +11,7 @@
 #include <fstream>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <engine/Math/Quat.hpp>
 #include <game/Level.hpp>
 #include <game/Stereographic.hpp>
 
@@ -53,7 +55,7 @@ void Editor::update(GameRenderer& renderer) {
 	{
 		ImGui::Begin(sideBarWindowName);
 
-		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "wall\0laser\0");
+		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "wall\0laser\0mirror\0");
 
 		ImGui::End();
 	}
@@ -70,6 +72,7 @@ void Editor::update(GameRenderer& renderer) {
 		using enum Tool;
 	case WALL: wallCreateToolUpdate(cursorPos, cursorCaptured); break;
 	case LASER: laserCreateToolUpdate(cursorPos, cursorCaptured); break;
+	case MIRROR: mirrorCreateToolUpdate(cursorPos, cursorCaptured); break;
 	}
 
 	camera.aspectRatio = Window::aspectRatio();
@@ -81,12 +84,71 @@ void Editor::update(GameRenderer& renderer) {
 
 	renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN);
 
+	const auto boundary = Circle{ Vec2(0.0f), 1.0f };
+
+	renderer.gfx.disk(Vec2(0.0f), 0.03f, Color3::GREEN);
 	for (const auto& wall : walls) {
 		renderer.wall(wall->endpoints[0], wall->endpoints[1]);
 	}
 	renderer.renderWalls();
 
+	for (auto mirror : mirrors) {
+		// The issue with this version is that you cannot specifiy the length easily. Maybe I am missing something idk.
 
+		static f32 b = 0.0f;
+		ImGui::SliderFloat("test", &b, 0.0f, TAU<f32>);
+		mirror->normalAngle = b;
+
+		const auto p0 = mirror->center;
+		const auto p1 = antipodalPoint(p0);
+		const auto line = circleThroughPointsWithNormalAngle(p0, mirror->normalAngle, p1);
+
+		if (line.has_value()) {
+			//const auto result = circleCircleIntersection(*line, boundary);
+			//if (result.has_value()) {
+			//	for (const auto& p : *result) {
+			//		renderer.gfx.disk(p, 0.03f, Color3::RED);
+			//		renderer.gfx.disk(-p, 0.03f, Color3::BLUE);
+			//	}
+			//}
+
+
+			renderer.gfx.circle(line->center, line->radius, 0.01f, Color3::YELLOW);
+		} else {
+			// Shouldn't happen when the points are p and it's antipodal point.
+			CHECK_NOT_REACHED();
+		}
+
+		//const auto c = fromStereographic(mirror->center);
+		//const auto angle = acos(dot(c, Vec3(0.0f, 0.0f, -1.0f)));
+		//// shortest rotation that brings c to the bottom of the sphere.
+		//const auto axis = cross(c, Vec3(0.0f, 0.0f, 1.0f));
+		//const auto coordinateSystemChange = Quat(;
+
+		f32 halfLength = 0.6f;
+		const auto c = fromStereographic(mirror->center);
+		const auto angle = acos(dot(c, Vec3(0.0f, 0.0f, -1.0f)));
+		const auto axis = cross(c, Vec3(0.0f, 0.0f, 1.0f));
+		// Because multiplication is left ascocitative this slower than putting the end part in parens.
+		const auto a = atan2(mirror->center.y, mirror->center.x);
+
+		
+
+		/*const auto result = Quat(mirror->normalAngle - a, c) * (Quat(halfLength, axis) * c);*/
+		const auto result = Quat(-b + a + PI<f32> / 2.0f, c) * (Quat(halfLength, axis) * c);
+		const auto p = toStereographic(result);
+		const auto l1 = result.length();
+
+		renderer.gfx.disk(p, 0.03f, Color3::RED);
+		renderer.gfx.disk(mirror->center, 0.03f, Color3::RED);
+
+		const auto l = stereographicLine(mirror->center, p);
+		renderer.gfx.circle(l.center, l.radius, 0.01f, Color3::GREEN);
+
+	}
+
+	renderer.gfx.drawCircles();
+	renderer.gfx.drawDisks();
 
 	for (const auto& laser : lasers) {
 		renderer.gfx.disk(laser->position, 0.02f, Color3::BLUE);
@@ -95,7 +157,6 @@ void Editor::update(GameRenderer& renderer) {
 		const auto laserLine = stereographicLine(laser->position, laserDirectionGrabPoint(laser.entity));
 		//renderer.gfx.circleTriangulated(line.center, line.radius, Constants::wallWidth, Color3::CYAN, 1000);
 
-		const auto boundary = Circle{ Vec2(0.0f), 1.0f };
 		const auto boundaryIntersections = circleCircleIntersection(laserLine, boundary);
 
 		if (boundaryIntersections.has_value()) {
@@ -162,37 +223,12 @@ void Editor::update(GameRenderer& renderer) {
 						renderer.stereographicSegment(laser->position, boundaryIntersection, laserColor);
 						renderer.stereographicSegment(laser->position, boundaryIntersectionWrappedAround, laserColor);
 					}
-
-					//renderer.gfx.disk(laser->position, 0.01f, Color3::RED);
-					//renderer.gfx.disk(intersection, 0.01f, Color3::RED);
-
-
 				}
-
-				/*if (intersections.has_value()) {
-					for (const auto& intersection : *intersections) {
-						renderer.gfx.disk(intersection, 0.01f, Color3::MAGENTA);
-					}
-				}*/
 			}
 
 		} else {
 			// Shouldn't happen if the points are inside
 		}
-
-
-		//for (const auto& wall : walls) {
-		//	const auto wallLine = stereographicLine(wall->endpoints[0], wall->endpoints[1]);
-		//	const auto intersections = circleCircleIntersection(wallLine, line);
-		//	if (intersections.has_value()) {
-		//		for (const auto& intersection : *intersections) {
-		//			renderer.gfx.disk(intersection, 0.01f, Color3::MAGENTA);
-		//		}
-		//	}
-		//}
-
-		//line.
-		//renderer.gfx
 	}
 
 	renderer.gfx.drawFilledTriangles();
@@ -282,6 +318,10 @@ void Editor::activateEntity(const EditorEntityId& id) {
 		lasers.activate(id.laser());
 		break;
 
+	case MIRROR:
+		mirrors.activate(id.mirror());
+		break;
+
 	}
 }
 
@@ -294,6 +334,10 @@ void Editor::deactivateEntity(const EditorEntityId& id) {
 
 	case LASER:
 		lasers.deactivate(id.laser());
+		break;
+
+	case MIRROR:
+		mirrors.deactivate(id.mirror());
 		break;
 	}
 }
@@ -470,6 +514,21 @@ void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 }
 
+void Editor::mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (!cursorCaptured) {
+		const auto result = mirrorCreateTool.update(
+			Input::isMouseButtonDown(MouseButton::LEFT),
+			Input::isMouseButtonDown(MouseButton::RIGHT),
+			cursorPos);
+		if (result.has_value()) {
+			auto e = mirrors.create();
+			e.entity = *result;
+			actions.add(*this, new EditorActionCreateEntity(EditorEntityId(e.id)));
+		}
+		cursorCaptured = true;
+	}
+}
+
 template<typename Entity, typename Action>
 void redoModify(EntityArray<Entity, typename Entity::DefaultInitialize>& array, const Action& action) {
 	auto entity = array.get(action.id);
@@ -530,4 +589,32 @@ void Editor::WallCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
 
 void Editor::WallCreateTool::reset() {
 	endpoint = std::nullopt;
+}
+
+std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos) {
+	if (cancelDown) {
+		reset();
+		return std::nullopt;
+	}
+
+	if (!down) {
+		return std::nullopt;
+	}
+
+	if (!center.has_value()) {
+		center = cursorPos;
+		return std::nullopt;
+	}
+
+	const auto result = EditorMirror{ .center = *center, .normalAngle = (cursorPos - *center).angle() };
+	reset();
+	return result;
+}
+
+void Editor::MirrorCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
+
+}
+
+void Editor::MirrorCreateTool::reset() {
+	center = std::nullopt;
 }

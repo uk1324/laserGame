@@ -23,9 +23,21 @@ struct EditorLaser {
 
 using EditorLaserId = EntityArrayId<EditorLaser>;
 
+struct EditorMirror {
+	struct DefaultInitialize {
+		EditorMirror operator()();
+	};
+
+	Vec2 center;
+	f32 normalAngle;
+};
+
+using EditorMirrorId = EntityArrayId<EditorMirror>;
+
 enum class EditorEntityType {
 	WALL,
 	LASER,
+	MIRROR,
 };
 
 struct EditorEntityId {
@@ -35,9 +47,11 @@ struct EditorEntityId {
 
 	explicit EditorEntityId(const EditorWallId& id);
 	explicit EditorEntityId(const EditorLaserId& id);
+	explicit EditorEntityId(const EditorMirrorId& id);
 
 	EditorWallId wall() const;
 	EditorLaserId laser() const;
+	EditorMirrorId mirror() const;
 
 	bool operator==(const EditorEntityId&) const = default;
 };

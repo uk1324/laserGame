@@ -17,6 +17,8 @@ Vec3 fromStereographic(Vec2 p);
 Vec2 antipodalPoint(Vec2 p);
 
 Circle circleThroughPoints(Vec2 p0, Vec2 p1, Vec2 p2);
+std::optional<Circle> circleThroughPointsWithNormalAngle(Vec2 p0, f32 angle0, Vec2 p1);
+Circle circleThroughPointsWithCenter(Vec2 center, Vec2 p0, Vec2 p1);
 
 Circle stereographicLine(Vec2 p0, Vec2 p1);
 

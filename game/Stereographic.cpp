@@ -1,6 +1,7 @@
 #include "Stereographic.hpp"
 #include <engine/Math/Constants.hpp>
 #include <array>
+#include <engine/Math/Line.hpp>
 
 // The 3d coordinate system is the set of points satisfying x^2 + y^2 + z^2 = 1, z <= 0, hemisphere.
 // The 2d coordinate system is the set of points satisfying x^2 + y^2 <= 1, circle
@@ -13,7 +14,7 @@ Vec2 toStereographic(Vec3 p) {
 
 Vec3 fromStereographic(Vec2 p) {
 	const auto d = p.x * p.x + p.y * p.y + 1.0f;
-	return Vec3(2.0f * p.x / d, 2.0f * p.y / d, -1.0 + p.x * p.x + p.y * p.y);
+	return Vec3(2.0f * p.x, 2.0f * p.y, (-1.0 + p.x * p.x + p.y * p.y)) / d;
 }
 
 Vec2 antipodalPoint(Vec2 p) {
@@ -39,6 +40,23 @@ Circle circleThroughPoints(Vec2 p0, Vec2 p1, Vec2 p2) {
 	const auto y0 = -0.5 * m13 / m11;
 	const auto r0 = sqrt(pow((x1 - x0), 2.0f) + pow((y1 - y0), 2.0f));
 	return Circle(Vec2(x0, y0), r0);
+}
+
+std::optional<Circle> circleThroughPointsWithNormalAngle(Vec2 p0, f32 angle0, Vec2 p1) {
+	/*
+	If the circle passes through 2 points it's center lies on a line.
+	If there is some N normal at a A point then the center lies on the A + tN.
+	So we have 2 lines. This defines the center.
+	*/
+	const auto midpointConstraint = Line::fromPointAndNormal((p0 + p1) / 2.0f, (p0 - p1).normalized());
+	const auto normalConstraint = Line::fromParametric(p0, Vec2::oriented(angle0));
+
+	const auto result = midpointConstraint.intersection(normalConstraint);
+	if (!result.has_value()) {
+		return std::nullopt;
+	}
+
+	return Circle(*result, distance(p0, *result));
 }
 
 Circle stereographicLine(Vec2 p0, Vec2 p1) {

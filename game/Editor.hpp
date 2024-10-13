@@ -13,6 +13,7 @@ struct Editor {
 	enum class Tool {
 		WALL,
 		LASER,
+		MIRROR,
 	};
 
 	Tool selectedTool = Tool::WALL;
@@ -57,6 +58,16 @@ struct Editor {
 
 	void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
+	struct MirrorCreateTool {
+		std::optional<EditorMirror> update(bool down, bool cancelDown, Vec2 cursorPos);
+		void render(GameRenderer& renderer, Vec2 cursorPos);
+		void reset();
+
+		std::optional<Vec2> center;
+	} mirrorCreateTool;
+	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+
+
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);
 
@@ -75,4 +86,5 @@ struct Editor {
 	Camera camera;
 	EntityArray<EditorWall, EditorWall::DefaultInitialize> walls;
 	EntityArray<EditorLaser, EditorLaser::DefaultInitialize> lasers;
+	EntityArray<EditorMirror, EditorMirror::DefaultInitialize> mirrors;
 };

@@ -13,6 +13,13 @@ EditorLaser EditorLaser::DefaultInitialize::operator()() {
 	};
 }
 
+EditorMirror EditorMirror::DefaultInitialize::operator()() {
+	return EditorMirror{
+		.center = Vec2(0.0f),
+		.normalAngle = 0.0f
+	};
+}
+
 EditorEntityId::EditorEntityId(const EditorWallId& id) 
 	: type(EditorEntityType::WALL) 
 	, index(id.index())
@@ -20,6 +27,11 @@ EditorEntityId::EditorEntityId(const EditorWallId& id)
 
 EditorEntityId::EditorEntityId(const EditorLaserId& id)
 	: type(EditorEntityType::LASER)
+	, index(id.index())
+	, version(id.version()) {}
+
+EditorEntityId::EditorEntityId(const EditorMirrorId& id)
+	: type(EditorEntityType::MIRROR)
 	, index(id.index())
 	, version(id.version()) {}
 
@@ -31,4 +43,9 @@ EditorWallId EditorEntityId::wall() const {
 EditorLaserId EditorEntityId::laser() const {
 	ASSERT(type == EditorEntityType::LASER);
 	return EditorLaserId(index, version);
+}
+
+EditorMirrorId EditorEntityId::mirror() const {
+	ASSERT(type == EditorEntityType::MIRROR);
+	return EditorMirrorId(index, version);
 }
