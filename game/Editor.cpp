@@ -151,8 +151,8 @@ void Editor::update(GameRenderer& renderer) {
 		// Normalizing, because rotating introduces errors in the norm that the amplified by the projection. 
 		/*const auto p = toStereographic(result.normalized());
 		const auto pp = toStereographic(result1.normalized());*/
-		const auto p = toStereographic(result);
-		const auto pp = toStereographic(result1);
+		const auto p = toStereographic(result.normalized());
+		const auto pp = toStereographic(result1.normalized());
 		const auto l1 = result.length();
 
 		renderer.gfx.disk(p, 0.03f, Color3::RED);
