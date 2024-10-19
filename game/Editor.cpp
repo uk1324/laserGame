@@ -77,14 +77,14 @@ void Editor::update(GameRenderer& renderer) {
 		ImGui::SeparatorText("grid");
 		{
 			ImGui::Checkbox("show", &showGrid);
+			ImGui::TextDisabled("(?)");
+			ImGui::SetItemTooltip("Hold ctrl to enable snapping to grid.");
 
 			ImGui::InputInt("lines", &gridLineCount);
 			gridLineCount = std::max(gridLineCount, 1);
 
 			ImGui::InputInt("circles", &gridCircleCount);
 			gridCircleCount = std::max(gridCircleCount, 1);
-
-			ImGui::Checkbox("snap to grid", &snapCursorToGrid);
 		}
 
 		ImGui::End();
@@ -95,7 +95,7 @@ void Editor::update(GameRenderer& renderer) {
 	bool snappedCursor = false;
 	auto cursorPos = Input::cursorPosClipSpace() * renderer.gfx.camera.clipSpaceToWorldSpace();
 
-	if (snapCursorToGrid && Input::isKeyHeld(KeyCode::LEFT_CONTROL)) {
+	if (Input::isKeyHeld(KeyCode::LEFT_CONTROL)) {
 		const auto snapDistance = Constants::endpointGrabPointRadius;
 
 		for (i32 iLine = 0; iLine < gridLineCount; iLine++) {
@@ -232,6 +232,7 @@ void Editor::update(GameRenderer& renderer) {
 
 	struct Segment {
 		Vec2 endpoints[2];
+		bool ignore = false;
 	};
 
 	std::vector<Segment> laserSegmentsToDraw;
@@ -240,18 +241,18 @@ void Editor::update(GameRenderer& renderer) {
 		renderer.gfx.disk(laser->position, 0.02f, Color3::BLUE);
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, Color3::BLUE);
 
-		const auto maxReflections = 5;
+		const auto maxReflections = 100;
 
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
 		std::optional<EditorEntityId> hitOnLastIteration;
 
 		for (i64 i = 0; i < maxReflections; i++) {
-			const auto laserLine = stereographicLineEx(laserPosition, laserPosition + laserDirection * 0.01f);
+			const auto laserLine = stereographicLine(laserPosition, laserPosition + laserDirection * 0.01f);
 
 			const auto boundaryIntersections = stereographicLineVsCircleIntersection(laserLine, boundary);
 
-			renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::GREEN);
+			//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::GREEN);
 
 			if (boundaryIntersections.size() == 0) {
 				// Shouldn't happen if the points are inside, because the antipodal point is always outside.
@@ -287,7 +288,7 @@ void Editor::update(GameRenderer& renderer) {
 				IntersectionType type,
 				EditorEntityId id) {
 
-				const auto line = stereographicLineEx(endpoint0, endpoint1);
+				const auto line = stereographicLine(endpoint0, endpoint1);
 				const auto intersections = stereographicLineVsStereographicLineIntersection(line, laserLine);
 
 				for (const auto& intersection : intersections) {
@@ -406,15 +407,8 @@ void Editor::update(GameRenderer& renderer) {
 				}
 
 			} else if (closestToWrappedAround.has_value()) {
-				renderer.stereographicSegment(
-					laserPosition,
-					boundaryIntersection,
-					laserColor);
-
-				renderer.stereographicSegment(
-					boundaryIntersectionWrappedAround,
-					closestToWrappedAround->position,
-					laserColor);
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection });
+				laserSegmentsToDraw.push_back(Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->position });
 
 				switch (closestToWrappedAround->type) {
 					using enum IntersectionType;
@@ -428,12 +422,59 @@ void Editor::update(GameRenderer& renderer) {
 					break;
 				}
 			} else {
-				renderer.stereographicSegment(laserPosition, boundaryIntersection, laserColor);
-				renderer.stereographicSegment(laserPosition, boundaryIntersectionWrappedAround, laserColor);
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection });
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersectionWrappedAround });
 			}
 		}
 
 		laserEnd:;
+	}
+
+	for (auto& s : laserSegmentsToDraw) {
+		// Lexographically order the endpoints.
+		if (s.endpoints[0].x > s.endpoints[1].x 
+			|| (s.endpoints[0].x == s.endpoints[1].x && s.endpoints[0].y > s.endpoints[1].y)) {
+			std::swap(s.endpoints[0], s.endpoints[1]);
+		}
+	}
+
+	for (i64 i = 0; i < laserSegmentsToDraw.size(); i++) {
+		const auto& a = laserSegmentsToDraw[i];
+		if (a.ignore) {
+			continue;
+		}
+
+		for (i64 j = 0; j < laserSegmentsToDraw.size(); j++) {
+			if (i == j) {
+				continue;
+			}
+			auto& b = laserSegmentsToDraw[j];
+
+			const auto epsilon = 0.01f;
+			const auto epsilonSquared = epsilon * epsilon;
+			if (a.endpoints[0].distanceSquaredTo(b.endpoints[0]) < epsilonSquared
+				&& a.endpoints[1].distanceSquaredTo(b.endpoints[1]) < epsilonSquared) {
+				b.ignore = true;
+			}
+		}
+	}
+	for (const auto& a : laserSegmentsToDraw) {
+		if (a.ignore) {
+			continue;
+		}
+
+		for (auto& b : laserSegmentsToDraw) {
+
+		}
+	}
+
+	i32 drawnSegments = 0;
+	for (const auto& segment : laserSegmentsToDraw) {
+		if (segment.ignore) {
+			continue;
+		}
+		drawnSegments++;
+		renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], laserColor);
 	}
 
 	renderer.gfx.drawFilledTriangles();
@@ -638,13 +679,17 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	const auto oldSelection = selectTool.selectedEntity;
 
 	auto stereographicSegmentDistance = [](Vec2 e0, Vec2 e1, Vec2 cursorPos) {
-		const auto circle = stereographicLine(e0, e1);
-		auto a0 = (e0 - circle.center).angle();
-		auto a1 = (e1 - circle.center).angle();
-		if (a0 > a1) {
-			std::swap(a0, a1);
+		const auto line = stereographicLine(e0, e1);
+		if (line.type == StereographicLine::Type::LINE) {
+			return LineSegment(e0, e1).distance(cursorPos);
+		} else {
+			auto a0 = (e0 - line.circle.center).angle();
+			auto a1 = (e1 - line.circle.center).angle();
+			if (a0 > a1) {
+				std::swap(a0, a1);
+			}
+			return circularArcDistance(cursorPos, line.circle, a0, a1);
 		}
-		return circularArcDistance(cursorPos, circle, a0, a1);
 	};
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {

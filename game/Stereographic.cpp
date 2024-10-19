@@ -59,20 +59,20 @@ std::optional<Circle> circleThroughPointsWithNormalAngle(Vec2 p0, f32 angle0, Ve
 	return Circle(*result, distance(p0, *result));
 }
 
-Circle stereographicLine(Vec2 p0, Vec2 p1) {
+Circle stereographicLineOld(Vec2 p0, Vec2 p1) {
 	// A great circle always passes through the antipodal point.
 	// Maybe doing the computation in S_2 would be more stable.
 	Vec2 antipodal = antipodalPoint(p0);
 	return circleThroughPoints(p0, p1, antipodal);
 }
 
-StereographicLine stereographicLineEx(Vec2 p0, Vec2 p1) {
+StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
 	const auto line = Line(p0, p1);
 	const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.0001f;
 	if (goesThroughOrigin) {
 		return StereographicLine(line.n);
 	}
-	return stereographicLine(p0, p1);
+	return stereographicLineOld(p0, p1);
 }
 
 f32 angleToRangeZeroTau(f32 a) {

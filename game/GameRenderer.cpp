@@ -16,7 +16,7 @@ void GameRenderer::wall(Vec2 e0, Vec2 e1) {
 	gfx.disk(e1, Constants::endpointGrabPointRadius, Color3::RED);
 
 	//stereographicSegment(e0, e1, Color3::WHITE);
-	stereographicSegmentEx(e0, e1, Color3::WHITE);
+	stereographicSegment(e0, e1, Color3::WHITE);
 	//gfx.
 	//gfx.circleTriangulated(line.center, line.radius, Constants::wallWidth, Color3::WHITE, 1000);
 	// 
@@ -38,8 +38,8 @@ void GameRenderer::renderWalls() {
 	gfx.drawDisks();
 }
 
-void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) {
-	const auto line = stereographicLine(e0, e1);
+void GameRenderer::stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color) {
+	const auto line = stereographicLineOld(e0, e1);
 
 	f32 a0 = angleToRangeZeroTau((e0 - line.center).angle());
 	f32 a1 = angleToRangeZeroTau((e1 - line.center).angle());
@@ -54,8 +54,8 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) {
 	gfx.circleArcTriangulated(line.center, line.radius, a0, a1, Constants::wallWidth, color, 1000);
 }
 
-void GameRenderer::stereographicSegmentEx(Vec2 e0, Vec2 e1, Vec3 color) { 
-	const auto stereographicLine = stereographicLineEx(e0, e1);
+void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) { 
+	const auto stereographicLine = ::stereographicLine(e0, e1);
 	if (stereographicLine.type == StereographicLine::Type::LINE) {
 		gfx.lineTriangulated(e0, e1, Constants::wallWidth, color);
 	} else {

@@ -44,8 +44,8 @@ std::optional<Circle> circleThroughPointsWithNormalAngle(Vec2 p0, f32 angle0, Ve
 // The center would need to lie on the midpoint of the segment p0 p1
 Circle circleThroughPointsWithCenter(Vec2 center, Vec2 p0, Vec2 p1);
 
-Circle stereographicLine(Vec2 p0, Vec2 p1);
-StereographicLine stereographicLineEx(Vec2 p0, Vec2 p1);
+Circle stereographicLineOld(Vec2 p0, Vec2 p1);
+StereographicLine stereographicLine(Vec2 p0, Vec2 p1);
 
 f32 angleToRangeZeroTau(f32 a);
 
