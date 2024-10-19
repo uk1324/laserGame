@@ -117,36 +117,65 @@ void Editor::update(GameRenderer& renderer) {
 	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawDisks();
 
+	struct Segment {
+		Vec2 endpoints[2];
+	};
+
+	std::vector<Segment> laserSegmentsToDraw;
+
 	for (const auto& laser : lasers) {
 		renderer.gfx.disk(laser->position, 0.02f, Color3::BLUE);
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, Color3::BLUE);
-		const auto laserDirection = Vec2::oriented(laser->angle);
-		const auto laserLine = stereographicLine(laser->position, laserDirectionGrabPoint(laser.entity));
+
 		//renderer.gfx.circleTriangulated(line.center, line.radius, Constants::wallWidth, Color3::CYAN, 1000);
 
-		const auto boundaryIntersections = circleCircleIntersection(laserLine, boundary);
+		const auto maxReflections = 5;
 
-		if (boundaryIntersections.has_value()) {
+		auto laserPosition = laser->position;
+		auto laserDirection = Vec2::oriented(laser->angle);
+		for (i64 i = 0; i < maxReflections; i++) {
+			const auto laserLine = stereographicLine(laserPosition, laserDirectionGrabPoint(laser.entity));
+			const auto boundaryIntersections = circleCircleIntersection(laserLine, boundary);
+
+			renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::GREEN);
+
+			if (!boundaryIntersections.has_value()) {
+				// Shouldn't happen if the points are inside, because the antipodal point is always outside.
+				// For now do nothing.
+				break;
+			}
+			
 			Vec2 boundaryIntersection = (*boundaryIntersections)[0];
 			Vec2 boundaryIntersectionWrappedAround = (*boundaryIntersections)[1];
 
-			if (dot(boundaryIntersection - laser->position, laserDirection) < 0.0f) {
+			if (dot(boundaryIntersection - laserPosition, laserDirection) < 0.0f) {
 				std::swap(boundaryIntersection, boundaryIntersectionWrappedAround);
 			}
+
+			enum class IntersectionType {
+				WALL,
+				MIRROR,
+			};
 
 			struct Intersection {
 				Vec2 position;
 				f32 distance;
+				Circle objectHit;
+				IntersectionType type;
 			};
 			std::optional<Intersection> closest;
 			std::optional<Intersection> closestToWrappedAround;
 
-			for (const auto& wall : walls) {
-				const auto wallLine = stereographicLine(wall->endpoints[0], wall->endpoints[1]);
-				const auto intersections = circleCircleIntersection(wallLine, laserLine);
+			auto processLineSegmentIntersections = [&laserLine, &laserPosition, &boundaryIntersectionWrappedAround, &laserDirection, &closest, &closestToWrappedAround](
+				Vec2 endpoint0,
+				Vec2 endpoint1,
+				IntersectionType type) {
+
+				const auto line = stereographicLine(endpoint0, endpoint1);
+				const auto intersections = circleCircleIntersection(line, laserLine);
 
 				if (!intersections.has_value()) {
-					continue;
+					return;
 				}
 
 				for (const auto& intersection : *intersections) {
@@ -154,35 +183,77 @@ void Editor::update(GameRenderer& renderer) {
 						continue;
 					}
 
-					const auto lineDirection = (wall->endpoints[1] - wall->endpoints[0]).normalized();
-					const auto dAlong0 = dot(lineDirection, wall->endpoints[0]);
-					const auto dAlong1 = dot(lineDirection, wall->endpoints[1]);
+					const auto lineDirection = (endpoint1 - endpoint0).normalized();
+					const auto dAlong0 = dot(lineDirection, endpoint0);
+					const auto dAlong1 = dot(lineDirection, endpoint1);
 					const auto intersectionDAlong = dot(lineDirection, intersection);
 					if (intersectionDAlong <= dAlong0 || intersectionDAlong >= dAlong1) {
 						continue;
 					}
 
-					const auto distance = intersection.distanceTo(laser->position);
+					const auto distance = intersection.distanceTo(laserPosition);
 					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
 
-					if (dot(intersection - laser->position, laserDirection) > 0.0f) {
+					if (dot(intersection - laserPosition, laserDirection) > 0.0f) {
 						if (!closest.has_value() || distance < closest->distance) {
-							closest = Intersection{ intersection, distance };
+							closest = Intersection{ intersection, distance, line, type };
 						}
 					} else {
-						if (!closestToWrappedAround.has_value() 
+						if (!closestToWrappedAround.has_value()
 							|| distanceToWrappedAround < closestToWrappedAround->distance) {
-							closestToWrappedAround = Intersection{ intersection, distanceToWrappedAround };
+							closestToWrappedAround = Intersection{
+								intersection,
+								distanceToWrappedAround,
+								line,
+								type
+							};
 						}
 					}
 				}
+			};
+
+			for (const auto& wall : walls) {
+				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], IntersectionType::WALL);
+			}
+
+			for (const auto& mirror : mirrors) {
+				const auto endpoints = mirror->calculateEndpoints();
+				processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::MIRROR);
 			}
 
 			if (closest.has_value()) {
-				renderer.stereographicSegment(laser->position, closest->position, laserColor);
+				renderer.stereographicSegment(laserPosition, closest->position, laserColor);
+
+				switch (closest->type) {
+					using enum IntersectionType;
+
+				case WALL:
+					goto laserEnd;
+
+				case MIRROR: {
+					auto laserTangentAtIntersection = (closest->position - laserLine.center).rotBy90deg().normalized();
+					if (dot(laserTangentAtIntersection, laserDirection) > 0.0f) {
+						laserTangentAtIntersection = -laserTangentAtIntersection;
+					}
+					auto mirrorNormal = (closest->position - closest->objectHit.center).normalized();
+					if (dot(mirrorNormal, laserDirection) > 0.0f) {
+						mirrorNormal = -mirrorNormal; 
+					}
+					laserDirection = laserTangentAtIntersection.reflectedAroundNormal(mirrorNormal);
+					laserPosition = closest->position;
+					renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::BLUE);
+					renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.06f, 0.01f, Color3::GREEN);
+					renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.06f, 0.01f, Color3::RED);
+					goto laserEnd;
+					break;
+				}
+					
+
+				}
+
 			} else if (closestToWrappedAround.has_value()) {
 				renderer.stereographicSegment(
-					laser->position,
+					laserPosition,
 					boundaryIntersection,
 					laserColor);
 
@@ -190,19 +261,30 @@ void Editor::update(GameRenderer& renderer) {
 					boundaryIntersectionWrappedAround,
 					closestToWrappedAround->position,
 					laserColor);
-			} else {
-				renderer.stereographicSegment(laser->position, boundaryIntersection, laserColor);
-				renderer.stereographicSegment(laser->position, boundaryIntersectionWrappedAround, laserColor);
-			}
 
-		} else {
-			// Shouldn't happen if the points are inside
+				switch (closestToWrappedAround->type) {
+					using enum IntersectionType;
+
+				case WALL:
+					goto laserEnd;
+
+				case MIRROR:
+					laserPosition = closestToWrappedAround->position;
+					break;
+				}
+			} else {
+				renderer.stereographicSegment(laserPosition, boundaryIntersection, laserColor);
+				renderer.stereographicSegment(laserPosition, boundaryIntersectionWrappedAround, laserColor);
+			}
 		}
+
+		laserEnd:;
 	}
 
 	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawCircles();
 	renderer.gfx.drawDisks();
+	renderer.gfx.drawLines();
 }
 
 void Editor::undoRedoUpdate() {
