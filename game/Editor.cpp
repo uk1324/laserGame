@@ -64,7 +64,14 @@ void Editor::update(GameRenderer& renderer) {
 	{
 		ImGui::Begin(sideBarWindowName);
 
-		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "wall\0laser\0mirror\0");
+		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "select\0create wall\0create laser\0create mirror\0create target\0");
+
+		ImGui::Separator();
+		if (selectedTool == Tool::SELECT) {
+			if (selectTool.selectedEntity == std::nullopt) {
+				ImGui::Text("no entity selected"); 
+			}
+		}
 
 		ImGui::End();
 	}
@@ -74,15 +81,24 @@ void Editor::update(GameRenderer& renderer) {
 	const auto cursorPos = Input::cursorPosClipSpace() * camera.clipSpaceToWorldSpace();
 	bool cursorCaptured = false;
 
+
+	// Selection should have higher precedence than grabbing, but creating should have lower precedence than grabbing.
+	if (selectedTool == Tool::SELECT) {
+		selectToolUpdate(cursorPos, cursorCaptured);
+	}
+
 	wallGrabToolUpdate(cursorPos, cursorCaptured);
 	laserGrabToolUpdate(cursorPos, cursorCaptured);
 	mirrorGrabToolUpdate(cursorPos, cursorCaptured);
+	targetGrabToolUpdate(cursorPos, cursorCaptured);
 
 	switch (selectedTool) {
 		using enum Tool;
+	case SELECT: break;
 	case WALL: wallCreateToolUpdate(cursorPos, cursorCaptured); break;
 	case LASER: laserCreateToolUpdate(cursorPos, cursorCaptured); break;
 	case MIRROR: mirrorCreateToolUpdate(cursorPos, cursorCaptured); break;
+	case TARGET: targetCreateToolUpdate(cursorPos, cursorCaptured); break;
 	}
 
 	camera.aspectRatio = Window::aspectRatio();
@@ -93,9 +109,11 @@ void Editor::update(GameRenderer& renderer) {
 	switch (selectedTool) {
 		using enum Tool;
 
+	case SELECT: break;
 	case WALL: wallCreateTool.render(renderer, cursorPos); break;
 	case LASER: break;
 	case MIRROR: mirrorCreateTool.render(renderer, cursorPos); break;
+	case TARGET: break;
 	}
 
 	renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN);
@@ -126,6 +144,12 @@ void Editor::update(GameRenderer& renderer) {
 	renderer.gfx.drawCircles();
 	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawDisks();
+
+	for (const auto& target : targets) {
+		const auto circle = target->calculateCircle();
+		renderer.gfx.circle(circle.center, circle.radius, 0.01f, Color3::MAGENTA);
+		renderer.gfx.disk(target->position, 0.01f, Color3::MAGENTA / 2.0f);
+	}
 
 	struct Segment {
 		Vec2 endpoints[2];
@@ -167,8 +191,8 @@ void Editor::update(GameRenderer& renderer) {
 			}
 
 			enum class IntersectionType {
-				WALL,
-				MIRROR,
+				END,
+				REFLECT,
 			};
 
 			struct Intersection {
@@ -232,12 +256,47 @@ void Editor::update(GameRenderer& renderer) {
 			};
 
 			for (const auto& wall : walls) {
-				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], IntersectionType::WALL, EditorEntityId(wall.id));
+				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], IntersectionType::END, EditorEntityId(wall.id));
 			}
 
 			for (const auto& mirror : mirrors) {
 				const auto endpoints = mirror->calculateEndpoints();
-				processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::MIRROR, EditorEntityId(mirror.id));
+				processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::REFLECT, EditorEntityId(mirror.id));
+			}
+
+			for (const auto& target : targets) {
+				const auto circle = target->calculateCircle();
+				const auto intersections = circleCircleIntersection(circle, laserLine);
+
+				if (!intersections.has_value()) {
+					continue;
+				}
+
+				for (const auto& intersection : *intersections) {
+					if (const auto outsideBoundary = intersection.length() > 1.0f) {
+						continue;
+					}
+
+					const auto distance = intersection.distanceTo(laserPosition);
+					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
+
+					if (dot(intersection - laserPosition, laserDirection) > 0.0f) {
+						if (!closest.has_value() || distance < closest->distance) {
+							closest = Intersection{ intersection, distance, circle, IntersectionType::END, EditorEntityId(target.id) };
+						}
+					} else {
+						if (!closestToWrappedAround.has_value()
+							|| distanceToWrappedAround < closestToWrappedAround->distance) {
+							closestToWrappedAround = Intersection{
+								intersection,
+								distanceToWrappedAround,
+								circle,
+								IntersectionType::END,
+								EditorEntityId(target.id)
+							};
+						}
+					}
+				}
 			}
 
 			auto doReflection = [&](Vec2 hitPoint, Circle objectHit) {
@@ -262,10 +321,10 @@ void Editor::update(GameRenderer& renderer) {
 				switch (closest->type) {
 					using enum IntersectionType;
 
-				case WALL:
+				case END:
 					goto laserEnd;
 
-				case MIRROR: {
+				case REFLECT: {
 					doReflection(closest->position, closest->objectHit);
 					hitOnLastIteration = closest->id;
 					break;
@@ -287,10 +346,10 @@ void Editor::update(GameRenderer& renderer) {
 				switch (closestToWrappedAround->type) {
 					using enum IntersectionType;
 
-				case WALL:
+				case END:
 					goto laserEnd;
 
-				case MIRROR:
+				case REFLECT:
 					doReflection(closestToWrappedAround->position, closestToWrappedAround->objectHit);
 					hitOnLastIteration = closestToWrappedAround->id;
 					break;
@@ -419,8 +478,146 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 }
 
+void Editor::targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
+		auto target = targets.create();
+		target.entity = EditorTarget{ .position = cursorPos };
+		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(target.id)));
+		cursorCaptured = true;
+	}
+}
+
+void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT) && !targetGrabTool.grabbed.has_value()) {
+		for (const auto& target : targets) {
+			if (distance(target->position, cursorPos) > Constants::endpointGrabPointRadius) {
+				continue;
+			}
+			cursorCaptured = true;
+			targetGrabTool.grabbed = TargetGrabTool::Grabbed{
+				.id = target.id,
+				.grabStartState = target.entity,
+				.grabOffset = target->position - cursorPos,
+			};
+			break;
+		}
+	}
+
+	if (Input::isMouseButtonHeld(MouseButton::LEFT) && targetGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		auto target = targets.get(targetGrabTool.grabbed->id);
+		if (target.has_value()) {
+			target->position = cursorPos + targetGrabTool.grabbed->grabOffset;
+		} else {
+			CHECK_NOT_REACHED();
+		}
+	}
+
+	if (Input::isMouseButtonUp(MouseButton::LEFT) && targetGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		auto target = targets.get(targetGrabTool.grabbed->id);
+		if (target.has_value()) {
+			auto action = new EditorActionModifyTarget(
+				targetGrabTool.grabbed->id,
+				std::move(targetGrabTool.grabbed->grabStartState),
+				std::move(*target));
+			actions.add(*this, action);
+		} else {
+			CHECK_NOT_REACHED();
+		}
+		targetGrabTool.grabbed = std::nullopt;
+	}
+}
+
 void Editor::freeAction(EditorAction& action) {
 	// TODO: Fix entity leaks.
+}
+
+void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (Input::isKeyDown(KeyCode::DELETE) && selectTool.selectedEntity.has_value()) {
+		deactivateEntity(*selectTool.selectedEntity);
+		actions.beginMultiAction();
+		{
+			actions.add(*this, new EditorActionDestroyEntity(*selectTool.selectedEntity));
+			actions.add(*this, new EditorActionModifiySelection(selectTool.selectedEntity, std::nullopt));
+			selectTool.selectedEntity = std::nullopt;
+		}
+		actions.endMultiAction();
+	}
+
+	if (cursorCaptured) {
+		return;
+	}
+
+	const auto oldSelection = selectTool.selectedEntity;
+
+	auto stereographicSegmentDistance = [](Vec2 e0, Vec2 e1, Vec2 cursorPos) {
+		const auto circle = stereographicLine(e0, e1);
+		auto a0 = (e0 - circle.center).angle();
+		auto a1 = (e1 - circle.center).angle();
+		if (a0 > a1) {
+			std::swap(a0, a1);
+		}
+		return circularArcDistance(cursorPos, circle, a0, a1);
+	};
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
+		for (const auto& wall : walls) {
+			if (stereographicSegmentDistance(wall->endpoints[0], wall->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
+				selectTool.selectedEntity = EditorEntityId(wall.id);
+				cursorCaptured = true;
+				goto selectedEntity;
+			}
+		}
+
+		for (const auto& mirror : mirrors) {
+			const auto endpoints = mirror->calculateEndpoints();
+			if (stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
+				selectTool.selectedEntity = EditorEntityId(mirror.id);
+				cursorCaptured = true;
+				goto selectedEntity;
+			}
+		}
+
+		for (const auto& laser : lasers) {
+			if (distance(laser->position, cursorPos) < Constants::endpointGrabPointRadius) {
+				selectTool.selectedEntity = EditorEntityId(laser.id);
+				cursorCaptured = true;
+				goto selectedEntity;
+			}
+		}
+
+		for (const auto& target : targets) {
+			const auto circle = target->calculateCircle();
+			const auto d = distance(cursorPos, circle.center);
+			const auto smallCircle = circle.radius < Constants::endpointGrabPointRadius
+				&& d < Constants::endpointGrabPointRadius;
+
+			const auto normalCircle = d < circle.radius;
+
+			if (smallCircle || normalCircle) {
+				selectTool.selectedEntity = EditorEntityId(target.id);
+				cursorCaptured = true;
+				goto selectedEntity;
+			}
+		}
+	} else if (Input::isMouseButtonDown(MouseButton::RIGHT) && selectTool.selectedEntity != std::nullopt) {
+		actions.add(*this, new EditorActionModifiySelection(selectTool.selectedEntity, std::nullopt));
+		selectTool.selectedEntity = std::nullopt;
+	}
+
+	selectedEntity:;
+	if (selectTool.selectedEntity != oldSelection) {
+		actions.add(*this, new EditorActionModifiySelection(oldSelection, selectTool.selectedEntity));
+	}
 }
 
 bool Editor::loadLevel(std::string_view path) {
@@ -463,6 +660,10 @@ void Editor::activateEntity(const EditorEntityId& id) {
 		mirrors.activate(id.mirror());
 		break;
 
+	case TARGET:
+		targets.activate(id.target());
+		break;
+
 	}
 }
 
@@ -480,6 +681,10 @@ void Editor::deactivateEntity(const EditorEntityId& id) {
 	case MIRROR:
 		mirrors.deactivate(id.mirror());
 		break;
+
+	case TARGET:
+		targets.deactivate(id.target());
+		break;
 	}
 }
 
@@ -496,17 +701,10 @@ void undoModify(EntityArray<Entity, typename Entity::DefaultInitialize>& array, 
 void Editor::undoAction(const EditorAction& action) {
 	switch (action.type) {
 		using enum EditorActionType;
-	case MODIFY_WALL:
-		undoModify(walls, static_cast<const EditorActionModifyWall&>(action));
-		break;
-
-	case MODIFY_LASER:
-		undoModify(lasers, static_cast<const EditorActionModifyLaser&>(action));
-		break;
-
-	case MODIFY_MIRROR:
-		undoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action));
-		break;
+	case MODIFY_WALL: undoModify(walls, static_cast<const EditorActionModifyWall&>(action)); break; 
+	case MODIFY_LASER: undoModify(lasers, static_cast<const EditorActionModifyLaser&>(action)); break;
+	case MODIFY_MIRROR: undoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
+	case MODIFY_TARGET: undoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
 
 	case CREATE_ENTITY: {
 		deactivateEntity(static_cast<const EditorActionDestroyEntity&>(action).id);
@@ -517,6 +715,13 @@ void Editor::undoAction(const EditorAction& action) {
 		activateEntity(static_cast<const EditorActionCreateEntity&>(action).id);
 		break;
 	}
+
+	case MODIFY_SELECTION: {
+		const auto& a = static_cast<const EditorActionModifiySelection&>(action);
+		selectTool.selectedEntity = a.oldSelection;
+		break;
+	}
+		
 
 	}
 }
@@ -689,17 +894,10 @@ void redoModify(EntityArray<Entity, typename Entity::DefaultInitialize>& array, 
 void Editor::redoAction(const EditorAction& action) {
 	switch (action.type) {
 		using enum EditorActionType;
-	case MODIFY_WALL:
-		redoModify(walls, *static_cast<const EditorActionModifyWall*>(&action));
-		break;
-
-	case MODIFY_LASER:
-		redoModify(lasers, static_cast<const EditorActionModifyLaser&>(action));
-		break;
-
-	case MODIFY_MIRROR:
-		redoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action));
-		break;
+	case MODIFY_WALL: redoModify(walls, *static_cast<const EditorActionModifyWall*>(&action)); break; 
+	case MODIFY_LASER: redoModify(lasers, static_cast<const EditorActionModifyLaser&>(action)); break; 
+	case MODIFY_MIRROR: redoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
+	case MODIFY_TARGET: redoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
 
 	case CREATE_ENTITY: {
 		activateEntity(static_cast<const EditorActionCreateEntity&>(action).id);
@@ -710,6 +908,13 @@ void Editor::redoAction(const EditorAction& action) {
 		deactivateEntity(static_cast<const EditorActionDestroyEntity&>(action).id);
 		break;
 	}
+
+	case MODIFY_SELECTION: {
+		const auto& a = static_cast<const EditorActionModifiySelection&>(action);
+		selectTool.selectedEntity = a.newSelection;
+		break;
+	}
+
 	}
 }
  

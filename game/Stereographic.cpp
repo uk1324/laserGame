@@ -71,6 +71,47 @@ f32 angleToRangeZeroTau(f32 a) {
 	return a;
 }
 
+/*
+Shadertoy test
+
+float circularArcDistance(vec2 p, vec2 c, float r, float a0, float a1) {
+	vec2 v = p - c;
+	float pa = atan(v.y, v.x);
+
+	if (pa >= a0 && pa <= a1) {
+		return abs(distance(p, c) - r);
+	}
+	return min(
+		distance(r * vec2(cos(a0), sin(a0)), p),
+		distance(r * vec2(cos(a1), sin(a1)), p)
+	);
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+	vec2 p = fragCoord/iResolution.xy;
+	p -= 0.5;
+	p.x *= iResolution.x / iResolution.y;
+
+	float a = circularArcDistance(p, vec2(0), 0.3, 0.0, 2.5);
+
+	vec3 col = vec3(smoothstep(0.05, 0.06, a));
+	fragColor = vec4(col, 1.0);
+}
+
+*/
+
+f32 circularArcDistance(Vec2 p, Circle circle, f32 startAngle, f32 endAngle) {
+	const auto pAngle = (p - circle.center).angle();
+
+	if (pAngle >= startAngle && pAngle <= endAngle) {
+		return abs(distance(p, circle.center) - circle.radius);
+	}
+	return std::min(
+		distance(Vec2::fromPolar(startAngle, circle.radius), p),
+		distance(Vec2::fromPolar(endAngle, circle.radius), p)
+	);
+}
+
 // https://stackoverflow.com/questions/55816902/finding-the-intersection-of-two-circles
 std::optional<std::array<Vec2, 2>> circleCircleIntersection(const Circle& c0, const Circle& c1) {
 	const auto d = distance(c0.center, c1.center);

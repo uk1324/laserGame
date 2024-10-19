@@ -2,6 +2,7 @@
 
 #include <engine/Math/Vec2.hpp>
 #include <game/EntityArray.hpp>
+#include <game/Stereographic.hpp>
 
 struct EditorWall {
 	struct DefaultInitialize {
@@ -36,10 +37,23 @@ struct EditorMirror {
 
 using EditorMirrorId = EntityArrayId<EditorMirror>;
 
+struct EditorTarget {
+	struct DefaultInitialize {
+		EditorTarget operator()();
+	};
+
+	Circle calculateCircle() const;
+
+	Vec2 position;
+};
+
+using EditorTargetId = EntityArrayId<EditorTarget>;
+
 enum class EditorEntityType {
 	WALL,
 	LASER,
 	MIRROR,
+	TARGET,
 };
 
 struct EditorEntityId {
@@ -50,10 +64,12 @@ struct EditorEntityId {
 	explicit EditorEntityId(const EditorWallId& id);
 	explicit EditorEntityId(const EditorLaserId& id);
 	explicit EditorEntityId(const EditorMirrorId& id);
+	explicit EditorEntityId(const EditorTargetId& id);
 
 	EditorWallId wall() const;
 	EditorLaserId laser() const;
 	EditorMirrorId mirror() const;
+	EditorTargetId target() const;
 
 	bool operator==(const EditorEntityId&) const = default;
 };

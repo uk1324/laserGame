@@ -91,3 +91,8 @@ EditorActionDestroyEntity::EditorActionDestroyEntity(EditorEntityId id)
     : EditorAction(EditorActionType::DESTROY_ENTITY)
     , id(id) {
 }
+
+EditorActionModifiySelection::EditorActionModifiySelection(std::optional<EditorEntityId> oldSelection, std::optional<EditorEntityId> newSelection) 
+    : EditorAction(EditorActionType::MODIFY_SELECTION)
+    , oldSelection(oldSelection)
+    , newSelection(newSelection) {}

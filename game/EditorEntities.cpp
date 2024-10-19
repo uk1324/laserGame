@@ -24,6 +24,12 @@ EditorMirror EditorMirror::DefaultInitialize::operator()() {
 	};
 }
 
+EditorTarget EditorTarget::DefaultInitialize::operator()() {
+	return EditorTarget{
+		.position = Vec2(0.0f) 
+	};
+}
+
 EditorEntityId::EditorEntityId(const EditorWallId& id) 
 	: type(EditorEntityType::WALL) 
 	, index(id.index())
@@ -36,6 +42,11 @@ EditorEntityId::EditorEntityId(const EditorLaserId& id)
 
 EditorEntityId::EditorEntityId(const EditorMirrorId& id)
 	: type(EditorEntityType::MIRROR)
+	, index(id.index())
+	, version(id.version()) {}
+
+EditorEntityId::EditorEntityId(const EditorTargetId& id) 
+	: type(EditorEntityType::TARGET)
 	, index(id.index())
 	, version(id.version()) {}
 
@@ -54,6 +65,11 @@ EditorMirrorId EditorEntityId::mirror() const {
 	return EditorMirrorId(index, version);
 }
 
+EditorTargetId EditorEntityId::target() const {
+	ASSERT(type == EditorEntityType::TARGET);
+	return EditorTargetId(index, version);
+}
+
 std::array<Vec2, 2> EditorMirror::calculateEndpoints() const {
 	f32 halfLength = 0.6f;
 	const auto c = fromStereographic(center);
@@ -70,4 +86,19 @@ std::array<Vec2, 2> EditorMirror::calculateEndpoints() const {
 	const auto e1 = toStereographic(endpoint1.normalized());
 
 	return { e0, e1 };
+}
+
+Circle EditorTarget::calculateCircle() const {
+	const auto center = fromStereographic(position);
+	f32 radius = 0.1f;
+
+	const auto axis = cross(center, Vec3(0.0f, 0.0f, 1.0f));
+	// Point equidistant from center in there sphere metric.
+	const auto p0 = Quat(radius, axis) * center;
+	const auto p1 = Quat(-radius, axis) * center;
+	const auto p2 = Quat(PI<f32> / 2.0f, center) * p1;
+
+	// The stereographic projection of center isn't necessarily the center of the stereograhic of the `circle on the sphere`. For small radii this isn't very noticible.
+
+	return circleThroughPoints(toStereographic(p0), toStereographic(p1), toStereographic(p2));
 }

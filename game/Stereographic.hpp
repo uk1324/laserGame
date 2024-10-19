@@ -1,3 +1,4 @@
+#pragma once
 #include <engine/Math/Vec2.hpp>
 #include <engine/Math/Vec3.hpp>
 
@@ -18,10 +19,13 @@ Vec2 antipodalPoint(Vec2 p);
 
 Circle circleThroughPoints(Vec2 p0, Vec2 p1, Vec2 p2);
 std::optional<Circle> circleThroughPointsWithNormalAngle(Vec2 p0, f32 angle0, Vec2 p1);
+// The center would need to lie on the midpoint of the segment p0 p1
 Circle circleThroughPointsWithCenter(Vec2 center, Vec2 p0, Vec2 p1);
 
 Circle stereographicLine(Vec2 p0, Vec2 p1);
 
 f32 angleToRangeZeroTau(f32 a);
+
+f32 circularArcDistance(Vec2 p, Circle circle, f32 startAngle, f32 endAngle);
 
 std::optional<std::array<Vec2, 2>> circleCircleIntersection(const Circle& a, const Circle& b);

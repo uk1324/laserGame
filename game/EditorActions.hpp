@@ -8,8 +8,10 @@ enum class EditorActionType {
 	MODIFY_WALL,
 	MODIFY_LASER,
 	MODIFY_MIRROR,
+	MODIFY_TARGET,
 	CREATE_ENTITY,
 	DESTROY_ENTITY,
+	MODIFY_SELECTION,
 };
 
 struct EditorAction {
@@ -28,6 +30,7 @@ struct EditorActionModify : EditorAction {
 using EditorActionModifyWall = EditorActionModify<EditorWall, EditorActionType::MODIFY_WALL>;
 using EditorActionModifyLaser = EditorActionModify<EditorLaser, EditorActionType::MODIFY_LASER>;
 using EditorActionModifyMirror = EditorActionModify<EditorMirror, EditorActionType::MODIFY_MIRROR>;
+using EditorActionModifyTarget = EditorActionModify<EditorTarget, EditorActionType::MODIFY_TARGET>;
 
 struct EditorActionCreateEntity : EditorAction {
 	EditorActionCreateEntity(EditorEntityId id);
@@ -39,6 +42,13 @@ struct EditorActionDestroyEntity : EditorAction {
 	EditorActionDestroyEntity(EditorEntityId id);
 
 	EditorEntityId id;
+};
+
+struct EditorActionModifiySelection : EditorAction {
+	EditorActionModifiySelection(std::optional<EditorEntityId> oldSelection, std::optional<EditorEntityId> newSelection);
+
+	std::optional<EditorEntityId> oldSelection;
+	std::optional<EditorEntityId> newSelection;
 };
 
 struct Editor;

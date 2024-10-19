@@ -11,12 +11,19 @@ struct Editor {
 	void undoRedoUpdate();
 
 	enum class Tool {
+		SELECT,
 		WALL,
 		LASER,
 		MIRROR,
+		TARGET,
 	};
 
 	Tool selectedTool = Tool::WALL;
+
+	struct SelectTool {
+		std::optional<EditorEntityId> selectedEntity;
+	} selectTool;
+	void selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	struct WallCreateTool {
 		std::optional<EditorWall> update(bool down, bool cancelDown, Vec2 cursorPos);
@@ -83,6 +90,18 @@ struct Editor {
 	} mirrorGrabTool;
 	void mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
+	void targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+	
+	struct TargetGrabTool {
+		struct Grabbed {
+			EditorTargetId id;
+			EditorTarget grabStartState;
+			Vec2 grabOffset;
+		};
+		std::optional<Grabbed> grabbed;
+	} targetGrabTool;
+	void targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);
 
@@ -102,4 +121,5 @@ struct Editor {
 	EntityArray<EditorWall, EditorWall::DefaultInitialize> walls;
 	EntityArray<EditorLaser, EditorLaser::DefaultInitialize> lasers;
 	EntityArray<EditorMirror, EditorMirror::DefaultInitialize> mirrors;
+	EntityArray<EditorTarget, EditorTarget::DefaultInitialize> targets;
 };
