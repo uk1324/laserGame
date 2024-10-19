@@ -573,7 +573,6 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		for (const auto& wall : walls) {
 			if (stereographicSegmentDistance(wall->endpoints[0], wall->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(wall.id);
-				cursorCaptured = true;
 				goto selectedEntity;
 			}
 		}
@@ -582,7 +581,6 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			const auto endpoints = mirror->calculateEndpoints();
 			if (stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(mirror.id);
-				cursorCaptured = true;
 				goto selectedEntity;
 			}
 		}
@@ -590,7 +588,6 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		for (const auto& laser : lasers) {
 			if (distance(laser->position, cursorPos) < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(laser.id);
-				cursorCaptured = true;
 				goto selectedEntity;
 			}
 		}
@@ -605,7 +602,6 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 			if (smallCircle || normalCircle) {
 				selectTool.selectedEntity = EditorEntityId(target.id);
-				cursorCaptured = true;
 				goto selectedEntity;
 			}
 		}
@@ -616,6 +612,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 	selectedEntity:;
 	if (selectTool.selectedEntity != oldSelection) {
+		cursorCaptured = true;
 		actions.add(*this, new EditorActionModifiySelection(oldSelection, selectTool.selectedEntity));
 	}
 }
