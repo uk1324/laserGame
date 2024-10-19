@@ -27,6 +27,9 @@ void GameRenderer::wall(Vec2 e0, Vec2 e1) {
 	gfx.disk(e1, Constants::wallWidth / 2.0f, Color3::RED);*/
 }
 
+void GameRenderer::mirror(Vec2 e0, Vec2 e1){
+}
+
 void GameRenderer::renderWalls() {
 	gfx.drawLines();
 	gfx.drawFilledTriangles();

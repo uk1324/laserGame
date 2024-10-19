@@ -61,6 +61,8 @@ struct Editor {
 		void render(GameRenderer& renderer, Vec2 cursorPos);
 		void reset();
 
+		static EditorMirror makeMirror(Vec2 center, Vec2 cursorPos);
+
 		std::optional<Vec2> center;
 	} mirrorCreateTool;
 	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);

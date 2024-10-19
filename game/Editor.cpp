@@ -27,6 +27,15 @@ Vec2 laserDirectionGrabPoint(const EditorLaser& laser) {
 	return laser.position + Vec2::oriented(laser.angle) * 0.15f;
 }
 
+void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {
+	const auto endpoints = mirror.calculateEndpoints();
+	renderer.stereographicSegment(endpoints[0], endpoints[1], Color3::WHITE / 2.0f);
+	for (const auto endpoint : endpoints) {
+		renderer.gfx.disk(endpoint, 0.01f, Color3::BLUE);
+	}
+	renderer.gfx.disk(mirror.center, 0.01f, Color3::RED);
+}
+
 void Editor::update(GameRenderer& renderer) {
 	auto id = ImGui::DockSpaceOverViewport(
 		ImGui::GetMainViewport(),
@@ -81,7 +90,13 @@ void Editor::update(GameRenderer& renderer) {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	wallCreateTool.render(renderer, cursorPos);
+	switch (selectedTool) {
+		using enum Tool;
+
+	case WALL: wallCreateTool.render(renderer, cursorPos); break;
+	case LASER: break;
+	case MIRROR: mirrorCreateTool.render(renderer, cursorPos); break;
+	}
 
 	renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN);
 
@@ -105,12 +120,7 @@ void Editor::update(GameRenderer& renderer) {
 	};
 
 	for (auto mirror : mirrors) {
-		const auto endpoints = mirror->calculateEndpoints();
-		renderer.stereographicSegment(endpoints[0], endpoints[1], Color3::WHITE / 2.0f);
-		for (const auto endpoint : endpoints) {
-			renderer.gfx.disk(endpoint, 0.01f, Color3::BLUE);
-		}
-		renderer.gfx.disk(mirror->center, 0.01f, Color3::RED);
+		renderMirror(renderer, mirror.entity);
 	}
 
 	renderer.gfx.drawCircles();
@@ -747,15 +757,23 @@ std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool can
 		return std::nullopt;
 	}
 
-	const auto result = EditorMirror{ .center = *center, .normalAngle = (cursorPos - *center).angle() };
+	const auto result = makeMirror(*center, cursorPos);
 	reset();
 	return result;
 }
 
 void Editor::MirrorCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
-
+	if (!center.has_value()) {
+		return;
+	}
+	const auto mirror = makeMirror(*center, cursorPos);
+	renderMirror(renderer, mirror);
 }
 
 void Editor::MirrorCreateTool::reset() {
 	center = std::nullopt;
+}
+
+EditorMirror Editor::MirrorCreateTool::makeMirror(Vec2 center, Vec2 cursorPos) {
+	return EditorMirror{ .center = center, .normalAngle = (cursorPos - center).angle() };
 }
