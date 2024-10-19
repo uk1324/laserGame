@@ -8,6 +8,7 @@
 #include <glad/glad.h>
 #include <engine/dependencies/Json/JsonPrinter.hpp>
 #include <JsonFileIo.hpp>
+#include <engine/Math/LineSegment.hpp>
 #include <fstream>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
@@ -73,14 +74,84 @@ void Editor::update(GameRenderer& renderer) {
 			}
 		}
 
+		ImGui::SeparatorText("grid");
+		{
+			ImGui::Checkbox("show", &showGrid);
+
+			ImGui::InputInt("lines", &gridLineCount);
+			gridLineCount = std::max(gridLineCount, 1);
+
+			ImGui::InputInt("circles", &gridCircleCount);
+			gridCircleCount = std::max(gridCircleCount, 1);
+
+			ImGui::Checkbox("snap to grid", &snapCursorToGrid);
+		}
+
 		ImGui::End();
 	}
 
 	undoRedoUpdate();
 
-	const auto cursorPos = Input::cursorPosClipSpace() * camera.clipSpaceToWorldSpace();
-	bool cursorCaptured = false;
+	bool snappedCursor = false;
+	auto cursorPos = Input::cursorPosClipSpace() * renderer.gfx.camera.clipSpaceToWorldSpace();
 
+	if (snapCursorToGrid && Input::isKeyHeld(KeyCode::LEFT_CONTROL)) {
+		const auto snapDistance = Constants::endpointGrabPointRadius;
+
+		for (i32 iLine = 0; iLine < gridLineCount; iLine++) {
+			for (i32 iCircle = 0; iCircle < gridCircleCount + 1; iCircle++) {
+				auto r = f32(iCircle) / f32(gridCircleCount);
+				const auto t = f32(iLine) / f32(gridLineCount);
+				const auto a = t * TAU<f32>;
+				const auto v = Vec2::fromPolar(a, r);
+
+				if (iCircle == gridCircleCount) {
+					r -= 0.01f;
+				}
+
+				if (distance(v, cursorPos) < snapDistance) {
+					snappedCursor = true;
+					cursorPos = v;
+					goto exitLoop;
+				}
+			}
+		}
+		exitLoop:;
+
+		struct ClosestFeature {
+			Vec2 pointOnFeature;
+			f32 distance;
+		};
+		std::optional<ClosestFeature> closestFeature;
+		// This could be done without the loop.
+		for (i32 iLine = 0; iLine < gridLineCount; iLine++) {
+			const auto t = f32(iLine) / f32(gridLineCount);
+			const auto a = t * TAU<f32>;
+			const auto p = Vec2::oriented(a);
+
+			const auto closestPointOnLine = LineSegment(Vec2(0.0f), p).closestPointTo(cursorPos);
+			const auto dist = distance(closestPointOnLine, cursorPos);
+			if (!closestFeature.has_value() || dist < closestFeature->distance) {
+				closestFeature = ClosestFeature{ .pointOnFeature = closestPointOnLine, .distance = dist };
+			}
+		}
+		// This also could be done without the loop.
+		for (i32 iCircle = 1; iCircle < gridCircleCount + 1; iCircle++) {
+			const auto r = f32(iCircle) / f32(gridCircleCount);
+			const auto pointOnCircle = cursorPos.normalized() * r;
+			const auto dist = distance(pointOnCircle, cursorPos);
+			if (!closestFeature.has_value() || dist < closestFeature->distance) {
+				closestFeature = ClosestFeature{ .pointOnFeature = pointOnCircle, .distance = dist };
+			}
+		}
+
+		if (!snappedCursor && closestFeature.has_value() && closestFeature->distance < snapDistance) {
+			snappedCursor = true;
+			cursorPos = closestFeature->pointOnFeature;
+		}
+	}
+
+	bool cursorCaptured = false;
 
 	// Selection should have higher precedence than grabbing, but creating should have lower precedence than grabbing.
 	if (selectedTool == Tool::SELECT) {
@@ -101,10 +172,28 @@ void Editor::update(GameRenderer& renderer) {
 	case TARGET: targetCreateToolUpdate(cursorPos, cursorCaptured); break;
 	}
 
-	camera.aspectRatio = Window::aspectRatio();
+	renderer.gfx.camera.aspectRatio = Window::aspectRatio();
 	glClear(GL_COLOR_BUFFER_BIT);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glViewport(0, 0, Window::size().x, Window::size().y);
+
+	const auto gridColor = Color3::WHITE / 15.0f;
+	if (showGrid) {
+		for (i32 i = 1; i < gridCircleCount; i++) {
+			const auto r = f32(i) / f32(gridCircleCount);
+			renderer.gfx.circle(Vec2(0.0f), r, 0.01f, gridColor);
+		}
+
+		for (i32 i = 0; i < gridLineCount; i++) {
+			const auto t = f32(i) / f32(gridLineCount);
+			const auto a = t * TAU<f32>;
+			const auto v = Vec2::oriented(a);
+			renderer.gfx.line(Vec2(0.0f), v, 0.01f, gridColor);
+		}
+	}
+	renderer.gfx.drawLines();
+	renderer.gfx.drawCircles();
 
 	switch (selectedTool) {
 		using enum Tool;
@@ -120,10 +209,8 @@ void Editor::update(GameRenderer& renderer) {
 
 	const auto boundary = Circle{ Vec2(0.0f), 1.0f };
 
-	//renderer.gfx.disk(Vec2(0.0f), 0.03f, Color3::GREEN);
 	for (const auto& wall : walls) {
 		renderer.wall(wall->endpoints[0], wall->endpoints[1]);
-
 	}
 	renderer.renderWalls();
 
@@ -367,6 +454,11 @@ void Editor::update(GameRenderer& renderer) {
 	renderer.gfx.drawCircles();
 	renderer.gfx.drawDisks();
 	renderer.gfx.drawLines();
+
+	if (snappedCursor) {
+		renderer.gfx.disk(cursorPos, 0.01f, Color3::WHITE);
+	}
+	renderer.gfx.drawDisks();
 }
 
 void Editor::undoRedoUpdate() {

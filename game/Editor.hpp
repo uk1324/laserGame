@@ -115,9 +115,13 @@ struct Editor {
 	void saveLevel(std::string_view path);
 	bool loadLevel(std::string_view path);
 
+	bool showGrid = false;
+	i32 gridLineCount = 10;
+	i32 gridCircleCount = 5;
+	bool snapCursorToGrid = false;
+
 	std::optional<std::string> lastLoadedLevel;
 
-	Camera camera;
 	EntityArray<EditorWall, EditorWall::DefaultInitialize> walls;
 	EntityArray<EditorLaser, EditorLaser::DefaultInitialize> lasers;
 	EntityArray<EditorMirror, EditorMirror::DefaultInitialize> mirrors;
