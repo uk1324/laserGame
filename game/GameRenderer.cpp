@@ -1,5 +1,6 @@
 #include "GameRenderer.hpp"
 #include <engine/Math/Color.hpp>
+#include <Overloaded.hpp>
 #include <engine/Math/Constants.hpp>
 #include <game/Constants.hpp>
 #include <game/Stereographic.hpp>
@@ -14,7 +15,8 @@ void GameRenderer::wall(Vec2 e0, Vec2 e1) {
 	gfx.disk(e0, Constants::endpointGrabPointRadius, Color3::RED);
 	gfx.disk(e1, Constants::endpointGrabPointRadius, Color3::RED);
 
-	stereographicSegment(e0, e1, Color3::WHITE);
+	//stereographicSegment(e0, e1, Color3::WHITE);
+	stereographicSegmentEx(e0, e1, Color3::WHITE);
 	//gfx.
 	//gfx.circleTriangulated(line.center, line.radius, Constants::wallWidth, Color3::WHITE, 1000);
 	// 
@@ -50,4 +52,25 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) {
 	}
 
 	gfx.circleArcTriangulated(line.center, line.radius, a0, a1, Constants::wallWidth, color, 1000);
+}
+
+void GameRenderer::stereographicSegmentEx(Vec2 e0, Vec2 e1, Vec3 color) { 
+	const auto stereographicLine = stereographicLineEx(e0, e1);
+	if (stereographicLine.type == StereographicLine::Type::LINE) {
+		gfx.lineTriangulated(e0, e1, Constants::wallWidth, color);
+	} else {
+		const auto line = stereographicLine.circle;
+
+		f32 a0 = angleToRangeZeroTau((e0 - line.center).angle());
+		f32 a1 = angleToRangeZeroTau((e1 - line.center).angle());
+
+		if (a0 > a1) {
+			std::swap(a0, a1);
+		}
+		if (a1 - a0 > PI<f32>) {
+			a1 -= TAU<f32>;
+		}
+
+		gfx.circleArcTriangulated(line.center, line.radius, a0, a1, Constants::wallWidth, color, 1000);
+	}
 }

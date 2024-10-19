@@ -158,10 +158,12 @@ void Editor::update(GameRenderer& renderer) {
 		selectToolUpdate(cursorPos, cursorCaptured);
 	}
 
-	wallGrabToolUpdate(cursorPos, cursorCaptured);
-	laserGrabToolUpdate(cursorPos, cursorCaptured);
-	mirrorGrabToolUpdate(cursorPos, cursorCaptured);
-	targetGrabToolUpdate(cursorPos, cursorCaptured);
+	// If the cursor was snapped then the user wants to position the cursor exactly in this position. Without cursorExact the offset from the exact position to the grab position is applied to make things more smooth. When this is done it can be very hard to position things exactly on the boundary for example;
+	const auto cursorExact = snappedCursor;
+	wallGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+	laserGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+	mirrorGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+	targetGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 
 	switch (selectedTool) {
 		using enum Tool;
@@ -214,16 +216,6 @@ void Editor::update(GameRenderer& renderer) {
 	}
 	renderer.renderWalls();
 
-	auto drawIntersections = [&](const Circle& c) {
-		const auto result = circleCircleIntersection(boundary, c);
-		if (result.has_value()) {
-			for (const auto& p : *result) {
-				renderer.gfx.disk(p, 0.01f, Color3::RED);
-				renderer.gfx.disk(-p, 0.01f, Color3::BLUE);
-			}
-		}
-	};
-
 	for (auto mirror : mirrors) {
 		renderMirror(renderer, mirror.entity);
 	}
@@ -248,8 +240,6 @@ void Editor::update(GameRenderer& renderer) {
 		renderer.gfx.disk(laser->position, 0.02f, Color3::BLUE);
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, Color3::BLUE);
 
-		//renderer.gfx.circleTriangulated(line.center, line.radius, Constants::wallWidth, Color3::CYAN, 1000);
-
 		const auto maxReflections = 5;
 
 		auto laserPosition = laser->position;
@@ -257,21 +247,20 @@ void Editor::update(GameRenderer& renderer) {
 		std::optional<EditorEntityId> hitOnLastIteration;
 
 		for (i64 i = 0; i < maxReflections; i++) {
-			/*const auto laserLine = stereographicLine(laserPosition, laserDirectionGrabPoint(laser.entity));*/
-			const auto laserLine = stereographicLine(laserPosition, laserPosition + laserDirection * 0.01f);
+			const auto laserLine = stereographicLineEx(laserPosition, laserPosition + laserDirection * 0.01f);
 
-			const auto boundaryIntersections = circleCircleIntersection(laserLine, boundary);
+			const auto boundaryIntersections = stereographicLineVsCircleIntersection(laserLine, boundary);
 
 			renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::GREEN);
 
-			if (!boundaryIntersections.has_value()) {
+			if (boundaryIntersections.size() == 0) {
 				// Shouldn't happen if the points are inside, because the antipodal point is always outside.
 				// For now do nothing.
 				break;
 			}
 			
-			Vec2 boundaryIntersection = (*boundaryIntersections)[0];
-			Vec2 boundaryIntersectionWrappedAround = (*boundaryIntersections)[1];
+			Vec2 boundaryIntersection = boundaryIntersections[0];
+			Vec2 boundaryIntersectionWrappedAround = boundaryIntersections[1];
 
 			if (dot(boundaryIntersection - laserPosition, laserDirection) < 0.0f) {
 				std::swap(boundaryIntersection, boundaryIntersectionWrappedAround);
@@ -285,7 +274,7 @@ void Editor::update(GameRenderer& renderer) {
 			struct Intersection {
 				Vec2 position;
 				f32 distance;
-				Circle objectHit;
+				StereographicLine objectHit;
 				IntersectionType type;
 				EditorEntityId id;
 			};
@@ -298,14 +287,10 @@ void Editor::update(GameRenderer& renderer) {
 				IntersectionType type,
 				EditorEntityId id) {
 
-				const auto line = stereographicLine(endpoint0, endpoint1);
-				const auto intersections = circleCircleIntersection(line, laserLine);
+				const auto line = stereographicLineEx(endpoint0, endpoint1);
+				const auto intersections = stereographicLineVsStereographicLineIntersection(line, laserLine);
 
-				if (!intersections.has_value()) {
-					return;
-				}
-
-				for (const auto& intersection : *intersections) {
+				for (const auto& intersection : intersections) {
 					if (const auto outsideBoundary = intersection.length() > 1.0f) {
 						continue;
 					}
@@ -353,13 +338,9 @@ void Editor::update(GameRenderer& renderer) {
 
 			for (const auto& target : targets) {
 				const auto circle = target->calculateCircle();
-				const auto intersections = circleCircleIntersection(circle, laserLine);
+				const auto intersections = stereographicLineVsCircleIntersection(laserLine, circle);
 
-				if (!intersections.has_value()) {
-					continue;
-				}
-
-				for (const auto& intersection : *intersections) {
+				for (const auto& intersection : intersections) {
 					if (const auto outsideBoundary = intersection.length() > 1.0f) {
 						continue;
 					}
@@ -386,12 +367,17 @@ void Editor::update(GameRenderer& renderer) {
 				}
 			}
 
-			auto doReflection = [&](Vec2 hitPoint, Circle objectHit) {
-				auto laserTangentAtIntersection = (hitPoint - laserLine.center).rotBy90deg().normalized();
+			auto doReflection = [&](Vec2 hitPoint, StereographicLine objectHit) {
+				auto laserTangentAtIntersection = laserLine.type == StereographicLine::Type::CIRCLE
+					? (hitPoint - laserLine.circle.center).rotBy90deg().normalized()
+					: laserLine.lineNormal.rotBy90deg();
+
 				if (dot(laserTangentAtIntersection, laserDirection) > 0.0f) {
 					laserTangentAtIntersection = -laserTangentAtIntersection;
 				}
-				auto mirrorNormal = (hitPoint - objectHit.center).normalized();
+				auto mirrorNormal = objectHit.type == StereographicLine::Type::CIRCLE
+					? (hitPoint - objectHit.circle.center).normalized()
+					: objectHit.lineNormal;
 				if (dot(mirrorNormal, laserDirection) > 0.0f) {
 					mirrorNormal = -mirrorNormal;
 				}
@@ -503,7 +489,7 @@ void Editor::reset() {
 	walls.reset();
 }
 
-void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
 	if (cursorCaptured) {
 		return;
 	}
@@ -538,7 +524,7 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		cursorCaptured = true;
 		auto mirror = mirrors.get(mirrorGrabTool.grabbed->id);
 		if (mirror.has_value()) {
-			const auto newPosition = cursorPos + mirrorGrabTool.grabbed->grabOffset;
+			const auto newPosition = cursorPos + mirrorGrabTool.grabbed->grabOffset * !cursorExact;
 			switch (mirrorGrabTool.grabbed->gizmo) {
 				using enum MirrorGrabTool::GizmoType;
 			case TRANSLATION:
@@ -583,7 +569,7 @@ void Editor::targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 }
 
-void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
 	if (cursorCaptured) {
 		return;
 	}
@@ -607,7 +593,7 @@ void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		cursorCaptured = true;
 		auto target = targets.get(targetGrabTool.grabbed->id);
 		if (target.has_value()) {
-			target->position = cursorPos + targetGrabTool.grabbed->grabOffset;
+			target->position = cursorPos + targetGrabTool.grabbed->grabOffset * !cursorExact;
 		} else {
 			CHECK_NOT_REACHED();
 		}
@@ -815,7 +801,7 @@ void Editor::undoAction(const EditorAction& action) {
 	}
 }
 
-void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
 	if (!cursorCaptured) {
 		if (Input::isMouseButtonDown(MouseButton::LEFT) && !wallGrabTool.grabbed.has_value()) {
 			for (const auto& wall : walls) {
@@ -841,7 +827,7 @@ void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			const auto& id = wallGrabTool.grabbed->id;
 			auto wall = walls.get(id);
 			if (wall.has_value()) {
-				wall->endpoints[wallGrabTool.grabbed->index] = cursorPos + wallGrabTool.grabbed->offset;
+				wall->endpoints[wallGrabTool.grabbed->index] = cursorPos + wallGrabTool.grabbed->offset * !cursorExact;
 			} else {
 				CHECK_NOT_REACHED();
 			}
@@ -892,7 +878,7 @@ void Editor::laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 }
 
-void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
 	if (cursorCaptured) {
 		return;
 	}
@@ -923,7 +909,7 @@ void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		cursorCaptured = true;
 		auto laser = lasers.get(laserGrabTool.grabbed->id);
 		if (laser.has_value()) {
-			const auto newPosition = cursorPos + laserGrabTool.grabbed->offset;
+			const auto newPosition = cursorPos + laserGrabTool.grabbed->offset * !cursorExact;
 			switch (laserGrabTool.grabbed->part) {
 				using enum LaserGrabTool::LaserPart;
 

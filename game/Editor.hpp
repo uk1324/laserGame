@@ -43,7 +43,7 @@ struct Editor {
 		};
 		std::optional<Grabbed> grabbed;
 	} wallGrabTool;
-	void wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+	void wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
 	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
@@ -61,7 +61,7 @@ struct Editor {
 
 		std::optional<Grabbed> grabbed;
 	} laserGrabTool;
-	void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+	void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
 	struct MirrorCreateTool {
 		std::optional<EditorMirror> update(bool down, bool cancelDown, Vec2 cursorPos);
@@ -88,7 +88,7 @@ struct Editor {
 
 		std::optional<Grabbed> grabbed;
 	} mirrorGrabTool;
-	void mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+	void mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
 	void targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 	
@@ -100,7 +100,7 @@ struct Editor {
 		};
 		std::optional<Grabbed> grabbed;
 	} targetGrabTool;
-	void targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+	void targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);

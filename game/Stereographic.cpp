@@ -14,7 +14,7 @@ Vec2 toStereographic(Vec3 p) {
 
 Vec3 fromStereographic(Vec2 p) {
 	const auto d = p.x * p.x + p.y * p.y + 1.0f;
-	return Vec3(2.0f * p.x, 2.0f * p.y, -1.0 + p.x * p.x + p.y * p.y) / d;
+	return Vec3(2.0f * p.x, 2.0f * p.y, -1.0f + p.x * p.x + p.y * p.y) / d;
 }
 
 Vec2 antipodalPoint(Vec2 p) {
@@ -36,8 +36,8 @@ Circle circleThroughPoints(Vec2 p0, Vec2 p1, Vec2 p2) {
 	const auto m11 = x1 * y2 + x2 * y3 + x3 * y1 - (x2 * y1 + x3 * y2 + x1 * y3);
 	const auto m12 = s1 * y2 + s2 * y3 + s3 * y1 - (s2 * y1 + s3 * y2 + s1 * y3);
 	const auto m13 = s1 * x2 + s2 * x3 + s3 * x1 - (s2 * x1 + s3 * x2 + s1 * x3);
-	const auto x0 = 0.5 * m12 / m11;
-	const auto y0 = -0.5 * m13 / m11;
+	const auto x0 = 0.5f * m12 / m11;
+	const auto y0 = -0.5f * m13 / m11;
 	const auto r0 = sqrt(pow((x1 - x0), 2.0f) + pow((y1 - y0), 2.0f));
 	return Circle(Vec2(x0, y0), r0);
 }
@@ -64,6 +64,15 @@ Circle stereographicLine(Vec2 p0, Vec2 p1) {
 	// Maybe doing the computation in S_2 would be more stable.
 	Vec2 antipodal = antipodalPoint(p0);
 	return circleThroughPoints(p0, p1, antipodal);
+}
+
+StereographicLine stereographicLineEx(Vec2 p0, Vec2 p1) {
+	const auto line = Line(p0, p1);
+	const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.0001f;
+	if (goesThroughOrigin) {
+		return StereographicLine(line.n);
+	}
+	return stereographicLine(p0, p1);
 }
 
 f32 angleToRangeZeroTau(f32 a) {
@@ -113,18 +122,20 @@ f32 circularArcDistance(Vec2 p, Circle circle, f32 startAngle, f32 endAngle) {
 }
 
 // https://stackoverflow.com/questions/55816902/finding-the-intersection-of-two-circles
-std::optional<std::array<Vec2, 2>> circleCircleIntersection(const Circle& c0, const Circle& c1) {
+StaticList<Vec2, 2> circleVsCircleIntersection(const Circle& c0, const Circle& c1) {
+	StaticList<Vec2, 2> out;
+
 	const auto d = distance(c0.center, c1.center);
 	if (d > c0.radius + c1.radius) {
-		return std::nullopt;
+		return out;
 	}
 
 	if (d < std::abs(c0.radius - c1.radius)) {
-		return std::nullopt;
+		return out;
 	}
 	
 	if (d == 0.0f) {
-		return std::nullopt;
+		return out;
 	}
 
 	const auto a = (pow(c0.radius, 2.0f) - pow(c1.radius, 2.0f) + pow(d, 2.0f)) / (2.0f * d);
@@ -142,5 +153,121 @@ std::optional<std::array<Vec2, 2>> circleCircleIntersection(const Circle& c0, co
     const auto x4 = x2 - h * (y1 - y0) / d;
 	const auto y4 = y2 + h * (x1 - x0) / d;
 
-	return std::array<Vec2, 2>{ Vec2(x3, y3), Vec2(x4, y4) };
+	out.add(Vec2(x3, y3));
+	out.add(Vec2(x4, y4));
+	return out;
+}
+
+StaticList<Vec2, 2> lineVsCircleIntersection(Vec2 linePoint, Vec2 lineDirection, const Circle& circle) {
+	StaticList<Vec2, 2> out;
+
+	const auto start = linePoint - circle.center;
+	const auto
+		a = dot(lineDirection, lineDirection),
+		b = dot(start, lineDirection) * 2.0f,
+		c = dot(start, start) - circle.radius * circle.radius;
+	const auto discriminant = b * b - 4.0f * a * c;
+	if (discriminant < 0.0f) {
+		return out;
+	}
+
+	const auto sqrtDiscriminant = sqrt(discriminant);
+	const auto
+		t0 = (-b + sqrtDiscriminant) / a / 2.0f,
+		t1 = (-b - sqrtDiscriminant) / a / 2.0f;
+
+	out.add(linePoint + lineDirection * t0);
+	out.add(linePoint + lineDirection * t1);
+	return out;
+}
+
+StaticList<Vec2, 2> stereographicLineVsCircleIntersection(const StereographicLine& l, const Circle& circle) {
+	switch (l.type) {
+		using enum StereographicLine::Type;
+
+	case LINE: {
+		return lineVsCircleIntersection(Vec2(0.0f), l.lineNormal.rotBy90deg(), circle);
+	}
+
+	case CIRCLE: {
+		return circleVsCircleIntersection(l.circle, circle);
+	}
+
+	}
+}
+
+StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const StereographicLine& a, const StereographicLine& b) {
+
+	switch (a.type) {
+		using enum StereographicLine::Type;
+
+	case LINE: {
+		switch (b.type) {
+		case LINE: {
+			StaticList<Vec2, 2> out;
+			const auto result = Line(a.lineNormal, 0.0f).intersection(Line(b.lineNormal, 0.0f));
+			if (result.has_value()) {
+				out.add(*result);
+				return out;
+			}
+			break;
+		}
+
+		case CIRCLE: {
+			return lineVsCircleIntersection(Vec2(0.0f), a.lineNormal.rotBy90deg(), b.circle);
+		}
+
+		}
+		break;
+	}
+
+	case CIRCLE: {
+		switch (b.type) {
+		case LINE: {
+			return lineVsCircleIntersection(Vec2(0.0f), b.lineNormal.rotBy90deg(), a.circle);
+		}
+
+		case CIRCLE: {
+			return circleVsCircleIntersection(a.circle, b.circle);
+		}
+
+		}
+	}
+
+	}
+}
+
+StereographicLine::StereographicLine(const StereographicLine& other)
+	: type(other.type) {
+	switch (type) {
+		using enum Type;
+	case LINE:
+		lineNormal = other.lineNormal;
+		break;
+
+	case CIRCLE:
+		circle = other.circle;
+		break;
+	}
+}
+
+StereographicLine::StereographicLine(Circle circle)
+	: type(Type::CIRCLE)
+	, circle(circle) {}
+
+StereographicLine::StereographicLine(Vec2 lineNormal) 
+	: type(Type::LINE)
+	, lineNormal(lineNormal) {}
+
+void StereographicLine::operator=(const StereographicLine& other) {
+	type = other.type;
+	switch (type) {
+		using enum Type;
+	case LINE:
+		lineNormal = other.lineNormal;
+		break;
+	case CIRCLE:
+		circle = other.circle;
+		break;
+	}
 }
