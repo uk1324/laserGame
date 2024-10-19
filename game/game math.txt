@@ -49,3 +49,5 @@ The if a great circle passes through a point it also passes through the antipoda
 If we make a circle that passes through antipodal points of a circle then the circles will go from a straight line (infinite center) to overlapping the original circle. 
 It can be seen that always the shorter segment of a circle lies inside the boundary circle. 
 Because of this we can for example check if a point is between or outside the shereographic line by checking if it is in  between the endpoints of the actual line.
+
+Could try using gnomonic projection. It doesn't preserve angles, but it does map geodesics into straight lines.

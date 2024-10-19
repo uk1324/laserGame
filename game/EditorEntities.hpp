@@ -30,6 +30,8 @@ struct EditorMirror {
 
 	Vec2 center;
 	f32 normalAngle;
+
+	std::array<Vec2, 2> calculateEndpoints() const;
 };
 
 using EditorMirrorId = EntityArrayId<EditorMirror>;

@@ -36,7 +36,6 @@ struct Editor {
 		};
 		std::optional<Grabbed> grabbed;
 	} wallGrabTool;
-
 	void wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
@@ -55,7 +54,6 @@ struct Editor {
 
 		std::optional<Grabbed> grabbed;
 	} laserGrabTool;
-
 	void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	struct MirrorCreateTool {
@@ -67,6 +65,21 @@ struct Editor {
 	} mirrorCreateTool;
 	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
+	struct MirrorGrabTool {
+		enum class GizmoType {
+			TRANSLATION, ROTATION
+		};
+
+		struct Grabbed {
+			EditorMirrorId id;
+			GizmoType gizmo;
+			EditorMirror grabStartState;
+			Vec2 grabOffset;
+		};
+
+		std::optional<Grabbed> grabbed;
+	} mirrorGrabTool;
+	void mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);

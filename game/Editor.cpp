@@ -67,6 +67,7 @@ void Editor::update(GameRenderer& renderer) {
 
 	wallGrabToolUpdate(cursorPos, cursorCaptured);
 	laserGrabToolUpdate(cursorPos, cursorCaptured);
+	mirrorGrabToolUpdate(cursorPos, cursorCaptured);
 
 	switch (selectedTool) {
 		using enum Tool;
@@ -86,7 +87,7 @@ void Editor::update(GameRenderer& renderer) {
 
 	const auto boundary = Circle{ Vec2(0.0f), 1.0f };
 
-	renderer.gfx.disk(Vec2(0.0f), 0.03f, Color3::GREEN);
+	//renderer.gfx.disk(Vec2(0.0f), 0.03f, Color3::GREEN);
 	for (const auto& wall : walls) {
 		renderer.wall(wall->endpoints[0], wall->endpoints[1]);
 
@@ -104,71 +105,16 @@ void Editor::update(GameRenderer& renderer) {
 	};
 
 	for (auto mirror : mirrors) {
-		// The issue with this version is that you cannot specifiy the length easily. Maybe I am missing something idk.
-
-		static f32 b = 0.0f;
-		ImGui::SliderFloat("test", &b, 0.0f, TAU<f32>);
-		mirror->normalAngle = b;
-
-		const auto p0 = mirror->center;
-		const auto p1 = antipodalPoint(p0);
-		const auto line = circleThroughPointsWithNormalAngle(p0, mirror->normalAngle, p1);
-
-		if (line.has_value()) {
-			//const auto result = circleCircleIntersection(*line, boundary);
-			//if (result.has_value()) {
-			//	for (const auto& p : *result) {
-			//		renderer.gfx.disk(p, 0.03f, Color3::RED);
-			//		renderer.gfx.disk(-p, 0.03f, Color3::BLUE);
-			//	}
-			//}
-
-			/*drawIntersections(*line);*/
-			renderer.gfx.circle(line->center, line->radius, 0.01f, Color3::YELLOW);
-		} else {
-			// Shouldn't happen when the points are p and it's antipodal point.
-			CHECK_NOT_REACHED();
+		const auto endpoints = mirror->calculateEndpoints();
+		renderer.stereographicSegment(endpoints[0], endpoints[1], Color3::WHITE / 2.0f);
+		for (const auto endpoint : endpoints) {
+			renderer.gfx.disk(endpoint, 0.01f, Color3::BLUE);
 		}
-
-		//const auto c = fromStereographic(mirror->center);
-		//const auto angle = acos(dot(c, Vec3(0.0f, 0.0f, -1.0f)));
-		//// shortest rotation that brings c to the bottom of the sphere.
-		//const auto axis = cross(c, Vec3(0.0f, 0.0f, 1.0f));
-		//const auto coordinateSystemChange = Quat(;
-
-		f32 halfLength = 0.6f;
-		const auto c = fromStereographic(mirror->center);
-		const auto angle = acos(dot(c, Vec3(0.0f, 0.0f, -1.0f)));
-		const auto axis = cross(c, Vec3(0.0f, 0.0f, 1.0f));
-		// Because multiplication is left ascocitative this slower than putting the end part in parens.
-		const auto a = atan2(mirror->center.y, mirror->center.x);
-
-		
-
-		/*const auto result = Quat(mirror->normalAngle - a, c) * (Quat(halfLength, axis) * c);*/
-		const auto result = Quat(-b + a + PI<f32> / 2.0f, c) * (Quat(halfLength, axis) * c);
-		const auto result1 = Quat(-b + a + PI<f32> / 2.0f, c) * (Quat(-halfLength, axis) * c);
-		// Normalizing, because rotating introduces errors in the norm that the amplified by the projection. 
-		/*const auto p = toStereographic(result.normalized());
-		const auto pp = toStereographic(result1.normalized());*/
-		const auto p = toStereographic(result.normalized());
-		const auto pp = toStereographic(result1.normalized());
-		const auto l1 = result.length();
-
-		renderer.gfx.disk(p, 0.03f, Color3::RED);
-		renderer.gfx.disk(mirror->center, 0.03f, Color3::RED);
-
-		const auto l = stereographicLine(mirror->center, p);
-		const auto l2 = circleThroughPoints(mirror->center, p, pp);
-		renderer.gfx.circle(l.center, l.radius, 0.01f, Color3::GREEN);
-		renderer.gfx.circle(l2.center, l2.radius, 0.01f, Color3::GREEN);
-
-		//drawIntersections(l);
-		drawIntersections(l2);
-
+		renderer.gfx.disk(mirror->center, 0.01f, Color3::RED);
 	}
 
 	renderer.gfx.drawCircles();
+	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawDisks();
 
 	for (const auto& laser : lasers) {
@@ -188,63 +134,65 @@ void Editor::update(GameRenderer& renderer) {
 				std::swap(boundaryIntersection, boundaryIntersectionWrappedAround);
 			}
 
+			struct Intersection {
+				Vec2 position;
+				f32 distance;
+			};
+			std::optional<Intersection> closest;
+			std::optional<Intersection> closestToWrappedAround;
+
 			for (const auto& wall : walls) {
 				const auto wallLine = stereographicLine(wall->endpoints[0], wall->endpoints[1]);
 				const auto intersections = circleCircleIntersection(wallLine, laserLine);
 
-				struct Intersection {
-					Vec2 position;
-					f32 distance;
-				};
-				if (intersections.has_value()) {
-					std::optional<Intersection> closest;
-					std::optional<Intersection> closestToWrappedAround;
+				if (!intersections.has_value()) {
+					continue;
+				}
 
-					for (const auto& intersection : *intersections) {
-						if (const auto outsideBoundary = intersection.length() > 1.0f) {
-							continue;
-						}
-
-						const auto lineDirection = (wall->endpoints[1] - wall->endpoints[0]).normalized();
-						const auto dAlong0 = dot(lineDirection, wall->endpoints[0]);
-						const auto dAlong1 = dot(lineDirection, wall->endpoints[1]);
-						const auto intersectionDAlong = dot(lineDirection, intersection);
-						if (intersectionDAlong <= dAlong0 || intersectionDAlong >= dAlong1) {
-							continue;
-						}
-
-						const auto distance = intersection.distanceTo(laser->position);
-						const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
-
-						if (dot(intersection - laser->position, laserDirection) > 0.0f) {
-							if (!closest.has_value() || distance < closest->distance) {
-								closest = Intersection{ intersection, distance };
-							}
-						} else {
-							if (!closestToWrappedAround.has_value() 
-								|| distanceToWrappedAround < closestToWrappedAround->distance) {
-								closestToWrappedAround = Intersection{ intersection, distanceToWrappedAround };
-							}
-						}
+				for (const auto& intersection : *intersections) {
+					if (const auto outsideBoundary = intersection.length() > 1.0f) {
+						continue;
 					}
 
-					if (closest.has_value()) {
-						renderer.stereographicSegment(laser->position, closest->position, laserColor);
-					} else if (closestToWrappedAround.has_value()) {
-						renderer.stereographicSegment(
-							laser->position,
-							boundaryIntersection, 
-							laserColor);
+					const auto lineDirection = (wall->endpoints[1] - wall->endpoints[0]).normalized();
+					const auto dAlong0 = dot(lineDirection, wall->endpoints[0]);
+					const auto dAlong1 = dot(lineDirection, wall->endpoints[1]);
+					const auto intersectionDAlong = dot(lineDirection, intersection);
+					if (intersectionDAlong <= dAlong0 || intersectionDAlong >= dAlong1) {
+						continue;
+					}
 
-						renderer.stereographicSegment(
-							boundaryIntersectionWrappedAround,
-							closestToWrappedAround->position,
-							laserColor);
+					const auto distance = intersection.distanceTo(laser->position);
+					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
+
+					if (dot(intersection - laser->position, laserDirection) > 0.0f) {
+						if (!closest.has_value() || distance < closest->distance) {
+							closest = Intersection{ intersection, distance };
+						}
 					} else {
-						renderer.stereographicSegment(laser->position, boundaryIntersection, laserColor);
-						renderer.stereographicSegment(laser->position, boundaryIntersectionWrappedAround, laserColor);
+						if (!closestToWrappedAround.has_value() 
+							|| distanceToWrappedAround < closestToWrappedAround->distance) {
+							closestToWrappedAround = Intersection{ intersection, distanceToWrappedAround };
+						}
 					}
 				}
+			}
+
+			if (closest.has_value()) {
+				renderer.stereographicSegment(laser->position, closest->position, laserColor);
+			} else if (closestToWrappedAround.has_value()) {
+				renderer.stereographicSegment(
+					laser->position,
+					boundaryIntersection,
+					laserColor);
+
+				renderer.stereographicSegment(
+					boundaryIntersectionWrappedAround,
+					closestToWrappedAround->position,
+					laserColor);
+			} else {
+				renderer.stereographicSegment(laser->position, boundaryIntersection, laserColor);
+				renderer.stereographicSegment(laser->position, boundaryIntersectionWrappedAround, laserColor);
 			}
 
 		} else {
@@ -297,6 +245,73 @@ void Editor::saveLevel(std::string_view path) {
 
 void Editor::reset() {
 	walls.reset();
+}
+
+void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT) && !mirrorGrabTool.grabbed.has_value()) {
+		for (const auto& mirror : mirrors) {
+			if (distance(cursorPos, mirror->center)) {
+				auto updateGrabbed = [&](Vec2 p, MirrorGrabTool::GizmoType gizmo) {
+					if (distance(cursorPos, p) > Constants::endpointGrabPointRadius) {
+						return;
+					}
+					mirrorGrabTool.grabbed = MirrorGrabTool::Grabbed{
+						.id = mirror.id,
+						.gizmo = gizmo,
+						.grabStartState = mirror.entity,
+						.grabOffset = p - cursorPos,
+					};
+					cursorCaptured = true;
+				};
+				updateGrabbed(mirror->center, MirrorGrabTool::GizmoType::TRANSLATION);
+				const auto endpoints = mirror->calculateEndpoints();
+				for (const auto& endpoint : endpoints) {
+					if (!cursorCaptured) {
+						updateGrabbed(endpoint, MirrorGrabTool::GizmoType::ROTATION);
+					}
+				}
+			}
+		}
+	}
+
+	if (Input::isMouseButtonHeld(MouseButton::LEFT) && mirrorGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		auto mirror = mirrors.get(mirrorGrabTool.grabbed->id);
+		if (mirror.has_value()) {
+			const auto newPosition = cursorPos + mirrorGrabTool.grabbed->grabOffset;
+			switch (mirrorGrabTool.grabbed->gizmo) {
+				using enum MirrorGrabTool::GizmoType;
+			case TRANSLATION:
+				mirror->center = newPosition;
+				break;
+
+			case ROTATION:
+				mirror->normalAngle = (newPosition - mirror->center).angle() + PI<f32> / 2.0f;
+				break;
+			}
+		} else {
+			CHECK_NOT_REACHED();
+		}
+	}
+
+	if (Input::isMouseButtonUp(MouseButton::LEFT) && mirrorGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		auto mirror = mirrors.get(mirrorGrabTool.grabbed->id);
+		if (mirror.has_value()) {
+			auto action = new EditorActionModifyMirror(
+				mirrorGrabTool.grabbed->id,
+				std::move(mirrorGrabTool.grabbed->grabStartState),
+				std::move(*mirror));
+			actions.add(*this, action);
+		} else {
+			CHECK_NOT_REACHED();
+		}
+		mirrorGrabTool.grabbed = std::nullopt;
+	}
 }
 
 void Editor::freeAction(EditorAction& action) {
@@ -382,6 +397,10 @@ void Editor::undoAction(const EditorAction& action) {
 
 	case MODIFY_LASER:
 		undoModify(lasers, static_cast<const EditorActionModifyLaser&>(action));
+		break;
+
+	case MODIFY_MIRROR:
+		undoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action));
 		break;
 
 	case CREATE_ENTITY: {
@@ -495,7 +514,9 @@ void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			};
 
 			updateGrabbed(laserDirectionGrabPoint(laser.entity), LaserGrabTool::LaserPart::DIRECTION);
-			updateGrabbed(laser->position, LaserGrabTool::LaserPart::ORIGIN);
+			if (!cursorCaptured) {
+				updateGrabbed(laser->position, LaserGrabTool::LaserPart::ORIGIN);
+			}
 		}
 	}
 
@@ -569,6 +590,10 @@ void Editor::redoAction(const EditorAction& action) {
 
 	case MODIFY_LASER:
 		redoModify(lasers, static_cast<const EditorActionModifyLaser&>(action));
+		break;
+
+	case MODIFY_MIRROR:
+		redoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action));
 		break;
 
 	case CREATE_ENTITY: {
