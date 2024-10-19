@@ -133,8 +133,12 @@ void Editor::update(GameRenderer& renderer) {
 
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
+		std::optional<EditorEntityId> hitOnLastIteration;
+
 		for (i64 i = 0; i < maxReflections; i++) {
-			const auto laserLine = stereographicLine(laserPosition, laserDirectionGrabPoint(laser.entity));
+			/*const auto laserLine = stereographicLine(laserPosition, laserDirectionGrabPoint(laser.entity));*/
+			const auto laserLine = stereographicLine(laserPosition, laserPosition + laserDirection * 0.01f);
+
 			const auto boundaryIntersections = circleCircleIntersection(laserLine, boundary);
 
 			renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::GREEN);
@@ -162,14 +166,16 @@ void Editor::update(GameRenderer& renderer) {
 				f32 distance;
 				Circle objectHit;
 				IntersectionType type;
+				EditorEntityId id;
 			};
 			std::optional<Intersection> closest;
 			std::optional<Intersection> closestToWrappedAround;
 
-			auto processLineSegmentIntersections = [&laserLine, &laserPosition, &boundaryIntersectionWrappedAround, &laserDirection, &closest, &closestToWrappedAround](
+			auto processLineSegmentIntersections = [&laserLine, &laserPosition, &boundaryIntersectionWrappedAround, &laserDirection, &closest, &closestToWrappedAround, &hitOnLastIteration](
 				Vec2 endpoint0,
 				Vec2 endpoint1,
-				IntersectionType type) {
+				IntersectionType type,
+				EditorEntityId id) {
 
 				const auto line = stereographicLine(endpoint0, endpoint1);
 				const auto intersections = circleCircleIntersection(line, laserLine);
@@ -194,9 +200,11 @@ void Editor::update(GameRenderer& renderer) {
 					const auto distance = intersection.distanceTo(laserPosition);
 					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
 
-					if (dot(intersection - laserPosition, laserDirection) > 0.0f) {
+					if (dot(intersection - laserPosition, laserDirection) > 0.0f
+						&& !(hitOnLastIteration.has_value() && hitOnLastIteration == id)) {
+
 						if (!closest.has_value() || distance < closest->distance) {
-							closest = Intersection{ intersection, distance, line, type };
+							closest = Intersection{ intersection, distance, line, type, id };
 						}
 					} else {
 						if (!closestToWrappedAround.has_value()
@@ -205,7 +213,8 @@ void Editor::update(GameRenderer& renderer) {
 								intersection,
 								distanceToWrappedAround,
 								line,
-								type
+								type,
+								id
 							};
 						}
 					}
@@ -213,13 +222,29 @@ void Editor::update(GameRenderer& renderer) {
 			};
 
 			for (const auto& wall : walls) {
-				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], IntersectionType::WALL);
+				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], IntersectionType::WALL, EditorEntityId(wall.id));
 			}
 
 			for (const auto& mirror : mirrors) {
 				const auto endpoints = mirror->calculateEndpoints();
-				processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::MIRROR);
+				processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::MIRROR, EditorEntityId(mirror.id));
 			}
+
+			auto doReflection = [&](Vec2 hitPoint, Circle objectHit) {
+				auto laserTangentAtIntersection = (hitPoint - laserLine.center).rotBy90deg().normalized();
+				if (dot(laserTangentAtIntersection, laserDirection) > 0.0f) {
+					laserTangentAtIntersection = -laserTangentAtIntersection;
+				}
+				auto mirrorNormal = (hitPoint - objectHit.center).normalized();
+				if (dot(mirrorNormal, laserDirection) > 0.0f) {
+					mirrorNormal = -mirrorNormal;
+				}
+				laserDirection = laserTangentAtIntersection.reflectedAroundNormal(mirrorNormal);
+				laserPosition = hitPoint;
+				/*renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::BLUE);
+				renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.06f, 0.01f, Color3::GREEN);
+				renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.06f, 0.01f, Color3::RED);*/
+			};
 
 			if (closest.has_value()) {
 				renderer.stereographicSegment(laserPosition, closest->position, laserColor);
@@ -231,23 +256,10 @@ void Editor::update(GameRenderer& renderer) {
 					goto laserEnd;
 
 				case MIRROR: {
-					auto laserTangentAtIntersection = (closest->position - laserLine.center).rotBy90deg().normalized();
-					if (dot(laserTangentAtIntersection, laserDirection) > 0.0f) {
-						laserTangentAtIntersection = -laserTangentAtIntersection;
-					}
-					auto mirrorNormal = (closest->position - closest->objectHit.center).normalized();
-					if (dot(mirrorNormal, laserDirection) > 0.0f) {
-						mirrorNormal = -mirrorNormal; 
-					}
-					laserDirection = laserTangentAtIntersection.reflectedAroundNormal(mirrorNormal);
-					laserPosition = closest->position;
-					renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::BLUE);
-					renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.06f, 0.01f, Color3::GREEN);
-					renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.06f, 0.01f, Color3::RED);
-					goto laserEnd;
+					doReflection(closest->position, closest->objectHit);
+					hitOnLastIteration = closest->id;
 					break;
 				}
-					
 
 				}
 
@@ -269,7 +281,8 @@ void Editor::update(GameRenderer& renderer) {
 					goto laserEnd;
 
 				case MIRROR:
-					laserPosition = closestToWrappedAround->position;
+					doReflection(closestToWrappedAround->position, closestToWrappedAround->objectHit);
+					hitOnLastIteration = closestToWrappedAround->id;
 					break;
 				}
 			} else {
