@@ -440,11 +440,11 @@ void Editor::update(GameRenderer& renderer) {
 
 	for (i64 i = 0; i < laserSegmentsToDraw.size(); i++) {
 		const auto& a = laserSegmentsToDraw[i];
-		if (a.ignore) {
+		/*if (a.ignore) {
 			continue;
-		}
+		}*/
 
-		for (i64 j = 0; j < laserSegmentsToDraw.size(); j++) {
+		for (i64 j = i + 1; j < laserSegmentsToDraw.size(); j++) {
 			if (i == j) {
 				continue;
 			}
