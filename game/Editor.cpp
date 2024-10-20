@@ -279,35 +279,17 @@ void Editor::update(GameRenderer& renderer) {
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
 		std::optional<EditorEntityId> hitOnLastIteration;
-		static bool toggle = false;
-		ImGui::Checkbox("toggle", &toggle);
 		for (i64 i = 0; i < maxReflections; i++) {
 			/*
 			The current version is probably better, because it doesn't have an optional return.
+			const auto laserCircle = circleThroughPointsWithNormalAngle(laserPosition, laserDirection.angle() + PI<f32> / 2.0f, antipodalPoint(laserPosition));
+			const auto laserLine = StereographicLine(*laserCircle);
 			*/
-			/*const auto laserCircle = circleThroughPointsWithNormalAngle(laserPosition, laserDirection.angle() + PI<f32> / 2.0f, antipodalPoint(laserPosition));
-			const auto laserLine = StereographicLine(*laserCircle);*/
 
-			StereographicLine laserLine(Vec2(0.0f)); 
-
-			if (toggle) {
-				laserLine = stereographicLineThroughPointWithTangent(laserPosition, laserDirection.angle());
-			} else {
-				const auto laserCircle = circleThroughPointsWithNormalAngle(laserPosition, laserDirection.angle() + PI<f32> / 2.0f, antipodalPoint(laserPosition));
-				laserLine = StereographicLine(*laserCircle);
-			}
-
-			/*const auto laserLine = stereographicLineThroughPointWithTangent(laserPosition, laserDirection.angle());*/
+			const auto laserLine = stereographicLineThroughPointWithTangent(laserPosition, laserDirection.angle());
 
 			const auto boundaryIntersections = stereographicLineVsCircleIntersection(laserLine, boundary);
 
-
-			/*for (const auto& i : boundaryIntersections) {
-				renderer.gfx.disk(i, 0.02f, Color3::RED);
-			}*/
-			//renderer.gfx.disk(closestToWrappedAround->position, 0.05f, Color3::RED);
-
-			//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::GREEN);
 
 			if (boundaryIntersections.size() == 0) {
 				// Shouldn't happen if the points are inside, because the antipodal point is always outside.
@@ -315,13 +297,8 @@ void Editor::update(GameRenderer& renderer) {
 				break;
 			}
 			
-			/*Vec2 boundaryIntersection = boundaryIntersections[0].normalized();
-			Vec2 boundaryIntersectionWrappedAround = boundaryIntersections[1].normalized();*/
 			Vec2 boundaryIntersection = boundaryIntersections[0].normalized();
 			Vec2 boundaryIntersectionWrappedAround = -boundaryIntersection;
-
-			/*renderer.gfx.disk(boundaryIntersection, 0.02f, Color3::RED);
-			renderer.gfx.disk(boundaryIntersectionWrappedAround, 0.02f, Color3::RED);*/
 
 			if (dot(boundaryIntersection - laserPosition, laserDirection) < 0.0f) {
 				std::swap(boundaryIntersection, boundaryIntersectionWrappedAround);
@@ -445,15 +422,9 @@ void Editor::update(GameRenderer& renderer) {
 				laserDirection = laserTangentAtIntersection.reflectedAroundNormal(mirrorNormal);
 				laserPosition = hitPoint;
 
-				if (i == maxReflections - 1) {
-					renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
-					renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
-					renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
-
-					/*renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::BLUE);
-					renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.06f, 0.01f, Color3::GREEN);
-					renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.06f, 0.01f, Color3::RED);*/
-				}
+				//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
+				//renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
+				//renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
 				
 			};
 
