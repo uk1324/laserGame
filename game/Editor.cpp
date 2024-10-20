@@ -28,6 +28,19 @@ Vec2 laserDirectionGrabPoint(const EditorLaser& laser) {
 	return laser.position + Vec2::oriented(laser.angle) * 0.15f;
 }
 
+// This reuses code from EditorMirror::calculateEndpoints().
+// Could combine them maybe.
+StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAngle, f32 translation = 0.1f) {
+	const auto p0 = fromStereographic(p);
+	const auto a = p.angle();
+
+	const auto axis = cross(p0, Vec3(0.0f, 0.0f, 1.0f));
+
+	const auto rotateLine = Quat(-tangentAngle + a, p0);
+	const auto p1 = rotateLine * (Quat(translation, axis) * p0);
+	return stereographicLine(p, toStereographic(p1.normalized()));
+}
+
 void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {
 	const auto endpoints = mirror.calculateEndpoints();
 	renderer.stereographicSegment(endpoints[0], endpoints[1], Color3::WHITE / 2.0f);
@@ -266,11 +279,28 @@ void Editor::update(GameRenderer& renderer) {
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
 		std::optional<EditorEntityId> hitOnLastIteration;
-
+		static bool toggle = false;
+		ImGui::Checkbox("toggle", &toggle);
 		for (i64 i = 0; i < maxReflections; i++) {
-			const auto laserLine = stereographicLine(laserPosition, laserPosition + laserDirection * 0.01f);
+			/*
+			The current version is probably better, because it doesn't have an optional return.
+			*/
+			/*const auto laserCircle = circleThroughPointsWithNormalAngle(laserPosition, laserDirection.angle() + PI<f32> / 2.0f, antipodalPoint(laserPosition));
+			const auto laserLine = StereographicLine(*laserCircle);*/
+
+			StereographicLine laserLine(Vec2(0.0f)); 
+
+			if (toggle) {
+				laserLine = stereographicLineThroughPointWithTangent(laserPosition, laserDirection.angle());
+			} else {
+				const auto laserCircle = circleThroughPointsWithNormalAngle(laserPosition, laserDirection.angle() + PI<f32> / 2.0f, antipodalPoint(laserPosition));
+				laserLine = StereographicLine(*laserCircle);
+			}
+
+			/*const auto laserLine = stereographicLineThroughPointWithTangent(laserPosition, laserDirection.angle());*/
 
 			const auto boundaryIntersections = stereographicLineVsCircleIntersection(laserLine, boundary);
+
 
 			/*for (const auto& i : boundaryIntersections) {
 				renderer.gfx.disk(i, 0.02f, Color3::RED);
@@ -290,8 +320,8 @@ void Editor::update(GameRenderer& renderer) {
 			Vec2 boundaryIntersection = boundaryIntersections[0].normalized();
 			Vec2 boundaryIntersectionWrappedAround = -boundaryIntersection;
 
-			renderer.gfx.disk(boundaryIntersection, 0.02f, Color3::RED);
-			renderer.gfx.disk(boundaryIntersectionWrappedAround, 0.02f, Color3::RED);
+			/*renderer.gfx.disk(boundaryIntersection, 0.02f, Color3::RED);
+			renderer.gfx.disk(boundaryIntersectionWrappedAround, 0.02f, Color3::RED);*/
 
 			if (dot(boundaryIntersection - laserPosition, laserDirection) < 0.0f) {
 				std::swap(boundaryIntersection, boundaryIntersectionWrappedAround);
