@@ -51,3 +51,5 @@ It can be seen that always the shorter segment of a circle lies inside the bound
 Because of this we can for example check if a point is between or outside the shereographic line by checking if it is in  between the endpoints of the actual line.
 
 Could try using gnomonic projection. It doesn't preserve angles, but it does map geodesics into straight lines.
+
+It might be good to later rewrite everything to use double precission. Or at least the laser reflection code, because that is probably responsible for most of the errors.

@@ -65,7 +65,7 @@ void Editor::update(GameRenderer& renderer) {
 	{
 		ImGui::Begin(sideBarWindowName);
 
-		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "select\0create wall\0create laser\0create mirror\0create target\0");
+		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0");
 
 		ImGui::Separator();
 		if (selectedTool == Tool::SELECT) {
@@ -154,24 +154,41 @@ void Editor::update(GameRenderer& renderer) {
 	bool cursorCaptured = false;
 
 	// Selection should have higher precedence than grabbing, but creating should have lower precedence than grabbing.
+	// The above turns out to not work very well so it got changed. For example when you are trying to place walls with overlapping endpoints. Instead of the wall placing the grab activates.
+	// To fix this I give grabbing precedence when cursor isn't snapped.
 	if (selectedTool == Tool::SELECT) {
 		selectToolUpdate(cursorPos, cursorCaptured);
 	}
 
-	// If the cursor was snapped then the user wants to position the cursor exactly in this position. Without cursorExact the offset from the exact position to the grab position is applied to make things more smooth. When this is done it can be very hard to position things exactly on the boundary for example;
-	const auto cursorExact = snappedCursor;
-	wallGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
-	laserGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
-	mirrorGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
-	targetGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+	// If the cursor was snapped then the user wants to position the cursor exactly in this position. Without cursorExact the offset from the exact position to the grab position is applied to make things more smooth. When this is done it can be very hard to position things exactly on the boundary for example.
 
-	switch (selectedTool) {
-		using enum Tool;
-	case SELECT: break;
-	case WALL: wallCreateToolUpdate(cursorPos, cursorCaptured); break;
-	case LASER: laserCreateToolUpdate(cursorPos, cursorCaptured); break;
-	case MIRROR: mirrorCreateToolUpdate(cursorPos, cursorCaptured); break;
-	case TARGET: targetCreateToolUpdate(cursorPos, cursorCaptured); break;
+	const auto cursorExact = snappedCursor;
+
+	auto updateSelectedTool = [&]() {
+		switch (selectedTool) {
+			using enum Tool;
+		case NONE: break;
+		case SELECT: break;
+		case WALL: wallCreateToolUpdate(cursorPos, cursorCaptured); break;
+		case LASER: laserCreateToolUpdate(cursorPos, cursorCaptured); break;
+		case MIRROR: mirrorCreateToolUpdate(cursorPos, cursorCaptured); break;
+		case TARGET: targetCreateToolUpdate(cursorPos, cursorCaptured); break;
+		}
+	};
+
+	auto grabToolsUpdate = [&] {
+		wallGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+		laserGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+		mirrorGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+		targetGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+	};
+
+	if (cursorExact) {
+		updateSelectedTool();
+		grabToolsUpdate();
+	} else {
+		grabToolsUpdate();
+		updateSelectedTool();
 	}
 
 	renderer.gfx.camera.aspectRatio = Window::aspectRatio();
@@ -200,6 +217,7 @@ void Editor::update(GameRenderer& renderer) {
 	switch (selectedTool) {
 		using enum Tool;
 
+	case NONE: break;
 	case SELECT: break;
 	case WALL: wallCreateTool.render(renderer, cursorPos); break;
 	case LASER: break;
@@ -241,7 +259,9 @@ void Editor::update(GameRenderer& renderer) {
 		renderer.gfx.disk(laser->position, 0.02f, Color3::BLUE);
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, Color3::BLUE);
 
-		const auto maxReflections = 100;
+
+		static i32 maxReflections = 20;
+		ImGui::InputInt("max reflections", &maxReflections);
 
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
@@ -252,6 +272,11 @@ void Editor::update(GameRenderer& renderer) {
 
 			const auto boundaryIntersections = stereographicLineVsCircleIntersection(laserLine, boundary);
 
+			/*for (const auto& i : boundaryIntersections) {
+				renderer.gfx.disk(i, 0.02f, Color3::RED);
+			}*/
+			//renderer.gfx.disk(closestToWrappedAround->position, 0.05f, Color3::RED);
+
 			//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::GREEN);
 
 			if (boundaryIntersections.size() == 0) {
@@ -260,8 +285,13 @@ void Editor::update(GameRenderer& renderer) {
 				break;
 			}
 			
-			Vec2 boundaryIntersection = boundaryIntersections[0];
-			Vec2 boundaryIntersectionWrappedAround = boundaryIntersections[1];
+			/*Vec2 boundaryIntersection = boundaryIntersections[0].normalized();
+			Vec2 boundaryIntersectionWrappedAround = boundaryIntersections[1].normalized();*/
+			Vec2 boundaryIntersection = boundaryIntersections[0].normalized();
+			Vec2 boundaryIntersectionWrappedAround = -boundaryIntersection;
+
+			renderer.gfx.disk(boundaryIntersection, 0.02f, Color3::RED);
+			renderer.gfx.disk(boundaryIntersectionWrappedAround, 0.02f, Color3::RED);
 
 			if (dot(boundaryIntersection - laserPosition, laserDirection) < 0.0f) {
 				std::swap(boundaryIntersection, boundaryIntersectionWrappedAround);
@@ -384,13 +414,22 @@ void Editor::update(GameRenderer& renderer) {
 				}
 				laserDirection = laserTangentAtIntersection.reflectedAroundNormal(mirrorNormal);
 				laserPosition = hitPoint;
-				/*renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::BLUE);
-				renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.06f, 0.01f, Color3::GREEN);
-				renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.06f, 0.01f, Color3::RED);*/
+
+				if (i == maxReflections - 1) {
+					renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
+					renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
+					renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
+
+					/*renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.06f, 0.01f, Color3::BLUE);
+					renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.06f, 0.01f, Color3::GREEN);
+					renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.06f, 0.01f, Color3::RED);*/
+				}
+				
 			};
 
 			if (closest.has_value()) {
-				renderer.stereographicSegment(laserPosition, closest->position, laserColor);
+				//renderer.stereographicSegmentEx(laserPosition, closest->position, laserColor);
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, closest->position });
 
 				switch (closest->type) {
 					using enum IntersectionType;
@@ -409,6 +448,8 @@ void Editor::update(GameRenderer& renderer) {
 			} else if (closestToWrappedAround.has_value()) {
 				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection });
 				laserSegmentsToDraw.push_back(Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->position });
+				/*renderer.gfx.disk(boundaryIntersectionWrappedAround, 0.05f, Color3::RED);
+				renderer.gfx.disk(closestToWrappedAround->position, 0.05f, Color3::RED);*/
 
 				switch (closestToWrappedAround->type) {
 					using enum IntersectionType;
@@ -438,16 +479,11 @@ void Editor::update(GameRenderer& renderer) {
 		}
 	}
 
+	// This only deals with exacly overlapping segments. There is also the case of partial overlaps that often occurs.
 	for (i64 i = 0; i < laserSegmentsToDraw.size(); i++) {
 		const auto& a = laserSegmentsToDraw[i];
-		/*if (a.ignore) {
-			continue;
-		}*/
-
 		for (i64 j = i + 1; j < laserSegmentsToDraw.size(); j++) {
-			if (i == j) {
-				continue;
-			}
+			
 			auto& b = laserSegmentsToDraw[j];
 
 			const auto epsilon = 0.01f;
@@ -467,14 +503,18 @@ void Editor::update(GameRenderer& renderer) {
 
 		}
 	}
+	static bool hideLaser = false;
 
+	ImGui::Checkbox("hide laser", &hideLaser);
 	i32 drawnSegments = 0;
-	for (const auto& segment : laserSegmentsToDraw) {
-		if (segment.ignore) {
-			continue;
+	if (!hideLaser) {
+		for (const auto& segment : laserSegmentsToDraw) {
+			if (segment.ignore) {
+				continue;
+			}
+			drawnSegments++;
+			renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], laserColor);
 		}
-		drawnSegments++;
-		renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], laserColor);
 	}
 
 	renderer.gfx.drawFilledTriangles();

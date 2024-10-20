@@ -11,6 +11,7 @@ struct Editor {
 	void undoRedoUpdate();
 
 	enum class Tool {
+		NONE,
 		SELECT,
 		WALL,
 		LASER,
