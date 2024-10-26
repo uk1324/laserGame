@@ -24,6 +24,15 @@ Editor::Editor()
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
+Vec3 wallColor(EditorWallType type) {
+	const auto absorbingColor = Color3::WHITE;
+	const auto reflectingColor = Color3::WHITE / 2.0f;
+
+	return type == EditorWallType::REFLECTING
+		? reflectingColor
+		: absorbingColor;
+}
+
 Vec2 laserDirectionGrabPoint(const EditorLaser& laser) {
 	return laser.position + Vec2::oriented(laser.angle) * 0.15f;
 }
@@ -84,11 +93,43 @@ void Editor::update(GameRenderer& renderer) {
 
 		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0");
 
-		ImGui::Separator();
-		if (selectedTool == Tool::SELECT) {
+		ImGui::SeparatorText("tool settings");
+		switch (selectedTool) {
+			using enum Tool;
+
+		case SELECT:
 			if (selectTool.selectedEntity == std::nullopt) {
-				ImGui::Text("no entity selected"); 
+				ImGui::Text("no entity selected");
+				break;
 			}
+
+			switch (selectTool.selectedEntity->type) {
+			case EditorEntityType::WALL: {
+				auto entity = walls.get(selectTool.selectedEntity->wall());
+				if (!entity.has_value()) {
+					break;
+				}
+				// TODO: Should this add an modify action?
+				wallTypeCombo("type", entity->type);
+				break;
+			}
+
+			default:
+				break;
+			}
+
+			break;
+
+		case WALL:
+			wallTypeCombo("type", wallCreateTool.wallType);
+			break;
+
+		case NONE:
+		case LASER:
+		case MIRROR:
+		case TARGET:
+		default:
+			break;
 		}
 
 		ImGui::SeparatorText("grid");
@@ -246,8 +287,9 @@ void Editor::update(GameRenderer& renderer) {
 
 	const auto boundary = Circle{ Vec2(0.0f), 1.0f };
 
+
 	for (const auto& wall : walls) {
-		renderer.wall(wall->endpoints[0], wall->endpoints[1]);
+		renderer.wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type));
 	}
 	renderer.renderWalls();
 
@@ -371,7 +413,11 @@ void Editor::update(GameRenderer& renderer) {
 			};
 
 			for (const auto& wall : walls) {
-				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], IntersectionType::END, EditorEntityId(wall.id));
+				const auto intersectionType = wall->type == EditorWallType::REFLECTING
+					? IntersectionType::REFLECT
+					: IntersectionType::END;
+
+				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], intersectionType, EditorEntityId(wall.id));
 			}
 
 			for (const auto& mirror : mirrors) {
@@ -799,7 +845,9 @@ bool Editor::loadLevel(std::string_view path) {
 			for (const auto& jsonWall : jsonWalls) {
 				const auto levelWall = fromJson<LevelWall>(jsonWall);
 				auto wall = walls.create();
-				wall.entity = EditorWall{ .endpoints = { levelWall.e0, levelWall.e1 } };
+				wall.entity = EditorWall{ 
+					.endpoints = { levelWall.e0, levelWall.e1 },
+				};
 			}
 		}
 	}
@@ -1097,7 +1145,10 @@ std::optional<EditorWall> Editor::WallCreateTool::update(bool down, bool cancelD
 		endpoint = cursorPos;
 		return std::nullopt;
 	}
-	const auto result = EditorWall{ .endpoints = { *endpoint, cursorPos } };
+	const auto result = EditorWall{ 
+		.endpoints = { *endpoint, cursorPos },
+		.type = wallType
+	};
 	reset();
 	return result;
 }
@@ -1106,7 +1157,7 @@ void Editor::WallCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
 	if (!endpoint.has_value()) {
 		return;
 	}
-	renderer.wall(*endpoint, cursorPos);
+	renderer.wall(*endpoint, cursorPos, wallColor(wallType));
 }
 
 void Editor::WallCreateTool::reset() {

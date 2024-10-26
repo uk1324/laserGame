@@ -11,12 +11,12 @@ GameRenderer GameRenderer::make() {
 	};
 }
 
-void GameRenderer::wall(Vec2 e0, Vec2 e1) {
+void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color) {
 	gfx.disk(e0, Constants::endpointGrabPointRadius, Color3::RED);
 	gfx.disk(e1, Constants::endpointGrabPointRadius, Color3::RED);
 
 	//stereographicSegment(e0, e1, Color3::WHITE);
-	stereographicSegment(e0, e1, Color3::WHITE);
+	stereographicSegment(e0, e1, color);
 	//gfx.
 	//gfx.circleTriangulated(line.center, line.radius, Constants::wallWidth, Color3::WHITE, 1000);
 	// 

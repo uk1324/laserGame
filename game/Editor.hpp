@@ -32,6 +32,8 @@ struct Editor {
 		void reset();
 
 		std::optional<Vec2> endpoint;
+
+		EditorWallType wallType = EditorWallType::ABSORBING;
 	} wallCreateTool;
 	void wallCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 

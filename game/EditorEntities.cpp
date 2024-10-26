@@ -2,11 +2,13 @@
 #include <array>
 #include <engine/Math/Quat.hpp>
 #include <engine/Math/Constants.hpp>
+#include <imgui/imgui.h>
 #include <game/Stereographic.hpp>
 
 EditorWall EditorWall::DefaultInitialize::operator()() {
 	return EditorWall{
-		.endpoints = { Vec2(0.0f), Vec2(0.0f) }
+		.endpoints = { Vec2(0.0f), Vec2(0.0f) },
+		.type = static_cast<EditorWallType>(-1)
 	};
 }
 
@@ -101,4 +103,11 @@ Circle EditorTarget::calculateCircle() const {
 	// The stereographic projection of center isn't necessarily the center of the stereograhic of the `circle on the sphere`. For small radii this isn't very noticible.
 
 	return circleThroughPoints(toStereographic(p0), toStereographic(p1), toStereographic(p2));
+}
+
+void wallTypeCombo(const char* label, EditorWallType& type) {
+	ImGui::Combo(
+		"type",
+		reinterpret_cast<int*>(&type),
+		"reflecting\0absorbing\0");
 }

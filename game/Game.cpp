@@ -5,10 +5,10 @@
 
 void Game::update(GameRenderer& renderer) {
 
-	for (const auto& wall : walls) {
+	/*for (const auto& wall : walls) {
 		renderer.wall(wall.endpoints[0], wall.endpoints[1]);
 	}
-	renderer.renderWalls();
+	renderer.renderWalls();*/
 }
 
 void Game::loadLevel(std::string_view path) {

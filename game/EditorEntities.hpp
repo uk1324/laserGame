@@ -4,12 +4,20 @@
 #include <game/EntityArray.hpp>
 #include <game/Stereographic.hpp>
 
+enum class EditorWallType {
+	REFLECTING,
+	ABSORBING
+};
+
+void wallTypeCombo(const char* label, EditorWallType& type);
+
 struct EditorWall {
 	struct DefaultInitialize {
 		EditorWall operator()();
 	};
 
 	Vec2 endpoints[2];
+	EditorWallType type;
 };
 using EditorWallId = EntityArrayId<EditorWall>;
 

@@ -5,7 +5,7 @@
 struct GameRenderer {
 	static GameRenderer make();
 
-	void wall(Vec2 e0, Vec2 e1);
+	void wall(Vec2 e0, Vec2 e1, Vec3 color);
 	void mirror(Vec2 e0, Vec2 e1);
 	void renderWalls();
 	void stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color);
