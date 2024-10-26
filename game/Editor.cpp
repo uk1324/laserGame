@@ -38,13 +38,6 @@ StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAn
 	if (p == Vec2(0.0f)) {
 		return StereographicLine(Vec2::oriented(tangentAngle + PI<f32> / 2.0f));
 	}
-	/*const auto p0 = fromStereographic(p);
-	const auto a = p.angle();
-
-	const auto axis = cross(p0, Vec3(0.0f, 0.0f, 1.0f));
-
-	const auto rotateLine = Quat(-tangentAngle + a, p0);
-	const auto p1 = rotateLine * (Quat(translation, axis) * p0);*/
 	const auto pointAhead = moveOnStereographicGeodesic(p, tangentAngle, translation);
 	return stereographicLine(p, pointAhead);
 }
@@ -220,6 +213,7 @@ void Editor::update(GameRenderer& renderer) {
 			editorTargetRadiusInput(targetCreateTool.targetRadius);
 
 		case NONE:
+			break;
 		default:
 			break;
 		}
@@ -1051,13 +1045,13 @@ void Editor::wallCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		const auto result = wallCreateTool.update(
 			Input::isMouseButtonDown(MouseButton::LEFT),
 			Input::isMouseButtonDown(MouseButton::RIGHT),
-			cursorPos);
+			cursorPos,
+			cursorCaptured);
 		if (result.has_value()) {
 			auto entity = walls.create();
 			entity.entity = *result;
 			actions.add(*this, new EditorActionCreateEntity(EditorEntityId(entity.id)));
 		}
-		cursorCaptured = true;
 	}
 }
 
@@ -1143,13 +1137,13 @@ void Editor::mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		const auto result = mirrorCreateTool.update(
 			Input::isMouseButtonDown(MouseButton::LEFT),
 			Input::isMouseButtonDown(MouseButton::RIGHT),
-			cursorPos);
+			cursorPos,
+			cursorCaptured);
 		if (result.has_value()) {
 			auto e = mirrors.create();
 			e.entity = *result;
 			actions.add(*this, new EditorActionCreateEntity(EditorEntityId(e.id)));
 		}
-		cursorCaptured = true;
 	}
 }
 
@@ -1190,8 +1184,9 @@ void Editor::redoAction(const EditorAction& action) {
 	}
 }
  
-std::optional<EditorWall> Editor::WallCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos) {
+std::optional<EditorWall> Editor::WallCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured) {
 	if (cancelDown) {
+		cursorCaptured = true;
 		reset();
 		return std::nullopt;
 	}
@@ -1199,6 +1194,8 @@ std::optional<EditorWall> Editor::WallCreateTool::update(bool down, bool cancelD
 	if (!down) {
 		return std::nullopt;
 	}
+	cursorCaptured = true;
+
 	if (!endpoint.has_value()) {
 		endpoint = cursorPos;
 		return std::nullopt;
@@ -1222,8 +1219,9 @@ void Editor::WallCreateTool::reset() {
 	endpoint = std::nullopt;
 }
 
-std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos) {
+std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured) {
 	if (cancelDown) {
+		cursorCaptured = true;
 		reset();
 		return std::nullopt;
 	}
@@ -1231,6 +1229,7 @@ std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool can
 	if (!down) {
 		return std::nullopt;
 	}
+	cursorCaptured = true;
 
 	if (!center.has_value()) {
 		center = cursorPos;

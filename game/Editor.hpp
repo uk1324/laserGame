@@ -27,7 +27,7 @@ struct Editor {
 	void selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	struct WallCreateTool {
-		std::optional<EditorWall> update(bool down, bool cancelDown, Vec2 cursorPos);
+		std::optional<EditorWall> update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured);
 		void render(GameRenderer& renderer, Vec2 cursorPos);
 		void reset();
 
@@ -70,7 +70,7 @@ struct Editor {
 	void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
 	struct MirrorCreateTool {
-		std::optional<EditorMirror> update(bool down, bool cancelDown, Vec2 cursorPos);
+		std::optional<EditorMirror> update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured);
 		void render(GameRenderer& renderer, Vec2 cursorPos);
 		void reset();
 
