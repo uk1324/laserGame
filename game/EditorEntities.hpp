@@ -30,6 +30,7 @@ struct EditorLaser {
 	Vec2 position;
 	f32 angle;
 	Vec3 color;
+	bool positionLocked;
 
 	static constexpr Vec3 defaultColor = Color3::CYAN;
 };
@@ -43,11 +44,12 @@ struct EditorMirror {
 		EditorMirror operator()();
 	};
 
-	EditorMirror(Vec2 center, f32 normalAngle, f32 length);
+	EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked);
 
 	Vec2 center;
 	f32 normalAngle;
 	f32 length;
+	bool positionLocked;
 
 	std::array<Vec2, 2> calculateEndpoints() const;
 };

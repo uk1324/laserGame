@@ -59,3 +59,5 @@ TODO: Make the collision segments longer so that lasers can't pass in between li
 TODO: Debug reflections to display. Give a max number of reflections to display. This could be a nonserialized property in each laser or there could be a map from id to number.
 
 TODO: Lock position and lock angle.
+
+The color out the boundary could inform the player if the objects are placed in a valid way.

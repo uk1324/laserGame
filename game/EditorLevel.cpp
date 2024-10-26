@@ -7,8 +7,8 @@
 #include <fstream>
 
 // TODO: Maybe validate the inputs. For example calmping the values to a certain range.
+// TODO: Maybe put the try catch only around loading of each element and continue if there is an error.
 
-//Json::Value::ArrayType& makeArrayAt(Json::Value& v, std::string_view at) {
 Json::Value::ArrayType& makeArrayAt(Json::Value& v, std::string_view at) {
 	return (v[std::string(at)] = Json::Value::emptyArray()).array();
 }
@@ -45,6 +45,7 @@ bool Editor::trySaveLevel(std::string_view path) {
 				.position = laser->position,
 				.angle = laser->angle,
 				.color = laser->color,
+				.positionLocked = laser->positionLocked
 			};
 			jsonLasers.push_back(toJson(levelLaser));
 		}
@@ -57,6 +58,7 @@ bool Editor::trySaveLevel(std::string_view path) {
 				.center = e->center,
 				.normalAngle = e->normalAngle,
 				.length = e->length,
+				.positionLocked = e->positionLocked
 			};
 			jsonMirrors.push_back(toJson(levelMirror));
 		}
@@ -132,6 +134,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 					.position = levelLaser.position,
 					.angle = levelLaser.angle,
 					.color = levelLaser.color,
+					.positionLocked = levelLaser.positionLocked
 				};
 			}
 		}
@@ -140,7 +143,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 			for (const auto& jsonMirror : *jsonMirrors) {
 				const auto levelMirror = fromJson<LevelMirror>(jsonMirror);
 				auto mirror = mirrors.create();
-				mirror.entity = EditorMirror(levelMirror.center, levelMirror.normalAngle, levelMirror.length);
+				mirror.entity = EditorMirror(levelMirror.center, levelMirror.normalAngle, levelMirror.length, levelMirror.positionLocked);
 			}
 		}
 

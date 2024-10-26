@@ -21,7 +21,7 @@ EditorLaser EditorLaser::DefaultInitialize::operator()() {
 }
 
 EditorMirror EditorMirror::DefaultInitialize::operator()() {
-	return EditorMirror(Vec2(0.0f), 0.0f, 1.0f);
+	return EditorMirror(Vec2(0.0f), 0.0f, 1.0f, false);
 }
 
 EditorTarget EditorTarget::DefaultInitialize::operator()() {
@@ -71,10 +71,12 @@ EditorTargetId EditorEntityId::target() const {
 	return EditorTargetId(index, version);
 }
 
-EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length)
+EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked)
 	: center(center)
 	, normalAngle(normalAngle)
-	, length(length) {}
+	, length(length) 
+	, positionLocked(positionLocked)
+{}
 
 // Could do this https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
 

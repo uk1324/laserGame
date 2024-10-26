@@ -12,6 +12,15 @@
 #include <engine/Math/Quat.hpp>
 #include <game/Stereographic.hpp>
 
+
+const auto movablePartColor(bool isPositionLocked) {
+	const auto movableColor = Color3::YELLOW;
+	const auto nonMovableColor = movableColor / 2.0f;
+	return isPositionLocked
+		? nonMovableColor
+		: movableColor;
+}
+
 Editor::Editor()
 	: actions(EditorActions::make()) {
 
@@ -170,6 +179,7 @@ void Editor::update(GameRenderer& renderer) {
 					break;
 				}
 				editorLaserColorCombo("color", laser->color);
+				ImGui::Checkbox("position locked", &laser->positionLocked);
 				break;
 			}
 
@@ -179,6 +189,7 @@ void Editor::update(GameRenderer& renderer) {
 					break;
 				}
 				editorMirrorLengthInput(mirror->length);
+				ImGui::Checkbox("position locked", &mirror->positionLocked);
 				break;
 			}
 
@@ -203,10 +214,12 @@ void Editor::update(GameRenderer& renderer) {
 
 		case LASER:
 			editorLaserColorCombo("color", laserCreateTool.laserColor);
+			ImGui::Checkbox("position locked", &laserCreateTool.laserPositionLocked);
 			break;
 
 		case MIRROR:
 			editorMirrorLengthInput(mirrorCreateTool.mirrorLength);
+			ImGui::Checkbox("position locked", &mirrorCreateTool.mirrorPositionLocked);
 			break;
 
 		case TARGET:
@@ -403,7 +416,7 @@ void Editor::update(GameRenderer& renderer) {
 	std::vector<Segment> laserSegmentsToDraw;
 
 	for (const auto& laser : lasers) {
-		renderer.gfx.disk(laser->position, 0.02f, Color3::BLUE);
+		renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, Color3::BLUE);
 
 
@@ -1061,7 +1074,8 @@ void Editor::laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		e.entity = EditorLaser{ 
 			.position = cursorPos, 
 			.angle = 0.0f, 
-			.color = laserCreateTool.laserColor
+			.color = laserCreateTool.laserColor,
+			.positionLocked = laserCreateTool.laserPositionLocked
 		};
 		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(e.id)));
 		cursorCaptured = true;
@@ -1236,7 +1250,7 @@ std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool can
 		return std::nullopt;
 	}
 
-	const auto result = makeMirror(*center, cursorPos, mirrorLength);
+	const auto result = makeMirror(*center, cursorPos);
 	reset();
 	return result;
 }
@@ -1245,7 +1259,7 @@ void Editor::MirrorCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
 	if (!center.has_value()) {
 		return;
 	}
-	const auto mirror = makeMirror(*center, cursorPos, mirrorLength);
+	const auto mirror = makeMirror(*center, cursorPos);
 	renderMirror(renderer, mirror);
 }
 
@@ -1253,8 +1267,8 @@ void Editor::MirrorCreateTool::reset() {
 	center = std::nullopt;
 }
 
-EditorMirror Editor::MirrorCreateTool::makeMirror(Vec2 center, Vec2 cursorPos, f32 length) {
-	return EditorMirror(center, (cursorPos - center).angle(), length);
+EditorMirror Editor::MirrorCreateTool::makeMirror(Vec2 center, Vec2 cursorPos) {
+	return EditorMirror(center, (cursorPos - center).angle(), mirrorLength, mirrorPositionLocked);
 }
 
 void Editor::LevelSaveOpen::openSaveLevelErrorModal() {

@@ -50,6 +50,7 @@ struct Editor {
 
 	struct LaserCreateTool {
 		Vec3 laserColor = EditorLaser::defaultColor;
+		bool laserPositionLocked = false;
 	} laserCreateTool;
 	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
@@ -74,10 +75,11 @@ struct Editor {
 		void render(GameRenderer& renderer, Vec2 cursorPos);
 		void reset();
 
-		static EditorMirror makeMirror(Vec2 center, Vec2 cursorPos, f32 length);
+		EditorMirror makeMirror(Vec2 center, Vec2 cursorPos);
 
 		std::optional<Vec2> center;
 		f32 mirrorLength = 0.6f;
+		bool mirrorPositionLocked = false;
 	} mirrorCreateTool;
 	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
