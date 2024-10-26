@@ -53,3 +53,7 @@ Because of this we can for example check if a point is between or outside the sh
 Could try using gnomonic projection. It doesn't preserve angles, but it does map geodesics into straight lines.
 
 It might be good to later rewrite everything to use double precission. Or at least the laser reflection code, because that is probably responsible for most of the errors.
+
+TODO: Make the collision segments longer so that lasers can't pass in between lines sharing endpoints.
+
+TODO: Debug reflections to display. Give a max number of reflections to display. This could be a nonserialized property in each laser or there could be a map from id to number.

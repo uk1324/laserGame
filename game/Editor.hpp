@@ -117,8 +117,8 @@ struct Editor {
 	bool loadLevel(std::string_view path);
 
 	bool showGrid = true;
-	i32 gridLineCount = 10;
-	i32 gridCircleCount = 5;
+	i32 gridLineCount = 16;
+	i32 gridCircleCount = 10;
 
 	std::optional<std::string> lastLoadedLevel;
 

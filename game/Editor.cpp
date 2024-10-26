@@ -31,6 +31,10 @@ Vec2 laserDirectionGrabPoint(const EditorLaser& laser) {
 // This reuses code from EditorMirror::calculateEndpoints().
 // Could combine them maybe.
 StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAngle, f32 translation = 0.1f) {
+	// TODO: Do that same thing in EditorMirror::calculateEndpoints().
+	if (p == Vec2(0.0f)) {
+		return StereographicLine(Vec2::oriented(tangentAngle + PI<f32> / 2.0f));
+	}
 	const auto p0 = fromStereographic(p);
 	const auto a = p.angle();
 
@@ -274,7 +278,7 @@ void Editor::update(GameRenderer& renderer) {
 
 
 		static i32 maxReflections = 20;
-		ImGui::InputInt("max reflections", &maxReflections);
+		//ImGui::InputInt("max reflections", &maxReflections);
 
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
@@ -333,9 +337,10 @@ void Editor::update(GameRenderer& renderer) {
 						continue;
 					}
 
+					const auto epsilon = 0.001f;
 					const auto lineDirection = (endpoint1 - endpoint0).normalized();
-					const auto dAlong0 = dot(lineDirection, endpoint0);
-					const auto dAlong1 = dot(lineDirection, endpoint1);
+					const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
+					const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
 					const auto intersectionDAlong = dot(lineDirection, intersection);
 					if (intersectionDAlong <= dAlong0 || intersectionDAlong >= dAlong1) {
 						continue;
@@ -374,7 +379,7 @@ void Editor::update(GameRenderer& renderer) {
 				processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::REFLECT, EditorEntityId(mirror.id));
 			}
 
-			for (const auto& target : targets) {
+			/*for (const auto& target : targets) {
 				const auto circle = target->calculateCircle();
 				const auto intersections = stereographicLineVsCircleIntersection(laserLine, circle);
 
@@ -403,7 +408,7 @@ void Editor::update(GameRenderer& renderer) {
 						}
 					}
 				}
-			}
+			}*/
 
 			auto doReflection = [&](Vec2 hitPoint, StereographicLine objectHit) {
 				auto laserTangentAtIntersection = laserLine.type == StereographicLine::Type::CIRCLE
@@ -506,7 +511,7 @@ void Editor::update(GameRenderer& renderer) {
 	}
 	static bool hideLaser = false;
 
-	ImGui::Checkbox("hide laser", &hideLaser);
+	//ImGui::Checkbox("hide laser", &hideLaser);
 	i32 drawnSegments = 0;
 	if (!hideLaser) {
 		for (const auto& segment : laserSegmentsToDraw) {

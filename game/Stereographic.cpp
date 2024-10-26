@@ -19,7 +19,11 @@ Vec3 fromStereographic(Vec2 p) {
 
 Vec2 antipodalPoint(Vec2 p) {
 	const auto onSphere = fromStereographic(p);
-	return toStereographic(-onSphere);
+	const auto r0 = toStereographic(-onSphere);
+
+	const auto a = 2.0f * (p.x * p.x + p.y * p.y);
+	const auto r1 = Vec2(-2.0f * p.x, -2.0f * p.y) / a;
+	return r1;
 }
 
 Circle::Circle(Vec2 center, f32 radius)
