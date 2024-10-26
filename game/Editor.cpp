@@ -38,14 +38,15 @@ StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAn
 	if (p == Vec2(0.0f)) {
 		return StereographicLine(Vec2::oriented(tangentAngle + PI<f32> / 2.0f));
 	}
-	const auto p0 = fromStereographic(p);
+	/*const auto p0 = fromStereographic(p);
 	const auto a = p.angle();
 
 	const auto axis = cross(p0, Vec3(0.0f, 0.0f, 1.0f));
 
 	const auto rotateLine = Quat(-tangentAngle + a, p0);
-	const auto p1 = rotateLine * (Quat(translation, axis) * p0);
-	return stereographicLine(p, toStereographic(p1.normalized()));
+	const auto p1 = rotateLine * (Quat(translation, axis) * p0);*/
+	const auto pointAhead = moveOnStereographicGeodesic(p, tangentAngle, translation);
+	return stereographicLine(p, pointAhead);
 }
 
 void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {

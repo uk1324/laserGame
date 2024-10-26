@@ -2,6 +2,7 @@
 #include <engine/Math/Vec2.hpp>
 #include <engine/Math/Vec3.hpp>
 #include <engine/Math/Line.hpp>
+#include <engine/Math/Quat.hpp>
 #include <StaticList.hpp>
 #include <variant>
 
@@ -36,6 +37,12 @@ struct StereographicLine {
 
 Vec2 toStereographic(Vec3 p);
 Vec3 fromStereographic(Vec2 p);
+
+// The angle is such that when stereographically projected it equal the plane angle.
+Quat movementOnSphericalGeodesic(Vec3 pos, f32 angle, f32 distance);
+Vec3 moveOnSphericalGeodesic(Vec3 pos, f32 angle, f32 distance);
+
+Vec2 moveOnStereographicGeodesic(Vec2 pos, f32 angle, f32 distance);
 
 Vec2 antipodalPoint(Vec2 p);
 

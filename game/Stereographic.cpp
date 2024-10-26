@@ -17,6 +17,31 @@ Vec3 fromStereographic(Vec2 p) {
 	return Vec3(2.0f * p.x, 2.0f * p.y, -1.0f + p.x * p.x + p.y * p.y) / d;
 }
 
+// The angle is such that when stereographically projected it equal the plane angle.
+Quat movementOnSphericalGeodesic(Vec3 pos, f32 angle, f32 distance) {
+	const auto a = atan2(pos.y, pos.x);
+	const auto up = Vec3(0.0f, 0.0f, 1.0f);
+
+	Vec3 axis(0.0f, 1.0f, 0.0f);
+	if (pos != -up) {
+		axis = cross(pos, up).normalized();
+	} else {
+		// It can be verified that this edge case works by placing a mirror at the center and then this case triggers.
+	}
+
+	// The formula for the angle was kinda derived through trial and error, but it matches the results of the correct method that isn't used, because it can't handle length specification. That version is available in previous commits in the mirror draw loop.
+	return Quat(-angle + a, pos) * Quat(distance, axis);
+}
+
+Vec3 moveOnSphericalGeodesic(Vec3 pos, f32 angle, f32 distance) {
+	// Normalizing, because rotating introduces errors in the norm that get amplified by the projection. 
+	return (pos * movementOnSphericalGeodesic(pos, angle, distance)).normalized();
+}
+
+Vec2 moveOnStereographicGeodesic(Vec2 pos, f32 angle, f32 distance) {
+	return toStereographic(moveOnSphericalGeodesic(fromStereographic(pos), angle, distance));
+}
+
 Vec2 antipodalPoint(Vec2 p) {
 	const auto onSphere = fromStereographic(p);
 	const auto r0 = toStereographic(-onSphere);
