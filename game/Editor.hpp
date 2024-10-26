@@ -48,6 +48,9 @@ struct Editor {
 	} wallGrabTool;
 	void wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
+	struct LaserCreateTool {
+		Vec3 laserColor = EditorLaser::defaultColor;
+	} laserCreateTool;
 	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	struct LaserGrabTool {

@@ -3,6 +3,7 @@
 #include <engine/Math/Vec2.hpp>
 #include <game/EntityArray.hpp>
 #include <game/Stereographic.hpp>
+#include <engine/Math/Color.hpp>
 
 enum class EditorWallType {
 	REFLECTING,
@@ -28,7 +29,12 @@ struct EditorLaser {
 
 	Vec2 position;
 	f32 angle;
+	Vec3 color;
+
+	static constexpr Vec3 defaultColor = Color3::CYAN;
 };
+
+void editorLaserColorCombo(const char* label, Vec3& color);
 
 using EditorLaserId = EntityArrayId<EditorLaser>;
 

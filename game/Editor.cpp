@@ -16,8 +16,6 @@
 #include <game/Level.hpp>
 #include <game/Stereographic.hpp>
 
-const auto laserColor = Color3::CYAN;
-
 Editor::Editor()
 	: actions(EditorActions::make()) {
 
@@ -104,6 +102,7 @@ void Editor::update(GameRenderer& renderer) {
 			}
 
 			switch (selectTool.selectedEntity->type) {
+
 			case EditorEntityType::WALL: {
 				auto entity = walls.get(selectTool.selectedEntity->wall());
 				if (!entity.has_value()) {
@@ -111,6 +110,15 @@ void Editor::update(GameRenderer& renderer) {
 				}
 				// TODO: Should this add an modify action?
 				wallTypeCombo("type", entity->type);
+				break;
+			}
+
+			case EditorEntityType::LASER: {
+				auto laser = lasers.get(selectTool.selectedEntity->laser());
+				if (!laser.has_value()) {
+					break;
+				}
+				editorLaserColorCombo("color", laser->color);
 				break;
 			}
 
@@ -124,8 +132,11 @@ void Editor::update(GameRenderer& renderer) {
 			wallTypeCombo("type", wallCreateTool.wallType);
 			break;
 
-		case NONE:
 		case LASER:
+			editorLaserColorCombo("color", laserCreateTool.laserColor);
+			break;
+
+		case NONE:
 		case MIRROR:
 		case TARGET:
 		default:
@@ -309,6 +320,7 @@ void Editor::update(GameRenderer& renderer) {
 
 	struct Segment {
 		Vec2 endpoints[2];
+		Vec3 color; // inefficient
 		bool ignore = false;
 	};
 
@@ -481,7 +493,7 @@ void Editor::update(GameRenderer& renderer) {
 
 			if (closest.has_value()) {
 				//renderer.stereographicSegmentEx(laserPosition, closest->position, laserColor);
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, closest->position });
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, closest->position, laser->color });
 
 				switch (closest->type) {
 					using enum IntersectionType;
@@ -498,8 +510,8 @@ void Editor::update(GameRenderer& renderer) {
 				}
 
 			} else if (closestToWrappedAround.has_value()) {
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection });
-				laserSegmentsToDraw.push_back(Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->position });
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection, laser->color });
+				laserSegmentsToDraw.push_back(Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->position, laser->color });
 				/*renderer.gfx.disk(boundaryIntersectionWrappedAround, 0.05f, Color3::RED);
 				renderer.gfx.disk(closestToWrappedAround->position, 0.05f, Color3::RED);*/
 
@@ -515,8 +527,8 @@ void Editor::update(GameRenderer& renderer) {
 					break;
 				}
 			} else {
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection });
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersectionWrappedAround });
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection, laser->color });
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color });
 			}
 		}
 
@@ -558,6 +570,8 @@ void Editor::update(GameRenderer& renderer) {
 	static bool hideLaser = false;
 
 	//ImGui::Checkbox("hide laser", &hideLaser);
+
+	// TODO: Use additive blending with transaprency maybe.
 	i32 drawnSegments = 0;
 	if (!hideLaser) {
 		for (const auto& segment : laserSegmentsToDraw) {
@@ -565,7 +579,7 @@ void Editor::update(GameRenderer& renderer) {
 				continue;
 			}
 			drawnSegments++;
-			renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], laserColor);
+			renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], segment.color);
 		}
 	}
 
@@ -1010,7 +1024,11 @@ void Editor::wallCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 void Editor::laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (!cursorCaptured && Input::isMouseButtonDown(MouseButton::LEFT)) {
 		const auto& e = lasers.create();
-		e.entity = EditorLaser{ .position = cursorPos, .angle = 0.0f };
+		e.entity = EditorLaser{ 
+			.position = cursorPos, 
+			.angle = 0.0f, 
+			.color = laserCreateTool.laserColor
+		};
 		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(e.id)));
 		cursorCaptured = true;
 		return;

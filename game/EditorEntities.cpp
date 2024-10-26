@@ -15,7 +15,8 @@ EditorWall EditorWall::DefaultInitialize::operator()() {
 EditorLaser EditorLaser::DefaultInitialize::operator()() {
 	return EditorLaser{
 		.position = Vec2(0.0f),
-		.angle = 0.0f
+		.angle = 0.0f,
+		.color = Vec3(0.123)
 	};
 }
 
@@ -110,4 +111,42 @@ void wallTypeCombo(const char* label, EditorWallType& type) {
 		"type",
 		reinterpret_cast<int*>(&type),
 		"reflecting\0absorbing\0");
+}
+
+void editorLaserColorCombo(const char* label, Vec3& selectedColor) {
+	struct ColorName {
+		Vec3 color;
+		const char* name;
+	};
+	ColorName pairs[]{
+		{ Color3::CYAN, "cyan" },
+		{ Vec3(81, 255, 13) / 255.0f, "green"},
+		{ Color3::RED, "red" }
+	};
+
+	const char* selectedName = nullptr;
+
+	for (const auto& [color, name] : pairs) {
+		if (selectedColor == color) {
+			selectedName = name;
+			break;
+		}
+	}
+
+	if (selectedName == nullptr) {
+		selectedName = "cyan";
+	}
+
+	if (ImGui::BeginCombo(label, selectedName)) {
+		for (const auto& [color, name] : pairs) {
+			const auto isSelected = selectedColor == color;
+			if (ImGui::Selectable(name, isSelected)) {
+				selectedColor = color;
+			}
+
+			if (isSelected) ImGui::SetItemDefaultFocus();
+				
+		}
+		ImGui::EndCombo();
+	}
 }
