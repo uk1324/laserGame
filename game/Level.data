@@ -1,4 +1,26 @@
+enum [[Json]] LevelWallType {
+	REFLECTING, ABSORBING
+}
+
 struct [[Json]] LevelWall {
-	Vec2 e0;
-	Vec2 e1;
+	Vec2 endpoint0;
+	Vec2 endpoint1;
+	LevelWallType type;
+}
+
+struct [[Json]] LevelLaser {
+	Vec2 position;
+	float angle;
+	Vec3 color;
+}
+
+struct [[Json]] LevelMirror {
+	Vec2 center;
+	float normalAngle;
+	float length;
+}
+
+struct [[Json]] LevelTarget {
+	Vec2 position;
+	float radius;
 }

@@ -1,19 +1,15 @@
 #include "Editor.hpp"
 #include <engine/Math/Color.hpp>
+#include <game/FileSelectWidget.hpp>
 #include <engine/Window.hpp>
 #include <engine/Math/Constants.hpp>
 #include <engine/Input/Input.hpp>
-#include <game/LevelData.hpp>
 #include <game/Constants.hpp>
 #include <glad/glad.h>
-#include <engine/dependencies/Json/JsonPrinter.hpp>
-#include <JsonFileIo.hpp>
 #include <engine/Math/LineSegment.hpp>
-#include <fstream>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include <engine/Math/Quat.hpp>
-#include <game/Level.hpp>
 #include <game/Stereographic.hpp>
 
 Editor::Editor()
@@ -66,9 +62,70 @@ void Editor::update(GameRenderer& renderer) {
 		ImGui::GetMainViewport(),
 		ImGuiDockNodeFlags_NoDockingOverCentralNode | ImGuiDockNodeFlags_PassthruCentralNode);
 
+	{
+		bool saveButtonDown = false;
+		bool saveAsButtonDown = false;
+		bool openButtonDown = false;
+		bool newButtonDown = false;
+
+		if (ImGui::BeginMainMenuBar()) {
+			// Modals can't be opened inside a menu.
+			if (ImGui::BeginMenu("level")) {
+				if (ImGui::MenuItem("new")) {
+					newButtonDown = true;
+				}
+				if (ImGui::MenuItem("save as")) {
+					saveAsButtonDown = true;
+				}
+				if (ImGui::MenuItem("save")) {
+					saveButtonDown = true;
+				}
+				if (ImGui::MenuItem("open")) {
+					openButtonDown = true;
+				}
+				ImGui::EndMenu();
+			}
+
+			ImGui::EndMainMenuBar();
+		}
+		std::optional<std::string_view> savePath;
+
+		if (Input::isKeyHeld(KeyCode::LEFT_CONTROL) && Input::isKeyDown(KeyCode::S)) {
+			saveButtonDown = true;
+		}
+
+		if (saveAsButtonDown || (saveButtonDown && !levelSaveOpen.lastLoadedLevelPath.has_value())) {
+			savePath = Gui::openFileSave();
+		} else if (saveButtonDown && levelSaveOpen.lastLoadedLevelPath.has_value()) {
+			savePath = levelSaveOpen.lastLoadedLevelPath;
+		}
+
+		if (savePath.has_value()) {
+			if (trySaveLevel(*savePath)) {
+				levelSaveOpen.lastLoadedLevelPath = savePath;
+			} else {
+				levelSaveOpen.saveLevelErrorModal();
+			}
+		}
+
+		if (openButtonDown) {
+			const auto path = Gui::openFileSelect();
+			if (path.has_value()) {
+				if (tryLoadLevel(path->data())) {
+					levelSaveOpen.lastLoadedLevelPath = path;
+				} else {
+					levelSaveOpen.openLevelErrorModal();
+				}
+			}
+		}
+
+		levelSaveOpen.openLevelErrorModal();
+		levelSaveOpen.saveLevelErrorModal();
+	}
+
 	// Putting this here, because using the dock builder twice (once in simulation once in editor), breaks it (the windows get undocked). 
 	// Just using a single id created here doesn't fix anything.
-	const auto sideBarWindowName = "sideBar";
+	const auto sideBarWindowName = "settings";
 	{
 		static bool firstFrame = true;
 		if (firstFrame) {
@@ -122,6 +179,24 @@ void Editor::update(GameRenderer& renderer) {
 				break;
 			}
 
+			case EditorEntityType::MIRROR: {
+				auto mirror = mirrors.get(selectTool.selectedEntity->mirror());
+				if (!mirror.has_value()) {
+					break;
+				}
+				editorMirrorLengthInput(mirror->length);
+				break;
+			}
+
+			case EditorEntityType::TARGET: {
+				auto target = targets.get(selectTool.selectedEntity->target());
+				if (!target.has_value()) {
+					break;
+				}
+				editorTargetRadiusInput(target->radius);
+				break;
+			}
+
 			default:
 				break;
 			}
@@ -136,9 +211,14 @@ void Editor::update(GameRenderer& renderer) {
 			editorLaserColorCombo("color", laserCreateTool.laserColor);
 			break;
 
-		case NONE:
 		case MIRROR:
+			editorMirrorLengthInput(mirrorCreateTool.mirrorLength);
+			break;
+
 		case TARGET:
+			editorTargetRadiusInput(targetCreateTool.targetRadius);
+
+		case NONE:
 		default:
 			break;
 		}
@@ -147,7 +227,7 @@ void Editor::update(GameRenderer& renderer) {
 		{
 			ImGui::Checkbox("show", &showGrid);
 			ImGui::TextDisabled("(?)");
-			ImGui::SetItemTooltip("Hold ctrl to enable snapping to grid.");
+			ImGui::SetItemTooltip("Hold ctrl to snap cursor to grid.");
 
 			ImGui::InputInt("lines", &gridLineCount);
 			gridLineCount = std::max(gridLineCount, 1);
@@ -261,10 +341,11 @@ void Editor::update(GameRenderer& renderer) {
 	}
 
 	renderer.gfx.camera.aspectRatio = Window::aspectRatio();
+	renderer.gfx.camera.zoom = 0.9f;
 	glClear(GL_COLOR_BUFFER_BIT);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glViewport(0, 0, Window::size().x, Window::size().y);
+	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
 
 	const auto gridColor = Color3::WHITE / 15.0f;
 	if (showGrid) {
@@ -544,9 +625,9 @@ void Editor::update(GameRenderer& renderer) {
 	}
 
 	// This only deals with exacly overlapping segments. There is also the case of partial overlaps that often occurs.
-	for (i64 i = 0; i < laserSegmentsToDraw.size(); i++) {
+	for (i64 i = 0; i < i64(laserSegmentsToDraw.size()); i++) {
 		const auto& a = laserSegmentsToDraw[i];
-		for (i64 j = i + 1; j < laserSegmentsToDraw.size(); j++) {
+		for (i64 j = i + 1; j < i64(laserSegmentsToDraw.size()); j++) {
 			
 			auto& b = laserSegmentsToDraw[j];
 
@@ -615,21 +696,6 @@ void Editor::undoRedoUpdate() {
 			}
 		}
 	}
-}
-
-void Editor::saveLevel(std::string_view path) {
-	auto level = Json::Value::emptyObject();
-
-	{
-		auto& jsonWalls = (level[levelWallsName] = Json::Value::emptyArray()).array();
-		for (const auto& wall : walls) {
-			const auto levelWall = LevelWall{ .e0 = wall->endpoints[0], .e1 = wall->endpoints[1] };
-			jsonWalls.push_back(toJson(levelWall));
-		}
-	}
-	std::ofstream file(path.data());
-	Json::print(file, level);
-
 }
 
 void Editor::reset() {
@@ -710,7 +776,7 @@ void Editor::targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		auto target = targets.create();
-		target.entity = EditorTarget{ .position = cursorPos };
+		target.entity = EditorTarget{ .position = cursorPos, .radius = targetCreateTool.targetRadius };
 		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(target.id)));
 		cursorCaptured = true;
 	}
@@ -846,32 +912,6 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 }
 
-bool Editor::loadLevel(std::string_view path) {
-	const auto jsonOpt = tryLoadJsonFromFile(path);
-	if (!jsonOpt.has_value()) {
-		return false;
-	}
-	const auto& json = *jsonOpt;
-	try {
-
-		{
-			const auto& jsonWalls = json.at(levelWallsName).array();
-			for (const auto& jsonWall : jsonWalls) {
-				const auto levelWall = fromJson<LevelWall>(jsonWall);
-				auto wall = walls.create();
-				wall.entity = EditorWall{ 
-					.endpoints = { levelWall.e0, levelWall.e1 },
-				};
-			}
-		}
-	}
-	catch (const Json::Value::Exception&) {
-		return false;
-	}
-
-	return true;
-}
-
 void Editor::activateEntity(const EditorEntityId& id) {
 	switch (id.type) {
 		using enum EditorEntityType;
@@ -949,7 +989,6 @@ void Editor::undoAction(const EditorAction& action) {
 		selectTool.selectedEntity = a.oldSelection;
 		break;
 	}
-		
 
 	}
 }
@@ -1197,7 +1236,7 @@ std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool can
 		return std::nullopt;
 	}
 
-	const auto result = makeMirror(*center, cursorPos);
+	const auto result = makeMirror(*center, cursorPos, mirrorLength);
 	reset();
 	return result;
 }
@@ -1206,7 +1245,7 @@ void Editor::MirrorCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
 	if (!center.has_value()) {
 		return;
 	}
-	const auto mirror = makeMirror(*center, cursorPos);
+	const auto mirror = makeMirror(*center, cursorPos, mirrorLength);
 	renderMirror(renderer, mirror);
 }
 
@@ -1214,6 +1253,46 @@ void Editor::MirrorCreateTool::reset() {
 	center = std::nullopt;
 }
 
-EditorMirror Editor::MirrorCreateTool::makeMirror(Vec2 center, Vec2 cursorPos) {
-	return EditorMirror{ .center = center, .normalAngle = (cursorPos - center).angle() };
+EditorMirror Editor::MirrorCreateTool::makeMirror(Vec2 center, Vec2 cursorPos, f32 length) {
+	return EditorMirror(center, (cursorPos - center).angle(), length);
 }
+
+void Editor::LevelSaveOpen::openSaveLevelErrorModal() {
+	ImGui::OpenPopup(SAVE_LEVEL_ERROR_MODAL_NAME);
+}
+
+void Editor::LevelSaveOpen::saveLevelErrorModal() {
+	const auto center = ImGui::GetMainViewport()->GetCenter();
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	if (!ImGui::BeginPopupModal(SAVE_LEVEL_ERROR_MODAL_NAME, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		return;
+	}
+	ImGui::Text("Failed to save level.");
+
+	if (ImGui::Button("ok")) {
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::EndPopup();
+}
+
+
+void Editor::LevelSaveOpen::openOpenLevelErrorModal() {
+	ImGui::OpenPopup(OPEN_LEVEL_ERROR_MODAL_NAME);
+}
+
+void Editor::LevelSaveOpen::openLevelErrorModal() {
+	const auto center = ImGui::GetMainViewport()->GetCenter();
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	if (!ImGui::BeginPopupModal(OPEN_LEVEL_ERROR_MODAL_NAME, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		return;
+	}
+	ImGui::Text("Failed to open level.");
+	
+	if (ImGui::Button("ok")) {
+		ImGui::CloseCurrentPopup();
+	}
+	
+	ImGui::EndPopup();
+}
+

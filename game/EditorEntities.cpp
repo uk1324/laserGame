@@ -16,20 +16,18 @@ EditorLaser EditorLaser::DefaultInitialize::operator()() {
 	return EditorLaser{
 		.position = Vec2(0.0f),
 		.angle = 0.0f,
-		.color = Vec3(0.123)
+		.color = Vec3(0.123f)
 	};
 }
 
 EditorMirror EditorMirror::DefaultInitialize::operator()() {
-	return EditorMirror{
-		.center = Vec2(0.0f),
-		.normalAngle = 0.0f
-	};
+	return EditorMirror(Vec2(0.0f), 0.0f, 1.0f);
 }
 
 EditorTarget EditorTarget::DefaultInitialize::operator()() {
 	return EditorTarget{
-		.position = Vec2(0.0f) 
+		.position = Vec2(0.0f) ,
+		.radius = 1.0f
 	};
 }
 
@@ -73,8 +71,13 @@ EditorTargetId EditorEntityId::target() const {
 	return EditorTargetId(index, version);
 }
 
+EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length)
+	: center(center)
+	, normalAngle(normalAngle)
+	, length(length) {}
+
 std::array<Vec2, 2> EditorMirror::calculateEndpoints() const {
-	f32 halfLength = 0.6f;
+	const auto halfLength = length / 2.0f;
 	const auto c = fromStereographic(center);
 	const auto a = atan2(center.y, center.x);
 
@@ -93,7 +96,6 @@ std::array<Vec2, 2> EditorMirror::calculateEndpoints() const {
 
 Circle EditorTarget::calculateCircle() const {
 	const auto center = fromStereographic(position);
-	f32 radius = 0.1f;
 
 	const auto axis = cross(center, Vec3(0.0f, 0.0f, 1.0f));
 	// Point equidistant from center in there sphere metric.
@@ -149,4 +151,23 @@ void editorLaserColorCombo(const char* label, Vec3& selectedColor) {
 		}
 		ImGui::EndCombo();
 	}
+}
+
+void sliderHelp() {
+	ImGui::TextDisabled("(?)");
+	ImGui::SetItemTooltip("Click while holding ctrl to input the value directly.");
+}
+
+void sliderFloat(const char* label, f32& value, f32 min, f32 max) {
+	ImGui::SliderFloat(label, &value, min, max);
+	value = std::clamp(value, min, max);
+	sliderHelp();
+}
+
+void editorMirrorLengthInput(f32& length) {
+	sliderFloat("length", length, 0.1f, 2.0f);
+}
+
+void editorTargetRadiusInput(f32& radius) {
+	sliderFloat("radius", radius, 0.05f, 1.5f);
 }

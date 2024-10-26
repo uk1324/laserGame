@@ -74,9 +74,10 @@ struct Editor {
 		void render(GameRenderer& renderer, Vec2 cursorPos);
 		void reset();
 
-		static EditorMirror makeMirror(Vec2 center, Vec2 cursorPos);
+		static EditorMirror makeMirror(Vec2 center, Vec2 cursorPos, f32 length);
 
 		std::optional<Vec2> center;
+		f32 mirrorLength = 0.6f;
 	} mirrorCreateTool;
 	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
@@ -96,6 +97,9 @@ struct Editor {
 	} mirrorGrabTool;
 	void mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
+	struct TargetCreateTool {
+		f32 targetRadius = EditorTarget::defaultRadius;
+	} targetCreateTool;
 	void targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 	
 	struct TargetGrabTool {
@@ -116,16 +120,26 @@ struct Editor {
 	void undoAction(const EditorAction& action);
 	void redoAction(const EditorAction& action);
 
-	void reset();
-
-	void saveLevel(std::string_view path);
-	bool loadLevel(std::string_view path);
-
 	bool showGrid = true;
 	i32 gridLineCount = 16;
 	i32 gridCircleCount = 10;
 
-	std::optional<std::string> lastLoadedLevel;
+	void reset();
+
+	bool trySaveLevel(std::string_view path);
+	bool tryLoadLevel(std::string_view path);
+
+	struct LevelSaveOpen {
+		static constexpr auto SAVE_LEVEL_ERROR_MODAL_NAME = "save level error";
+		static void openSaveLevelErrorModal();
+		static void saveLevelErrorModal();
+
+		static constexpr auto OPEN_LEVEL_ERROR_MODAL_NAME = "open level error";
+		static void openOpenLevelErrorModal();
+		static void openLevelErrorModal();
+
+		std::optional<std::string> lastLoadedLevelPath;
+	} levelSaveOpen;
 
 	EntityArray<EditorWall, EditorWall::DefaultInitialize> walls;
 	EntityArray<EditorLaser, EditorLaser::DefaultInitialize> lasers;

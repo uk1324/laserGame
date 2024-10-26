@@ -43,11 +43,16 @@ struct EditorMirror {
 		EditorMirror operator()();
 	};
 
+	EditorMirror(Vec2 center, f32 normalAngle, f32 length);
+
 	Vec2 center;
 	f32 normalAngle;
+	f32 length;
 
 	std::array<Vec2, 2> calculateEndpoints() const;
 };
+
+void editorMirrorLengthInput(f32& length);
 
 using EditorMirrorId = EntityArrayId<EditorMirror>;
 
@@ -58,8 +63,12 @@ struct EditorTarget {
 
 	Circle calculateCircle() const;
 
+	static constexpr auto defaultRadius = 0.1f;
 	Vec2 position;
+	f32 radius;
 };
+
+void editorTargetRadiusInput(f32& radius);
 
 using EditorTargetId = EntityArrayId<EditorTarget>;
 
