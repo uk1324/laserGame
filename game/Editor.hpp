@@ -17,6 +17,7 @@ struct Editor {
 		LASER,
 		MIRROR,
 		TARGET,
+		PORTAL_PAIR
 	};
 
 	Tool selectedTool = Tool::WALL;
@@ -83,6 +84,15 @@ struct Editor {
 	} mirrorCreateTool;
 	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
+	/*struct RotatableSegmentGizmoType {
+
+	};
+
+	template<typename T>
+	struct RotatableSegmentGrabTool {
+
+	};*/
+
 	struct MirrorGrabTool {
 		enum class GizmoType {
 			TRANSLATION, ROTATION
@@ -113,6 +123,12 @@ struct Editor {
 		std::optional<Grabbed> grabbed;
 	} targetGrabTool;
 	void targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
+
+	void portalCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+
+	struct PortalGrabTool {
+
+	};
 
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);
@@ -147,4 +163,5 @@ struct Editor {
 	EntityArray<EditorLaser, EditorLaser::DefaultInitialize> lasers;
 	EntityArray<EditorMirror, EditorMirror::DefaultInitialize> mirrors;
 	EntityArray<EditorTarget, EditorTarget::DefaultInitialize> targets;
+	EntityArray<EditorPortalPair, EditorPortalPair::DefaultInitialize> portalPairs;
 };

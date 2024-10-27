@@ -48,8 +48,6 @@ void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {
 	for (const auto endpoint : endpoints) {
 		renderer.gfx.disk(endpoint, 0.01f, movablePartColor(false));
 	}
-	
-	//renderer.gfx.circle(mirror.center, mirror.length / 4.0f, 0.01f, movablePartColor(mirror.positionLocked));
 	renderer.gfx.disk(mirror.center, 0.01f, movablePartColor(mirror.positionLocked));
 }
 
@@ -147,7 +145,7 @@ void Editor::update(GameRenderer& renderer) {
 	{
 		ImGui::Begin(sideBarWindowName);
 
-		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0");
+		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0create portals\0");
 
 		ImGui::SeparatorText("tool settings");
 		switch (selectedTool) {
@@ -328,6 +326,7 @@ void Editor::update(GameRenderer& renderer) {
 		case LASER: laserCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case MIRROR: mirrorCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case TARGET: targetCreateToolUpdate(cursorPos, cursorCaptured); break;
+		case PORTAL_PAIR: portalCreateToolUpdate(cursorPos, cursorCaptured); break;
 		}
 	};
 
@@ -379,6 +378,7 @@ void Editor::update(GameRenderer& renderer) {
 	case LASER: break;
 	case MIRROR: mirrorCreateTool.render(renderer, cursorPos); break;
 	case TARGET: break;
+	case PORTAL_PAIR: break;
 	}
 
 	renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN);
@@ -403,6 +403,17 @@ void Editor::update(GameRenderer& renderer) {
 		const auto circle = target->calculateCircle();
 		renderer.gfx.circle(circle.center, circle.radius, 0.01f, Color3::MAGENTA);
 		renderer.gfx.disk(target->position, 0.01f, Color3::MAGENTA / 2.0f);
+	}
+
+	for (const auto& portalPair : portalPairs) {
+		for (const auto& portal : portalPair->portals) {
+			const auto endpoints = portal.endpoints();
+			renderer.stereographicSegment(endpoints[0], endpoints[1], (Color3::RED + Color3::YELLOW) / 2.0f);
+			for (const auto endpoint : endpoints) {
+				renderer.gfx.disk(endpoint, 0.01f, movablePartColor(false));
+			}
+			renderer.gfx.disk(portal.center, 0.01f, movablePartColor(false));
+		}
 	}
 
 	struct Segment {
@@ -718,25 +729,23 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !mirrorGrabTool.grabbed.has_value()) {
 		for (const auto& mirror : mirrors) {
-			if (distance(cursorPos, mirror->center)) {
-				auto updateGrabbed = [&](Vec2 p, MirrorGrabTool::GizmoType gizmo) {
-					if (distance(cursorPos, p) > Constants::endpointGrabPointRadius) {
-						return;
-					}
-					mirrorGrabTool.grabbed = MirrorGrabTool::Grabbed{
-						.id = mirror.id,
-						.gizmo = gizmo,
-						.grabStartState = mirror.entity,
-						.grabOffset = p - cursorPos,
-					};
-					cursorCaptured = true;
+			auto updateGrabbed = [&](Vec2 p, MirrorGrabTool::GizmoType gizmo) {
+				if (distance(cursorPos, p) > Constants::endpointGrabPointRadius) {
+					return;
+				}
+				mirrorGrabTool.grabbed = MirrorGrabTool::Grabbed{
+					.id = mirror.id,
+					.gizmo = gizmo,
+					.grabStartState = mirror.entity,
+					.grabOffset = p - cursorPos,
 				};
-				updateGrabbed(mirror->center, MirrorGrabTool::GizmoType::TRANSLATION);
-				const auto endpoints = mirror->calculateEndpoints();
-				for (const auto& endpoint : endpoints) {
-					if (!cursorCaptured) {
-						updateGrabbed(endpoint, MirrorGrabTool::GizmoType::ROTATION);
-					}
+				cursorCaptured = true;
+			};
+			updateGrabbed(mirror->center, MirrorGrabTool::GizmoType::TRANSLATION);
+			const auto endpoints = mirror->calculateEndpoints();
+			for (const auto& endpoint : endpoints) {
+				if (!cursorCaptured) {
+					updateGrabbed(endpoint, MirrorGrabTool::GizmoType::ROTATION);
 				}
 			}
 		}
@@ -849,6 +858,25 @@ void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 	}
 }
 
+void Editor::portalCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
+		auto portalPair = portalPairs.create();
+		const auto offset = Vec2(-0.1f, 0.0f);
+		portalPair.entity = EditorPortalPair{
+			.portals = {
+				EditorPortal{ .center = cursorPos + offset, .normalAngle = 0.0f },
+				EditorPortal{ .center = cursorPos - offset, .normalAngle = 0.0f }
+			}
+		};
+		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(portalPair.id)));
+		cursorCaptured = true;
+	}
+}
+
 void Editor::freeAction(EditorAction& action) {
 	// TODO: Fix entity leaks.
 }
@@ -937,43 +965,22 @@ void Editor::activateEntity(const EditorEntityId& id) {
 	switch (id.type) {
 		using enum EditorEntityType;
 
-	case WALL:
-		walls.activate(id.wall());
-		break;
-
-	case LASER:
-		lasers.activate(id.laser());
-		break;
-
-	case MIRROR:
-		mirrors.activate(id.mirror());
-		break;
-
-	case TARGET:
-		targets.activate(id.target());
-		break;
-
+	case WALL: walls.activate(id.wall()); break;
+	case LASER: lasers.activate(id.laser()); break;
+	case MIRROR: mirrors.activate(id.mirror()); break;
+	case TARGET: targets.activate(id.target()); break;
+	case PORTAL_PAIR: portalPairs.activate(id.portalPair()); break;
 	}
 }
 
 void Editor::deactivateEntity(const EditorEntityId& id) {
 	switch (id.type) {
 		using enum EditorEntityType;
-	case WALL:
-		walls.deactivate(id.wall());
-		break;
-
-	case LASER:
-		lasers.deactivate(id.laser());
-		break;
-
-	case MIRROR:
-		mirrors.deactivate(id.mirror());
-		break;
-
-	case TARGET:
-		targets.deactivate(id.target());
-		break;
+	case WALL: walls.deactivate(id.wall()); break;
+	case LASER: lasers.deactivate(id.laser()); break;
+	case MIRROR: mirrors.deactivate(id.mirror()); break;
+	case TARGET: targets.deactivate(id.target()); break;
+	case PORTAL_PAIR: portalPairs.deactivate(id.portalPair()); break;
 	}
 }
 

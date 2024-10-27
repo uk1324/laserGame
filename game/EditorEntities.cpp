@@ -31,6 +31,13 @@ EditorTarget EditorTarget::DefaultInitialize::operator()() {
 	};
 }
 
+EditorPortalPair EditorPortalPair::DefaultInitialize::operator()() {
+	const auto portal = EditorPortal{ .center = Vec2(0.0f), .normalAngle = 0.0f };
+	return EditorPortalPair{
+		.portals = { portal, portal }
+	};
+}
+
 EditorEntityId::EditorEntityId(const EditorWallId& id) 
 	: type(EditorEntityType::WALL) 
 	, index(id.index())
@@ -48,6 +55,11 @@ EditorEntityId::EditorEntityId(const EditorMirrorId& id)
 
 EditorEntityId::EditorEntityId(const EditorTargetId& id) 
 	: type(EditorEntityType::TARGET)
+	, index(id.index())
+	, version(id.version()) {}
+
+EditorEntityId::EditorEntityId(const EditorPortalPairId& id)
+	: type(EditorEntityType::PORTAL_PAIR)
 	, index(id.index())
 	, version(id.version()) {}
 
@@ -69,6 +81,11 @@ EditorMirrorId EditorEntityId::mirror() const {
 EditorTargetId EditorEntityId::target() const {
 	ASSERT(type == EditorEntityType::TARGET);
 	return EditorTargetId(index, version);
+}
+
+EditorPortalPairId EditorEntityId::portalPair() const {
+	ASSERT(type == EditorEntityType::PORTAL_PAIR);
+	return EditorPortalPairId(index, version);
 }
 
 EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked)
@@ -141,12 +158,7 @@ EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positi
 //}
 
 std::array<Vec2, 2> EditorMirror::calculateEndpoints() const {
-	const auto c = fromStereographic(center);
-	const auto endpoint0 = moveOnSphericalGeodesic(c, normalAngle + PI<f32> / 2.0f, length / 2.0f);
-	const auto endpoint1 = Quat(PI<f32>, c) * endpoint0;
-	const auto e0 = toStereographic(endpoint0.normalized());
-	const auto e1 = toStereographic(endpoint1.normalized());
-	return { e0, e1 };
+	return rotatableSegmentEndpoints(center, normalAngle, length);
 }
 
 Circle EditorTarget::calculateCircle() const {
@@ -212,6 +224,15 @@ void editorLaserColorCombo(const char* label, Vec3& selectedColor) {
 	}
 }
 
+std::array<Vec2, 2> rotatableSegmentEndpoints(Vec2 center, f32 normalAngle, f32 length) {
+	const auto c = fromStereographic(center);
+	const auto endpoint0 = moveOnSphericalGeodesic(c, normalAngle + PI<f32> / 2.0f, length / 2.0f);
+	const auto endpoint1 = Quat(PI<f32>, c) * endpoint0;
+	const auto e0 = toStereographic(endpoint0.normalized());
+	const auto e1 = toStereographic(endpoint1.normalized());
+	return { e0, e1 };
+}
+
 void sliderHelp() {
 	ImGui::TextDisabled("(?)");
 	ImGui::SetItemTooltip("Click while holding ctrl to input the value directly.");
@@ -229,4 +250,9 @@ void editorMirrorLengthInput(f32& length) {
 
 void editorTargetRadiusInput(f32& radius) {
 	sliderFloat("radius", radius, 0.05f, 1.5f);
+}
+
+std::array<Vec2, 2> EditorPortal::endpoints() const {
+	const auto portalLength = 0.6f;
+	return rotatableSegmentEndpoints(center, normalAngle, portalLength);
 }
