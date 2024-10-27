@@ -101,6 +101,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 	if (!jsonOpt.has_value()) {
 		return false;
 	}
+	reset();
 	const auto& json = *jsonOpt;
 	try {
 

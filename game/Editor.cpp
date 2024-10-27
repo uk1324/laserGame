@@ -12,15 +12,6 @@
 #include <engine/Math/Quat.hpp>
 #include <game/Stereographic.hpp>
 
-
-const auto movablePartColor(bool isPositionLocked) {
-	const auto movableColor = Color3::YELLOW;
-	const auto nonMovableColor = movableColor / 2.0f;
-	return isPositionLocked
-		? nonMovableColor
-		: movableColor;
-}
-
 Editor::Editor()
 	: actions(EditorActions::make()) {
 
@@ -55,9 +46,11 @@ void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {
 	const auto endpoints = mirror.calculateEndpoints();
 	renderer.stereographicSegment(endpoints[0], endpoints[1], Color3::WHITE / 2.0f);
 	for (const auto endpoint : endpoints) {
-		renderer.gfx.disk(endpoint, 0.01f, Color3::BLUE);
+		renderer.gfx.disk(endpoint, 0.01f, movablePartColor(false));
 	}
-	renderer.gfx.disk(mirror.center, 0.01f, Color3::RED);
+	
+	//renderer.gfx.circle(mirror.center, mirror.length / 4.0f, 0.01f, movablePartColor(mirror.positionLocked));
+	renderer.gfx.disk(mirror.center, 0.01f, movablePartColor(mirror.positionLocked));
 }
 
 void Editor::update(GameRenderer& renderer) {
@@ -92,6 +85,11 @@ void Editor::update(GameRenderer& renderer) {
 			ImGui::EndMainMenuBar();
 		}
 		std::optional<std::string_view> savePath;
+
+		if (newButtonDown) {
+			reset();
+			levelSaveOpen.lastLoadedLevelPath = std::nullopt;
+		}
 
 		if (Input::isKeyHeld(KeyCode::LEFT_CONTROL) && Input::isKeyDown(KeyCode::S)) {
 			saveButtonDown = true;
@@ -393,7 +391,7 @@ void Editor::update(GameRenderer& renderer) {
 	}
 	renderer.renderWalls();
 
-	for (auto mirror : mirrors) {
+	for (const auto& mirror : mirrors) {
 		renderMirror(renderer, mirror.entity);
 	}
 
@@ -417,8 +415,7 @@ void Editor::update(GameRenderer& renderer) {
 
 	for (const auto& laser : lasers) {
 		renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
-		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, Color3::BLUE);
-
+		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, movablePartColor(false));
 
 		static i32 maxReflections = 20;
 		//ImGui::InputInt("max reflections", &maxReflections);
@@ -708,6 +705,10 @@ void Editor::undoRedoUpdate() {
 
 void Editor::reset() {
 	walls.reset();
+	lasers.reset();
+	mirrors.reset();
+	targets.reset();
+	actions.reset();
 }
 
 void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
@@ -752,9 +753,21 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 				mirror->center = newPosition;
 				break;
 
-			case ROTATION:
-				mirror->normalAngle = (newPosition - mirror->center).angle() + PI<f32> / 2.0f;
+			case ROTATION: {
+				const auto line = stereographicLine(newPosition, mirror->center);
+				f32 angleAtCenter = 0.0f;
+				switch (line.type) {
+					using enum StereographicLine::Type;
+				case CIRCLE:
+					angleAtCenter = (mirror->center - line.circle.center).angle();
+					break;
+				case LINE:
+					angleAtCenter = line.lineNormal.angle();
+				}
+				mirror->normalAngle = angleAtCenter;
 				break;
+			}
+
 			}
 		} else {
 			CHECK_NOT_REACHED();

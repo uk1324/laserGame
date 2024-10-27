@@ -74,6 +74,28 @@ void editorTargetRadiusInput(f32& radius);
 
 using EditorTargetId = EntityArrayId<EditorTarget>;
 
+//struct EditorDoor {
+//	i32 triggerIndex;
+//	Vec2 endpoints[2];
+//};
+//
+//struct EditorTriggerOrb {
+//	i32 index;
+//	Vec2 position;
+//};
+
+//struct EditorPortals {
+//	Vec2 positions[2];
+//	f32 angles[2];
+//};
+// or maybe
+//struct EditorPortal {
+//	Vec2 position;
+//	f32 angle;
+//	i32 index
+//};
+// this version could allow cloning portals. One big issue with this is that doors work based on order and there would need to be an order found for which portal the laser goes through first. Maybe based on distance. It could be cool, but it seems unnescecarily complicated.
+
 enum class EditorEntityType {
 	WALL,
 	LASER,

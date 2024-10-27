@@ -61,3 +61,11 @@ TODO: Debug reflections to display. Give a max number of reflections to display.
 TODO: Lock position and lock angle.
 
 The color out the boundary could inform the player if the objects are placed in a valid way.
+
+TODO: Circular walls.
+
+TODO: An orb that you can't hit.
+
+The continue button would be ungreyed when a solution is reached only after pressing the button is the next level opened.
+
+TODO: Could add a flag that makes mirrors one sided.

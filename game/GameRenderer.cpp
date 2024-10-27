@@ -74,3 +74,11 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) {
 		gfx.circleArcTriangulated(line.center, line.radius, a0, a1, Constants::wallWidth, color, 1000);
 	}
 }
+
+Vec3 movablePartColor(bool isPositionLocked) {
+	const auto movableColor = Color3::YELLOW;
+	const auto nonMovableColor = movableColor / 2.0f;
+	return isPositionLocked
+		? nonMovableColor
+		: movableColor;
+}

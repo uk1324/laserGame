@@ -13,3 +13,5 @@ struct GameRenderer {
 
 	Gfx2d gfx;
 };
+
+Vec3 movablePartColor(bool isPositionLocked);
