@@ -335,6 +335,7 @@ void Editor::update(GameRenderer& renderer) {
 		laserGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 		mirrorGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 		targetGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+		portalGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 	};
 
 	if (cursorExact) {
@@ -729,24 +730,15 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !mirrorGrabTool.grabbed.has_value()) {
 		for (const auto& mirror : mirrors) {
-			auto updateGrabbed = [&](Vec2 p, MirrorGrabTool::GizmoType gizmo) {
-				if (distance(cursorPos, p) > Constants::endpointGrabPointRadius) {
-					return;
-				}
+			const auto result = rotatableSegmentCheckGrab(mirror->center, mirror->normalAngle, mirror->length,
+				cursorPos, cursorCaptured, cursorExact);
+
+			if (result.has_value()) {
 				mirrorGrabTool.grabbed = MirrorGrabTool::Grabbed{
 					.id = mirror.id,
-					.gizmo = gizmo,
 					.grabStartState = mirror.entity,
-					.grabOffset = p - cursorPos,
+					.grabbed = *result,
 				};
-				cursorCaptured = true;
-			};
-			updateGrabbed(mirror->center, MirrorGrabTool::GizmoType::TRANSLATION);
-			const auto endpoints = mirror->calculateEndpoints();
-			for (const auto& endpoint : endpoints) {
-				if (!cursorCaptured) {
-					updateGrabbed(endpoint, MirrorGrabTool::GizmoType::ROTATION);
-				}
 			}
 		}
 	}
@@ -755,29 +747,9 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 		cursorCaptured = true;
 		auto mirror = mirrors.get(mirrorGrabTool.grabbed->id);
 		if (mirror.has_value()) {
-			const auto newPosition = cursorPos + mirrorGrabTool.grabbed->grabOffset * !cursorExact;
-			switch (mirrorGrabTool.grabbed->gizmo) {
-				using enum MirrorGrabTool::GizmoType;
-			case TRANSLATION:
-				mirror->center = newPosition;
-				break;
-
-			case ROTATION: {
-				const auto line = stereographicLine(newPosition, mirror->center);
-				f32 angleAtCenter = 0.0f;
-				switch (line.type) {
-					using enum StereographicLine::Type;
-				case CIRCLE:
-					angleAtCenter = (mirror->center - line.circle.center).angle();
-					break;
-				case LINE:
-					angleAtCenter = line.lineNormal.angle();
-				}
-				mirror->normalAngle = angleAtCenter;
-				break;
-			}
-
-			}
+			grabbedRotatableSegmentUpdate(mirrorGrabTool.grabbed->grabbed.grabbedGizmo, mirrorGrabTool.grabbed->grabbed.grabOffset,
+				mirror->center, mirror->normalAngle,
+				cursorPos, cursorExact);
 		} else {
 			CHECK_NOT_REACHED();
 		}
@@ -874,6 +846,60 @@ void Editor::portalCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		};
 		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(portalPair.id)));
 		cursorCaptured = true;
+	}
+}
+
+void Editor::portalGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT) && !portalGrabTool.grabbed.has_value()) {
+		for (const auto& portalPair : portalPairs) {
+			for (i32 i = 0; i < 2; i++) {
+				const auto& portal = portalPair->portals[i];
+
+				const auto result = rotatableSegmentCheckGrab(portal.center, portal.normalAngle, EditorPortal::defaultLength,
+					cursorPos, cursorCaptured, cursorExact);
+
+				if (result.has_value()) {
+					portalGrabTool.grabbed = PortalGrabTool::Grabbed{
+						.id = portalPair.id,
+						.portalIndex = i,
+						.grabStartState = portalPair.entity,
+						.grabbed = *result,
+					};
+				}
+			}
+		}
+	}
+
+	if (Input::isMouseButtonHeld(MouseButton::LEFT) && portalGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		auto portalPair = portalPairs.get(portalGrabTool.grabbed->id);
+		if (portalPair.has_value()) {
+			auto& portal = portalPair->portals[portalGrabTool.grabbed->portalIndex];
+			grabbedRotatableSegmentUpdate(portalGrabTool.grabbed->grabbed.grabbedGizmo, portalGrabTool.grabbed->grabbed.grabOffset,
+				portal.center, portal.normalAngle,
+				cursorPos, cursorExact);
+		} else {
+			CHECK_NOT_REACHED();
+		}
+	}
+
+	if (Input::isMouseButtonUp(MouseButton::LEFT) && portalGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		auto portalPair = portalPairs.get(portalGrabTool.grabbed->id);
+		if (portalPair.has_value()) {
+			auto action = new EditorActionModifyPortalPair(
+				portalGrabTool.grabbed->id,
+				std::move(portalGrabTool.grabbed->grabStartState),
+				std::move(*portalPair));
+			actions.add(*this, action);
+		} else {
+			CHECK_NOT_REACHED();
+		}
+		portalGrabTool.grabbed = std::nullopt;
 	}
 }
 
@@ -1001,6 +1027,7 @@ void Editor::undoAction(const EditorAction& action) {
 	case MODIFY_LASER: undoModify(lasers, static_cast<const EditorActionModifyLaser&>(action)); break;
 	case MODIFY_MIRROR: undoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
 	case MODIFY_TARGET: undoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
+	case MODIFY_PORTAL_PAIR: undoModify(portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
 
 	case CREATE_ENTITY: {
 		deactivateEntity(static_cast<const EditorActionDestroyEntity&>(action).id);
@@ -1181,6 +1208,62 @@ void Editor::mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 }
 
+std::optional<Editor::GrabbedRotatableSegment> Editor::rotatableSegmentCheckGrab(Vec2 center, f32 normalAngle, f32 length,
+	Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
+	
+	std::optional<Editor::GrabbedRotatableSegment> grabbed;
+
+	auto updateGrabbed = [&](Vec2 p, RotatableSegmentGizmoType gizmo) {
+		if (distance(cursorPos, p) > Constants::endpointGrabPointRadius) {
+			return;
+		}
+		grabbed = GrabbedRotatableSegment{
+			.grabOffset = p - cursorPos,
+			.grabbedGizmo = gizmo,
+		};
+		cursorCaptured = true;
+	};
+	updateGrabbed(center, RotatableSegmentGizmoType::TRANSLATION);
+	const auto endpoints = rotatableSegmentEndpoints(center, normalAngle, length);
+
+	for (const auto& endpoint : endpoints) {
+		if (!cursorCaptured) {
+			updateGrabbed(endpoint, RotatableSegmentGizmoType::ROTATION);
+		}
+	}
+
+	return grabbed;
+}
+
+void Editor::grabbedRotatableSegmentUpdate(RotatableSegmentGizmoType type, Vec2 grabOffset,
+	Vec2& center, f32& normalAngle,
+	Vec2 cursorPos, bool cursorExact) {
+
+	const auto newPosition = cursorPos + grabOffset * !cursorExact;
+	switch (type) {
+		using enum RotatableSegmentGizmoType;
+	case TRANSLATION:
+		center = newPosition;
+		break;
+
+	case ROTATION: {
+		const auto line = stereographicLine(newPosition, center);
+		f32 angleAtCenter = 0.0f;
+		switch (line.type) {
+			using enum StereographicLine::Type;
+		case CIRCLE:
+			angleAtCenter = (center - line.circle.center).angle();
+			break;
+		case LINE:
+			angleAtCenter = line.lineNormal.angle();
+		}
+		normalAngle = angleAtCenter;
+		break;
+	}
+
+	}
+}
+
 template<typename Entity, typename Action>
 void redoModify(EntityArray<Entity, typename Entity::DefaultInitialize>& array, const Action& action) {
 	auto entity = array.get(action.id);
@@ -1198,6 +1281,7 @@ void Editor::redoAction(const EditorAction& action) {
 	case MODIFY_LASER: redoModify(lasers, static_cast<const EditorActionModifyLaser&>(action)); break; 
 	case MODIFY_MIRROR: redoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
 	case MODIFY_TARGET: redoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
+	case MODIFY_PORTAL_PAIR: redoModify(portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
 
 	case CREATE_ENTITY: {
 		activateEntity(static_cast<const EditorActionCreateEntity&>(action).id);

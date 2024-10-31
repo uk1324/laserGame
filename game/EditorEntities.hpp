@@ -80,6 +80,8 @@ struct EditorPortal {
 	Vec2 center;
 	f32 normalAngle;
 
+	static constexpr auto defaultLength = 0.6f;
+
 	std::array<Vec2, 2> endpoints() const;
 };
 

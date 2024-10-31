@@ -253,6 +253,5 @@ void editorTargetRadiusInput(f32& radius) {
 }
 
 std::array<Vec2, 2> EditorPortal::endpoints() const {
-	const auto portalLength = 0.6f;
-	return rotatableSegmentEndpoints(center, normalAngle, portalLength);
+	return rotatableSegmentEndpoints(center, normalAngle, defaultLength);
 }

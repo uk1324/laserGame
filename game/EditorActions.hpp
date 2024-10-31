@@ -9,6 +9,7 @@ enum class EditorActionType {
 	MODIFY_LASER,
 	MODIFY_MIRROR,
 	MODIFY_TARGET,
+	MODIFY_PORTAL_PAIR,
 	CREATE_ENTITY,
 	DESTROY_ENTITY,
 	MODIFY_SELECTION,
@@ -31,6 +32,7 @@ using EditorActionModifyWall = EditorActionModify<EditorWall, EditorActionType::
 using EditorActionModifyLaser = EditorActionModify<EditorLaser, EditorActionType::MODIFY_LASER>;
 using EditorActionModifyMirror = EditorActionModify<EditorMirror, EditorActionType::MODIFY_MIRROR>;
 using EditorActionModifyTarget = EditorActionModify<EditorTarget, EditorActionType::MODIFY_TARGET>;
+using EditorActionModifyPortalPair = EditorActionModify<EditorPortalPair, EditorActionType::MODIFY_PORTAL_PAIR>;
 
 struct EditorActionCreateEntity : EditorAction {
 	EditorActionCreateEntity(EditorEntityId id);
