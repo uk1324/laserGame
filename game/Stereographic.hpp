@@ -56,7 +56,16 @@ StereographicLine stereographicLine(Vec2 p0, Vec2 p1);
 
 f32 angleToRangeZeroTau(f32 a);
 
-f32 circularArcDistance(Vec2 p, Circle circle, f32 startAngle, f32 endAngle);
+struct AngleRange {
+	f32 min, max;
+
+	bool isInRange(f32 angle);
+};
+
+f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange);
+
+
+AngleRange angleRangeBetweenPointsOnCircle(Vec2 circleCenter, Vec2 pointOnCircle0, Vec2 pointOnCircle1);
 
 f32 sphericalDistance(Vec3 a, Vec3 b);
 f32 stereographicDistance(Vec2 a, Vec2 b);

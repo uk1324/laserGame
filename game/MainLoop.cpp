@@ -29,4 +29,5 @@ void MainLoop::update() {
 		editor.update(renderer);
 		break;
 	}
+	renderer.gfx.drawDebug();
 }

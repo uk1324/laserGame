@@ -41,17 +41,9 @@ void GameRenderer::renderWalls() {
 void GameRenderer::stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color) {
 	const auto line = stereographicLineOld(e0, e1);
 
-	f32 a0 = angleToRangeZeroTau((e0 - line.center).angle());
-	f32 a1 = angleToRangeZeroTau((e1 - line.center).angle());
+	const auto range = angleRangeBetweenPointsOnCircle(line.center, e0, e1);
 
-	if (a0 > a1) {
-		std::swap(a0, a1);
-	}
-	if (a1 - a0 > PI<f32>) {
-		a1 -= TAU<f32>;
-	}
-
-	gfx.circleArcTriangulated(line.center, line.radius, a0, a1, Constants::wallWidth, color, 1000);
+	gfx.circleArcTriangulated(line.center, line.radius, range.min, range.max, Constants::wallWidth, color, 1000);
 }
 
 void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) { 
@@ -59,19 +51,10 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) {
 	if (stereographicLine.type == StereographicLine::Type::LINE) {
 		gfx.lineTriangulated(e0, e1, Constants::wallWidth, color);
 	} else {
-		const auto line = stereographicLine.circle;
+		const auto& line = stereographicLine.circle;
 
-		f32 a0 = angleToRangeZeroTau((e0 - line.center).angle());
-		f32 a1 = angleToRangeZeroTau((e1 - line.center).angle());
-
-		if (a0 > a1) {
-			std::swap(a0, a1);
-		}
-		if (a1 - a0 > PI<f32>) {
-			a1 -= TAU<f32>;
-		}
-
-		gfx.circleArcTriangulated(line.center, line.radius, a0, a1, Constants::wallWidth, color, 1000);
+		const auto range = angleRangeBetweenPointsOnCircle(line.center, e0, e1);
+		gfx.circleArcTriangulated(line.center, line.radius, range.min, range.max, Constants::wallWidth, color, 1000);
 	}
 }
 

@@ -1020,6 +1020,8 @@ void Editor::freeAction(EditorAction& action) {
 	// TODO: Fix entity leaks.
 }
 
+#include <iostream>
+
 void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (Input::isKeyDown(KeyCode::DELETE) && selectTool.selectedEntity.has_value()) {
 		deactivateEntity(*selectTool.selectedEntity);
@@ -1043,14 +1045,30 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		if (line.type == StereographicLine::Type::LINE) {
 			return LineSegment(e0, e1).distance(cursorPos);
 		} else {
-			auto a0 = (e0 - line.circle.center).angle();
-			auto a1 = (e1 - line.circle.center).angle();
-			if (a0 > a1) {
-				std::swap(a0, a1);
-			}
-			return circularArcDistance(cursorPos, line.circle, a0, a1);
+			const auto range = angleRangeBetweenPointsOnCircle(line.circle.center, e0, e1);
+			return circularArcDistance(cursorPos, line.circle, range);
 		}
 	};
+
+	/*for (const auto& mirror : mirrors) {
+		const auto endpoints = mirror->calculateEndpoints();
+		if (Input::isKeyDown(KeyCode::Z)) {
+			_CrtDbgBreak();
+		}
+		const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
+		ImGui::Text("%g", dist);
+	}*/
+
+	for (const auto& portalPair : portalPairs) {
+		for (const auto& portal : portalPair->portals) {
+			const auto endpoints = portal.endpoints();
+			if (Input::isKeyDown(KeyCode::Z)) {
+				_CrtDbgBreak();
+			}
+			const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
+			ImGui::Text("%g", dist);
+		}
+	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		for (const auto& wall : walls) {
@@ -1062,7 +1080,9 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 		for (const auto& mirror : mirrors) {
 			const auto endpoints = mirror->calculateEndpoints();
-			if (stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
+			const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
+			ImGui::Text("%g", dist);
+			if (dist < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(mirror.id);
 				goto selectedEntity;
 			}
@@ -1092,7 +1112,8 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		for (const auto& portalPair : portalPairs) {
 			for (const auto& portal : portalPair->portals) {
 				const auto endpoints = portal.endpoints();
-				if (stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
+				const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
+				if (dist < Constants::endpointGrabPointRadius) {
 					selectTool.selectedEntity = EditorEntityId(portalPair.id);
 					goto selectedEntity;
 				}

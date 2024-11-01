@@ -139,16 +139,33 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 */
 
-f32 circularArcDistance(Vec2 p, Circle circle, f32 startAngle, f32 endAngle) {
-	const auto pAngle = (p - circle.center).angle();
+#include <gfx2d/DbgGfx2d.hpp>
 
-	if (pAngle >= startAngle && pAngle <= endAngle) {
+f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange) {
+	if (angleRange.isInRange((p - circle.center).angle())) {
 		return abs(distance(p, circle.center) - circle.radius);
 	}
 	return std::min(
-		distance(Vec2::fromPolar(startAngle, circle.radius), p),
-		distance(Vec2::fromPolar(endAngle, circle.radius), p)
+		distance(circle.center + Vec2::fromPolar(angleRange.min, circle.radius), p),
+		distance(circle.center + Vec2::fromPolar(angleRange.max, circle.radius), p)
 	);
+}
+
+AngleRange angleRangeBetweenPointsOnCircle(Vec2 circleCenter, Vec2 pointOnCircle0, Vec2 pointOnCircle1) { 
+	f32 a0 = angleToRangeZeroTau((pointOnCircle0 - circleCenter).angle());
+	f32 a1 = angleToRangeZeroTau((pointOnCircle1 - circleCenter).angle());
+
+	if (a0 > a1) {
+		std::swap(a0, a1);
+	}
+	if (a1 - a0 > PI<f32>) {
+		a0 += TAU<f32>;
+	}
+	if (a0 > a1) {
+		std::swap(a0, a1);
+	}
+
+	return AngleRange{ .min = a0, .max = a1 };
 }
 
 f32 sphericalDistance(Vec3 a, Vec3 b) {
@@ -327,5 +344,31 @@ void StereographicLine::operator=(const StereographicLine& other) {
 	case CIRCLE:
 		circle = other.circle;
 		break;
+	}
+}
+
+bool AngleRange::isInRange(f32 angle) {
+	/*
+	min = a0 + m tau
+	max = a1 + m tau
+	min and max both have the same multiple of tau added because they are a range. That is max is measured with respect to min.
+	angle = a + n tau
+
+	subtracting floor(p / TAU<f32>) * TAU<f32> brings the angles into the same range
+	*/
+	angle -= floor(angle / TAU<f32>) * TAU<f32>;
+	{
+		const auto offset = floor(min / TAU<f32>) * TAU<f32>;
+		const auto mn = min - offset;
+		const auto mx = max - offset;
+		if (angle >= mn && angle <= mx) {
+			return true;
+		}
+	}
+	{
+		const auto offset = floor(max / TAU<f32>) * TAU<f32>;
+		const auto mn = min - offset;
+		const auto mx = max - offset;
+		return angle >= mn && angle <= mx;
 	}
 }
