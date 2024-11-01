@@ -60,7 +60,7 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) {
 
 Vec3 movablePartColor(bool isPositionLocked) {
 	const auto movableColor = Color3::YELLOW;
-	const auto nonMovableColor = movableColor / 2.0f;
+	const auto nonMovableColor = Vec3(0.3f);
 	return isPositionLocked
 		? nonMovableColor
 		: movableColor;

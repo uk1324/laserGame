@@ -42,13 +42,15 @@ StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAn
 	return stereographicLine(p, pointAhead);
 }
 
+const auto grabbableCircleRadius = 0.015f;
+
 void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {
 	const auto endpoints = mirror.calculateEndpoints();
 	renderer.stereographicSegment(endpoints[0], endpoints[1], Color3::WHITE / 2.0f);
 	for (const auto endpoint : endpoints) {
-		renderer.gfx.disk(endpoint, 0.01f, movablePartColor(false));
+		renderer.gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(false));
 	}
-	renderer.gfx.disk(mirror.center, 0.01f, movablePartColor(mirror.positionLocked));
+	renderer.gfx.disk(mirror.center, grabbableCircleRadius, movablePartColor(mirror.positionLocked));
 }
 
 void Editor::update(GameRenderer& renderer) {
@@ -206,6 +208,8 @@ void Editor::update(GameRenderer& renderer) {
 				auto portalGui = [](EditorPortal& portal) {
 					ImGui::PushID(&portal);
 					ImGui::Combo("wall type", reinterpret_cast<int*>(&portal.wallType), "portal\0reflecting\0absorbing\0");
+					ImGui::Checkbox("position locked", &portal.positionLocked);
+					ImGui::Checkbox("rotation locked", &portal.rotationLocked);
 					ImGui::PopID();
 				};
 
@@ -450,9 +454,9 @@ void Editor::update(GameRenderer& renderer) {
 				break;
 			}
 			for (const auto endpoint : endpoints) {
-				renderer.gfx.disk(endpoint, 0.01f, movablePartColor(false));
+				renderer.gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(portal.rotationLocked));
 			}
-			renderer.gfx.disk(portal.center, 0.01f, movablePartColor(false));
+			renderer.gfx.disk(portal.center, grabbableCircleRadius, movablePartColor(portal.positionLocked));
 		}
 	}
 
@@ -466,7 +470,7 @@ void Editor::update(GameRenderer& renderer) {
 
 	for (const auto& laser : lasers) {
 		renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
-		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, movablePartColor(false));
+		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));
 
 		static i32 maxReflections = 20;
 		ImGui::InputInt("max reflections", &maxReflections);
@@ -833,6 +837,7 @@ void Editor::reset() {
 	mirrors.reset();
 	targets.reset();
 	portalPairs.reset();
+	selectTool.selectedEntity = std::nullopt;
 	actions.reset();
 }
 
@@ -951,11 +956,11 @@ void Editor::portalCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		auto portalPair = portalPairs.create();
 		const auto offset = Vec2(-0.1f, 0.0f);
+		auto makePortal = [&cursorPos](Vec2 offset) {
+			return EditorPortal{ .center = cursorPos + offset, .normalAngle = 0.0f, .wallType = EditorPortalWallType::PORTAL, .positionLocked = false, .rotationLocked = false };
+		};
 		portalPair.entity = EditorPortalPair{
-			.portals = {
-				EditorPortal{ .center = cursorPos + offset, .normalAngle = 0.0f, .wallType = EditorPortalWallType::PORTAL },
-				EditorPortal{ .center = cursorPos - offset, .normalAngle = 0.0f, .wallType = EditorPortalWallType::PORTAL }
-			}
+			.portals = { makePortal(offset), makePortal(-offset) }
 		};
 		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(portalPair.id)));
 		cursorCaptured = true;
@@ -1050,26 +1055,6 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		}
 	};
 
-	/*for (const auto& mirror : mirrors) {
-		const auto endpoints = mirror->calculateEndpoints();
-		if (Input::isKeyDown(KeyCode::Z)) {
-			_CrtDbgBreak();
-		}
-		const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
-		ImGui::Text("%g", dist);
-	}*/
-
-	for (const auto& portalPair : portalPairs) {
-		for (const auto& portal : portalPair->portals) {
-			const auto endpoints = portal.endpoints();
-			if (Input::isKeyDown(KeyCode::Z)) {
-				_CrtDbgBreak();
-			}
-			const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
-			ImGui::Text("%g", dist);
-		}
-	}
-
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		for (const auto& wall : walls) {
 			if (stereographicSegmentDistance(wall->endpoints[0], wall->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
@@ -1081,7 +1066,6 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		for (const auto& mirror : mirrors) {
 			const auto endpoints = mirror->calculateEndpoints();
 			const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
-			ImGui::Text("%g", dist);
 			if (dist < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(mirror.id);
 				goto selectedEntity;

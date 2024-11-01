@@ -88,3 +88,8 @@ The Portal 2 is pointing upward.
 Then things look correct.
 
 TODO: Maybe add orientation reversing portals (mirroring portals).
+
+
+
+Could make a simulation class that would use the geme representation.
+The editor would initialize it each frame. By resetting it and addint the entities back.

@@ -84,6 +84,8 @@ struct EditorPortal {
 	Vec2 center;
 	f32 normalAngle;
 	EditorPortalWallType wallType;
+	bool positionLocked;
+	bool rotationLocked;
 
 	static constexpr auto defaultLength = 0.6f;
 
