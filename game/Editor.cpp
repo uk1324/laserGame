@@ -410,6 +410,11 @@ void Editor::update(GameRenderer& renderer) {
 	for (const auto& portalPair : portalPairs) {
 		for (const auto& portal : portalPair->portals) {
 			const auto endpoints = portal.endpoints();
+
+			const auto normal = Vec2::oriented(portal.normalAngle);
+			// Instead of rendering 2 segments could render on that has 2 colors by making a custom triangulation. Then the rendering would need to swap wether the inside or outside of the circle is the side with the normal.
+			/*renderer.stereographicSegment(endpoints[0] - normal * 0.007f, endpoints[1] - normal * 0.007, Color3::WHITE);*/
+
 			renderer.stereographicSegment(endpoints[0], endpoints[1], (Color3::RED + Color3::YELLOW) / 2.0f);
 			for (const auto endpoint : endpoints) {
 				renderer.gfx.disk(endpoint, 0.01f, movablePartColor(false));
@@ -435,7 +440,13 @@ void Editor::update(GameRenderer& renderer) {
 
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
-		std::optional<EditorEntityId> hitOnLastIteration; // TODO: Add index for portals.
+
+		struct EditorEntity {
+			EditorEntityId id;
+			// Used for portals.
+			i32 partIndex;
+		};
+		std::optional<EditorEntity> hitOnLastIteration;
 		for (i64 i = 0; i < maxReflections; i++) {
 			/*
 			The current version is probably better, because it doesn't have an optional return.
@@ -505,7 +516,7 @@ void Editor::update(GameRenderer& renderer) {
 					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
 
 					if (dot(intersection - laserPosition, laserDirection) > 0.0f
-						&& !(hitOnLastIteration.has_value() && hitOnLastIteration == id)) {
+						&& !(hitOnLastIteration.has_value() && hitOnLastIteration->id == id && hitOnLastIteration->partIndex == index)) {
 
 						if (!closest.has_value() || distance < closest->distance) {
 							closest = Intersection{ intersection, distance, line, type, id, index };
@@ -614,15 +625,14 @@ void Editor::update(GameRenderer& renderer) {
 
 					//auto normalAtHitpoint = stereographicLineNormalAt(inPortalLine, hitPoint);
 
-					ImGui::Text("%g", normalAtHitPoint.angle());
+					/*ImGui::Text("%g", normalAtHitPoint.angle());
 					renderer.gfx.line(hitPoint, hitPoint + normalAtHitPoint * 0.05f, 0.01f, Color3::GREEN);
-					renderer.gfx.line(hitPoint, hitPoint + laserTangentAtIntersection * 0.05f, 0.01f, Color3::BLUE);
+					renderer.gfx.line(hitPoint, hitPoint + laserTangentAtIntersection * 0.05f, 0.01f, Color3::BLUE);*/
 
 					//if (dot(normalAtHitPoint, laserDirection) > 0.0f) {
 					//	normalAtHitpoint = -normalAtHitpoint;
 					//}
 
-					auto laserDirectionAngle = laserTangentAtIntersection.angle() - normalAtHitPoint.angle();
 					auto outPortalNormalAtOutPoint = stereographicLineNormalAt(outPortalLine, laserPosition);
 					if (dot(outPortalNormalAtOutPoint, Vec2::oriented(outPortal.normalAngle)) < 0.0f) {
 						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
@@ -633,16 +643,18 @@ void Editor::update(GameRenderer& renderer) {
 						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
 					}
 
-					//ImGui::Text("%g", outPortal.normalAngle);
-					laserDirectionAngle += outPortalNormalAtOutPoint.angle();
+					// The angle the laser makes with the input mirror normal is the same as the one it makes with the output portal normal.
+					auto laserDirectionAngle = 
+						laserTangentAtIntersection.angle() - normalAtHitPoint.angle()
+						+ outPortalNormalAtOutPoint.angle();
 					laserDirection = Vec2::oriented(laserDirectionAngle);
 
-					hitOnLastIteration = i.id;
+					hitOnLastIteration = EditorEntity{ i.id, (i.index + 1) % 2 };
 					return;
 				}
 				laserDirection = laserTangentAtIntersection.reflectedAroundNormal(normalAtHitPoint);
 				laserPosition = hitPoint;
-				hitOnLastIteration = i.id;
+				hitOnLastIteration = EditorEntity{ i.id, i.index };
 				//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
 				//renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
 				//renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
@@ -778,6 +790,7 @@ void Editor::reset() {
 	lasers.reset();
 	mirrors.reset();
 	targets.reset();
+	portalPairs.reset();
 	actions.reset();
 }
 

@@ -26,3 +26,13 @@ struct [[Json]] LevelTarget {
 	Vec2 position;
 	float radius;
 }
+
+struct [[Json]] LevelPortal {
+	Vec2 center;
+	float normalAngle;
+}
+
+struct [[Json]] LevelPortalPair {
+	LevelPortal portal0;
+	LevelPortal portal1;
+}
