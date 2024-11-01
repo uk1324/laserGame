@@ -70,6 +70,8 @@ struct EditorTarget {
 	static constexpr auto defaultRadius = 0.1f;
 	Vec2 position;
 	f32 radius;
+
+	bool activated = false;
 };
 
 void editorTargetRadiusInput(f32& radius);

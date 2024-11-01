@@ -93,3 +93,9 @@ TODO: Maybe add orientation reversing portals (mirroring portals).
 
 Could make a simulation class that would use the geme representation.
 The editor would initialize it each frame. By resetting it and addint the entities back.
+
+TODO: Walls that can pass only certain colors of lasers or maybe triggers that can be activated by only a certain laser.
+
+One issue with doors is that when there are multiple layers there isn't really a correct way to decide the order in which things are executed.
+
+One option would be to introuce actual time. Then doors wouldn't open instantly. If the doors were to move out of the way then order would make sense I think not sure.

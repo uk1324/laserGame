@@ -148,6 +148,8 @@ struct Editor {
 	i32 gridLineCount = 16;
 	i32 gridCircleCount = 10;
 
+	i32 maxReflections = 30;
+
 	void reset();
 
 	bool trySaveLevel(std::string_view path);

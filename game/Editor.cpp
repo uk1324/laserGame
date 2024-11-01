@@ -42,8 +42,6 @@ StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAn
 	return stereographicLine(p, pointAhead);
 }
 
-const auto grabbableCircleRadius = 0.015f;
-
 void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {
 	const auto endpoints = mirror.calculateEndpoints();
 	renderer.stereographicSegment(endpoints[0], endpoints[1], Color3::WHITE / 2.0f);
@@ -262,6 +260,9 @@ void Editor::update(GameRenderer& renderer) {
 			gridCircleCount = std::max(gridCircleCount, 1);
 		}
 
+		ImGui::SeparatorText("debug");
+		ImGui::InputInt("max reflections", &maxReflections);
+
 		ImGui::End();
 	}
 
@@ -408,7 +409,6 @@ void Editor::update(GameRenderer& renderer) {
 
 	const auto boundary = Circle{ Vec2(0.0f), 1.0f };
 
-
 	for (const auto& wall : walls) {
 		renderer.wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type));
 	}
@@ -421,12 +421,6 @@ void Editor::update(GameRenderer& renderer) {
 	renderer.gfx.drawCircles();
 	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawDisks();
-
-	for (const auto& target : targets) {
-		const auto circle = target->calculateCircle();
-		renderer.gfx.circle(circle.center, circle.radius, 0.01f, Color3::MAGENTA);
-		renderer.gfx.disk(target->position, 0.01f, Color3::MAGENTA / 2.0f);
-	}
 
 	for (const auto& portalPair : portalPairs) {
 		for (const auto& portal : portalPair->portals) {
@@ -466,22 +460,22 @@ void Editor::update(GameRenderer& renderer) {
 		bool ignore = false;
 	};
 
+	for (auto target : targets) {
+		target->activated = false;
+	}
+
 	std::vector<Segment> laserSegmentsToDraw;
 
 	for (const auto& laser : lasers) {
 		renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));
 
-		static i32 maxReflections = 20;
-		ImGui::InputInt("max reflections", &maxReflections);
-
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
 
 		struct EditorEntity {
 			EditorEntityId id;
-			// Used for portals.
-			i32 partIndex;
+			i32 partIndex; // Used for portals.
 		};
 		std::optional<EditorEntity> hitOnLastIteration;
 		for (i64 i = 0; i < maxReflections; i++) {
@@ -583,6 +577,7 @@ void Editor::update(GameRenderer& renderer) {
 				}
 			}
 
+			// The old version of this code makes the laser stop on collision with a target.
 			/*for (const auto& target : targets) {
 				const auto circle = target->calculateCircle();
 				const auto intersections = stereographicLineVsCircleIntersection(laserLine, circle);
@@ -592,29 +587,16 @@ void Editor::update(GameRenderer& renderer) {
 						continue;
 					}
 
-					const auto distance = intersection.distanceTo(laserPosition);
-					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
-
 					if (dot(intersection - laserPosition, laserDirection) > 0.0f) {
-						if (!closest.has_value() || distance < closest->distance) {
-							closest = Intersection{ intersection, distance, circle, IntersectionType::END, EditorEntityId(target.id) };
-						}
+						const auto distance = intersection.distanceTo(laserPosition);
+						hitTargets.push_back(HitTarget{ target.id, distance });
 					} else {
-						if (!closestToWrappedAround.has_value()
-							|| distanceToWrappedAround < closestToWrappedAround->distance) {
-							closestToWrappedAround = Intersection{
-								intersection,
-								distanceToWrappedAround,
-								circle,
-								IntersectionType::END,
-								EditorEntityId(target.id)
-							};
-						}
+						const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
+						hitTargetsFromWrappedAround.push_back(HitTarget{ target.id, distanceToWrappedAround });
 					}
 				}
 			}*/
 
-			/*auto processHit = [&](Vec2 hitPoint, StereographicLine objectHit, const Hit& hit) {*/
 			enum HitResult {
 				CONTINUE, END
 			};
@@ -735,25 +717,52 @@ void Editor::update(GameRenderer& renderer) {
 				return HitResult::END;
 			};
 
+			auto checkSegmentVsTargetCollision = [&](const Segment& segment) {
+				for (auto target : targets) {
+					const auto circle = target->calculateCircle();
+					const auto intersections = stereographicLineVsCircleIntersection(laserLine, circle);
+
+					// TODO: Somehow abstract this, this is copied from above.
+					const auto epsilon = 0.001f;
+					const auto lineDirection = (segment.endpoints[1] - segment.endpoints[0]).normalized();
+					const auto dAlong0 = dot(lineDirection, segment.endpoints[0]);
+					const auto dAlong1 = dot(lineDirection, segment.endpoints[1]);
+					for (const auto& intersection : intersections) {
+						const auto intersectionDAlong = dot(lineDirection, intersection);
+						if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
+							target->activated = true;
+						}
+					}
+				}
+			};
+
 			if (closest.has_value()) {
-				//renderer.stereographicSegmentEx(laserPosition, closest->position, laserColor);
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, closest->point, laser->color });
+				const auto s = Segment{ laserPosition, closest->point, laser->color };
+				checkSegmentVsTargetCollision(s);
+				laserSegmentsToDraw.push_back(s);
 				const auto result = processHit(*closest);
 				if (result == HitResult::END) {
 					break;
 				}
 			} else if (closestToWrappedAround.has_value()) {
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection, laser->color });
-				laserSegmentsToDraw.push_back(Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->point, laser->color });
-				/*renderer.gfx.disk(boundaryIntersectionWrappedAround, 0.05f, Color3::RED);
-				renderer.gfx.disk(closestToWrappedAround->position, 0.05f, Color3::RED);*/
+				const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
+				const auto s1 = Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->point, laser->color };
+				checkSegmentVsTargetCollision(s0);
+				checkSegmentVsTargetCollision(s1);
+				laserSegmentsToDraw.push_back(s0);
+				laserSegmentsToDraw.push_back(s1);
+
 				const auto result = processHit(*closestToWrappedAround);
 				if (result == HitResult::END) {
 					break;
 				}
 			} else {
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection, laser->color });
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color });
+				const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
+				const auto s1 = Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color };
+				checkSegmentVsTargetCollision(s0);
+				checkSegmentVsTargetCollision(s1);
+				laserSegmentsToDraw.push_back(s0);
+				laserSegmentsToDraw.push_back(s1);
 			}
 		}
 	}
@@ -795,6 +804,13 @@ void Editor::update(GameRenderer& renderer) {
 			drawnSegments++;
 			renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], segment.color);
 		}
+	}
+
+	for (const auto& target : targets) {
+		const auto circle = target->calculateCircle();
+		const auto color = target->activated ? Color3::MAGENTA : Color3::MAGENTA / 2.0f;
+		renderer.gfx.circle(circle.center, circle.radius, 0.01f, color);
+		renderer.gfx.disk(target->position, 0.01f, color);
 	}
 
 	renderer.gfx.drawFilledTriangles();

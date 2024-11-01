@@ -12,25 +12,10 @@ GameRenderer GameRenderer::make() {
 }
 
 void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color) {
-	gfx.disk(e0, Constants::endpointGrabPointRadius, Color3::RED);
-	gfx.disk(e1, Constants::endpointGrabPointRadius, Color3::RED);
-
-	//stereographicSegment(e0, e1, Color3::WHITE);
+	gfx.disk(e0, grabbableCircleRadius, Color3::RED);
+	gfx.disk(e1, grabbableCircleRadius, Color3::RED);
 	stereographicSegment(e0, e1, color);
-	//gfx.
-	//gfx.circleTriangulated(line.center, line.radius, Constants::wallWidth, Color3::WHITE, 1000);
-	// 
-	// 
-	//e0
-	/*const auto center = (e0 + e1) / 2.0f;
-	const auto angle = (e0 - center).angle();
-	gfx.circleArcTriangulated(center, distance(e0, e1) / 2.0f, angle, angle + PI<f32>, Constants::wallWidth, Color3::WHITE);
-	gfx.disk(e0, Constants::wallWidth / 2.0f, Color3::RED);
-	gfx.disk(e1, Constants::wallWidth / 2.0f, Color3::RED);*/
 }
-
-//void GameRenderer::mirror(Vec2 e0, Vec2 e1){
-//}
 
 void GameRenderer::renderWalls() {
 	gfx.drawLines();

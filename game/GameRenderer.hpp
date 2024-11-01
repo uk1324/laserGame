@@ -2,6 +2,8 @@
 
 #include <gfx2d/Gfx2d.hpp>
 
+const auto grabbableCircleRadius = 0.015f;
+
 struct GameRenderer {
 	static GameRenderer make();
 
