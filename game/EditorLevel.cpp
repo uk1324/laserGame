@@ -78,10 +78,21 @@ bool Editor::trySaveLevel(std::string_view path) {
 	{
 		auto& jsonPortalPairs = makeArrayAt(level, levelPortalPairsName);
 		for (const auto& e : portalPairs) {
-			auto convert = [](const EditorPortal& portal) {
+			auto convertWallType = [](EditorPortalWallType type) {
+				switch (type) {
+					using enum EditorPortalWallType;
+				case REFLECTING: return LevelPortalWallType::REFLECTING;
+				case ABSORBING: return LevelPortalWallType::ABSORBING;
+				case PORTAL: return LevelPortalWallType::PORTAL;
+				}
+				return LevelPortalWallType::PORTAL;
+			};
+
+			auto convert = [&convertWallType](const EditorPortal& portal) {
 				return LevelPortal{
 					.center = portal.center,
-					.normalAngle = portal.normalAngle
+					.normalAngle = portal.normalAngle,
+					.wallType = convertWallType(portal.wallType)
 				};
 			};
 
@@ -181,8 +192,17 @@ bool Editor::tryLoadLevel(std::string_view path) {
 			for (const auto& jsonPortalPair : *jsonPortalPairs) {
 				const auto levelPortalPair = fromJson<LevelPortalPair>(jsonPortalPair);
 				auto portalPair = portalPairs.create();
-				auto convertPortal = [](const LevelPortal& levelPortal) {
-					return EditorPortal{ .center = levelPortal.center, .normalAngle = levelPortal.normalAngle };
+				auto convertPortalWallType = [](LevelPortalWallType type) {
+					switch (type) {
+						using enum LevelPortalWallType;
+					case PORTAL: return EditorPortalWallType::PORTAL;
+					case REFLECTING: return EditorPortalWallType::REFLECTING;
+					case ABSORBING: return EditorPortalWallType::ABSORBING;
+					}
+					return EditorPortalWallType::PORTAL;
+				};
+				auto convertPortal = [&convertPortalWallType](const LevelPortal& levelPortal) {
+					return EditorPortal{ .center = levelPortal.center, .normalAngle = levelPortal.normalAngle, .wallType = convertPortalWallType(levelPortal.wallType) };
 				};
 				portalPair.entity = EditorPortalPair{
 					.portals = { convertPortal(levelPortalPair.portal0), convertPortal(levelPortalPair.portal1) }

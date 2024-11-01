@@ -953,8 +953,8 @@ void Editor::portalCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		const auto offset = Vec2(-0.1f, 0.0f);
 		portalPair.entity = EditorPortalPair{
 			.portals = {
-				EditorPortal{ .center = cursorPos + offset, .normalAngle = 0.0f },
-				EditorPortal{ .center = cursorPos - offset, .normalAngle = 0.0f }
+				EditorPortal{ .center = cursorPos + offset, .normalAngle = 0.0f, .wallType = EditorPortalWallType::PORTAL },
+				EditorPortal{ .center = cursorPos - offset, .normalAngle = 0.0f, .wallType = EditorPortalWallType::PORTAL }
 			}
 		};
 		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(portalPair.id)));

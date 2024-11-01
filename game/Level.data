@@ -27,9 +27,14 @@ struct [[Json]] LevelTarget {
 	float radius;
 }
 
+enum [[Json]] LevelPortalWallType {
+	PORTAL, REFLECTING, ABSORBING,
+}
+
 struct [[Json]] LevelPortal {
 	Vec2 center;
 	float normalAngle;
+	LevelPortalWallType wallType;
 }
 
 struct [[Json]] LevelPortalPair {
