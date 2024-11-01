@@ -18,10 +18,10 @@ Editor::Editor()
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
-Vec3 wallColor(EditorWallType type) {
-	const auto absorbingColor = Color3::WHITE;
-	const auto reflectingColor = Color3::WHITE / 2.0f;
+const auto absorbingColor = Color3::WHITE;
+const auto reflectingColor = Color3::WHITE / 2.0f;
 
+Vec3 wallColor(EditorWallType type) {
 	return type == EditorWallType::REFLECTING
 		? reflectingColor
 		: absorbingColor;
@@ -195,6 +195,23 @@ void Editor::update(GameRenderer& renderer) {
 					break;
 				}
 				editorTargetRadiusInput(target->radius);
+				break;
+			}
+
+			case EditorEntityType::PORTAL_PAIR: {
+				auto portalPair = portalPairs.get(selectTool.selectedEntity->portalPair());
+				if (!portalPair.has_value()) {
+					break;
+				}
+				auto portalGui = [](EditorPortal& portal) {
+					ImGui::PushID(&portal);
+					ImGui::Combo("wall type", reinterpret_cast<int*>(&portal.wallType), "portal\0reflecting\0absorbing\0");
+					ImGui::PopID();
+				};
+
+				for (auto& portal : portalPair->portals) {
+					portalGui(portal);
+				}
 				break;
 			}
 
@@ -414,8 +431,24 @@ void Editor::update(GameRenderer& renderer) {
 			const auto normal = Vec2::oriented(portal.normalAngle);
 			// Instead of rendering 2 segments could render on that has 2 colors by making a custom triangulation. Then the rendering would need to swap wether the inside or outside of the circle is the side with the normal.
 			/*renderer.stereographicSegment(endpoints[0] - normal * 0.007f, endpoints[1] - normal * 0.007, Color3::WHITE);*/
+			const auto portalColor = (Color3::RED + Color3::YELLOW) / 2.0f;
+			const auto forward = normal * 0.005f;
+			const auto back = -normal * 0.005f;
+			switch (portal.wallType) {
+				using enum EditorPortalWallType;
+			case PORTAL:
+				renderer.stereographicSegment(endpoints[0], endpoints[1], portalColor);
+				break;
+			case ABSORBING:
+				renderer.stereographicSegment(endpoints[0] + forward, endpoints[1] + forward, portalColor);
+				renderer.stereographicSegment(endpoints[0] + back, endpoints[1] + back, absorbingColor);
+				break;
 
-			renderer.stereographicSegment(endpoints[0], endpoints[1], (Color3::RED + Color3::YELLOW) / 2.0f);
+			case REFLECTING:
+				renderer.stereographicSegment(endpoints[0] + forward, endpoints[1] + forward, portalColor);
+				renderer.stereographicSegment(endpoints[0] + back, endpoints[1] + back, reflectingColor);
+				break;
+			}
 			for (const auto endpoint : endpoints) {
 				renderer.gfx.disk(endpoint, 0.01f, movablePartColor(false));
 			}
@@ -436,7 +469,7 @@ void Editor::update(GameRenderer& renderer) {
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), 0.01f, movablePartColor(false));
 
 		static i32 maxReflections = 20;
-		//ImGui::InputInt("max reflections", &maxReflections);
+		ImGui::InputInt("max reflections", &maxReflections);
 
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
@@ -472,26 +505,19 @@ void Editor::update(GameRenderer& renderer) {
 				std::swap(boundaryIntersection, boundaryIntersectionWrappedAround);
 			}
 
-			enum class IntersectionType {
-				END,
-				REFLECT,
-			};
-
-			struct Intersection {
-				Vec2 position;
+			struct Hit {
+				Vec2 point;
 				f32 distance;
-				StereographicLine objectHit;
-				IntersectionType type;
+				StereographicLine line;
 				EditorEntityId id;
 				i32 index;
 			};
-			std::optional<Intersection> closest;
-			std::optional<Intersection> closestToWrappedAround;
+			std::optional<Hit> closest;
+			std::optional<Hit> closestToWrappedAround;
 
 			auto processLineSegmentIntersections = [&laserLine, &laserPosition, &boundaryIntersectionWrappedAround, &laserDirection, &closest, &closestToWrappedAround, &hitOnLastIteration](
 				Vec2 endpoint0,
 				Vec2 endpoint1,
-				IntersectionType type,
 				EditorEntityId id,
 				i32 index = 0) {
 
@@ -519,16 +545,15 @@ void Editor::update(GameRenderer& renderer) {
 						&& !(hitOnLastIteration.has_value() && hitOnLastIteration->id == id && hitOnLastIteration->partIndex == index)) {
 
 						if (!closest.has_value() || distance < closest->distance) {
-							closest = Intersection{ intersection, distance, line, type, id, index };
+							closest = Hit{ intersection, distance, line, id, index };
 						}
 					} else {
 						if (!closestToWrappedAround.has_value()
 							|| distanceToWrappedAround < closestToWrappedAround->distance) {
-							closestToWrappedAround = Intersection{
+							closestToWrappedAround = Hit{
 								intersection,
 								distanceToWrappedAround,
 								line,
-								type,
 								id,
 								index
 							};
@@ -538,23 +563,19 @@ void Editor::update(GameRenderer& renderer) {
 			};
 
 			for (const auto& wall : walls) {
-				const auto intersectionType = wall->type == EditorWallType::REFLECTING
-					? IntersectionType::REFLECT
-					: IntersectionType::END;
-
-				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], intersectionType, EditorEntityId(wall.id));
+				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], EditorEntityId(wall.id));
 			}
 
 			for (const auto& mirror : mirrors) {
 				const auto endpoints = mirror->calculateEndpoints();
-				processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::REFLECT, EditorEntityId(mirror.id));
+				processLineSegmentIntersections(endpoints[0], endpoints[1], EditorEntityId(mirror.id));
 			}
 
 			for (const auto& portalPair : portalPairs) {
 				for (i32 i = 0; i < 2; i++) {
 					const auto& portal = portalPair->portals[i];
 					const auto endpoints = portal.endpoints();
-					processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::REFLECT, EditorEntityId(portalPair.id), i);
+					processLineSegmentIntersections(endpoints[0], endpoints[1], EditorEntityId(portalPair.id), i);
 				}
 			}
 
@@ -589,36 +610,85 @@ void Editor::update(GameRenderer& renderer) {
 				}
 			}*/
 
-			auto doReflection = [&](Vec2 hitPoint, StereographicLine objectHit, const Intersection& i) {
-				/*auto laserTangentAtIntersection = laserLine.type == StereographicLine::Type::CIRCLE
-					? (hitPoint - laserLine.circle.center).rotBy90deg().normalized()
-					: laserLine.lineNormal.rotBy90deg();*/
+			/*auto processHit = [&](Vec2 hitPoint, StereographicLine objectHit, const Hit& hit) {*/
+			enum HitResult {
+				CONTINUE, END
+			};
 
-				auto laserTangentAtIntersection = stereographicLineNormalAt(laserLine, hitPoint).rotBy90deg();
-				if (dot(laserTangentAtIntersection, laserDirection) > 0.0f) {
-					laserTangentAtIntersection = -laserTangentAtIntersection;
+			auto processHit = [&](const Hit& hit) -> HitResult {
+				auto laserTangentAtHitPoint = stereographicLineNormalAt(laserLine, hit.point).rotBy90deg();
+				if (dot(laserTangentAtHitPoint, laserDirection) > 0.0f) {
+					laserTangentAtHitPoint = -laserTangentAtHitPoint;
 				}
 
-				auto normalAtHitPoint = stereographicLineNormalAt(objectHit, hitPoint);
+				auto normalAtHitPoint = stereographicLineNormalAt(hit.line, hit.point);
 				if (dot(normalAtHitPoint, laserDirection) > 0.0f) {
 					normalAtHitPoint = -normalAtHitPoint;
 				}
 
-				if (i.id.type == EditorEntityType::PORTAL_PAIR) {
-					const auto portalPair = portalPairs.get(i.id.portalPair());
+				auto hitOnNormalSide = [&normalAtHitPoint](f32 hitObjectNormalAngle) {
+					return dot(Vec2::oriented(hitObjectNormalAngle), normalAtHitPoint) > 0.0f;
+				};
+
+				auto doReflection = [&] {
+					laserDirection = laserTangentAtHitPoint.reflectedAroundNormal(normalAtHitPoint);
+					laserPosition = hit.point;
+					hitOnLastIteration = EditorEntity{ hit.id, hit.index };
+					//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
+					//renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
+					//renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
+				};
+
+				switch (hit.id.type) {
+					using enum EditorEntityType;
+				case WALL: {
+					const auto& wall = walls.get(hit.id.wall());
+					if (!wall.has_value()) {
+						CHECK_NOT_REACHED();
+						return HitResult::END;
+					}
+
+					if (wall->type == EditorWallType::ABSORBING) {
+						return HitResult::END;
+					} else {
+						doReflection();
+						return HitResult::CONTINUE;
+					}
+				}
+
+				case MIRROR: {
+					//const auto& mirror = mirrors.get(hit.id.mirror());
+					doReflection();
+					return HitResult::CONTINUE;
+				}
+				
+				case PORTAL_PAIR: {
+					const auto portalPair = portalPairs.get(hit.id.portalPair());
 					if (!portalPair.has_value()) {
 						CHECK_NOT_REACHED();
-						return;
+						return HitResult::END;
 					}
-					const auto inPortal = portalPair->portals[i.index];
-					const auto inPortalEndpoints = inPortal.endpoints();
-					const auto inPortalLine = stereographicLine(inPortalEndpoints[0], inPortalEndpoints[1]);
-					const auto& outPortal = portalPair->portals[(i.index + 1) % 2];
+					const auto inPortal = portalPair->portals[hit.index];
+					const auto hitHappenedOnNormalSide = hitOnNormalSide(inPortal.normalAngle);
+					if (!hitHappenedOnNormalSide) {
+						switch (inPortal.wallType) {
+						case EditorPortalWallType::PORTAL:
+							break;
+						case EditorPortalWallType::REFLECTING:
+							doReflection();
+							return HitResult::CONTINUE;
+						case EditorPortalWallType::ABSORBING:
+							return HitResult::END;
+						}
+					}
+					const auto& inPortalLine = hit.line;
+					const auto outPortalIndex = (hit.index + 1) % 2;
+					const auto& outPortal = portalPair->portals[outPortalIndex];
 					const auto outPortalEndpoints = outPortal.endpoints();
 					const auto outPortalLine = stereographicLine(outPortalEndpoints[0], outPortalEndpoints[1]);
 
-					auto dist = stereographicDistance(inPortal.center, hitPoint);
-					if (dot(hitPoint - inPortal.center, Vec2::oriented(inPortal.normalAngle + PI<f32> / 2.0f)) < 0.0f) {
+					auto dist = stereographicDistance(inPortal.center, hit.point);
+					if (dot(hit.point - inPortal.center, Vec2::oriented(inPortal.normalAngle + PI<f32> / 2.0f)) > 0.0f) {
 						dist *= -1.0f;
 					}
 					laserPosition = moveOnStereographicGeodesic(outPortal.center, outPortal.normalAngle + PI<f32> / 2.0f, dist);
@@ -634,10 +704,9 @@ void Editor::update(GameRenderer& renderer) {
 					//}
 
 					auto outPortalNormalAtOutPoint = stereographicLineNormalAt(outPortalLine, laserPosition);
-					if (dot(outPortalNormalAtOutPoint, Vec2::oriented(outPortal.normalAngle)) < 0.0f) {
+					if (dot(outPortalNormalAtOutPoint, Vec2::oriented(outPortal.normalAngle)) > 0.0f) {
 						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
 					}
-
 
 					if (dot(normalAtHitPoint, Vec2::oriented(inPortal.normalAngle)) > 0.0f) {
 						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
@@ -645,53 +714,37 @@ void Editor::update(GameRenderer& renderer) {
 
 					// The angle the laser makes with the input mirror normal is the same as the one it makes with the output portal normal.
 					auto laserDirectionAngle = 
-						laserTangentAtIntersection.angle() - normalAtHitPoint.angle()
+						laserTangentAtHitPoint.angle() - normalAtHitPoint.angle()
 						+ outPortalNormalAtOutPoint.angle();
 					laserDirection = Vec2::oriented(laserDirectionAngle);
 
-					hitOnLastIteration = EditorEntity{ i.id, (i.index + 1) % 2 };
-					return;
+					hitOnLastIteration = EditorEntity{ hit.id, outPortalIndex };
+					return HitResult::CONTINUE;
 				}
-				laserDirection = laserTangentAtIntersection.reflectedAroundNormal(normalAtHitPoint);
-				laserPosition = hitPoint;
-				hitOnLastIteration = EditorEntity{ i.id, i.index };
-				//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
-				//renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
-				//renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
 				
+				default:
+					break;
+
+				}
+
+				CHECK_NOT_REACHED();
+				return HitResult::END;
 			};
 
 			if (closest.has_value()) {
 				//renderer.stereographicSegmentEx(laserPosition, closest->position, laserColor);
-				laserSegmentsToDraw.push_back(Segment{ laserPosition, closest->position, laser->color });
-
-				switch (closest->type) {
-					using enum IntersectionType;
-
-				case END:
-					goto laserEnd;
-
-				case REFLECT: {
-					doReflection(closest->position, closest->objectHit, *closest);
+				laserSegmentsToDraw.push_back(Segment{ laserPosition, closest->point, laser->color });
+				const auto result = processHit(*closest);
+				if (result == HitResult::END) {
 					break;
 				}
-
-				}
-
 			} else if (closestToWrappedAround.has_value()) {
 				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersection, laser->color });
-				laserSegmentsToDraw.push_back(Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->position, laser->color });
+				laserSegmentsToDraw.push_back(Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->point, laser->color });
 				/*renderer.gfx.disk(boundaryIntersectionWrappedAround, 0.05f, Color3::RED);
 				renderer.gfx.disk(closestToWrappedAround->position, 0.05f, Color3::RED);*/
-
-				switch (closestToWrappedAround->type) {
-					using enum IntersectionType;
-
-				case END:
-					goto laserEnd;
-
-				case REFLECT:
-					doReflection(closestToWrappedAround->position, closestToWrappedAround->objectHit, *closestToWrappedAround);
+				const auto result = processHit(*closestToWrappedAround);
+				if (result == HitResult::END) {
 					break;
 				}
 			} else {
@@ -699,8 +752,6 @@ void Editor::update(GameRenderer& renderer) {
 				laserSegmentsToDraw.push_back(Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color });
 			}
 		}
-
-		laserEnd:;
 	}
 
 	for (auto& s : laserSegmentsToDraw) {
@@ -724,15 +775,6 @@ void Editor::update(GameRenderer& renderer) {
 				&& a.endpoints[1].distanceSquaredTo(b.endpoints[1]) < epsilonSquared) {
 				b.ignore = true;
 			}
-		}
-	}
-	for (const auto& a : laserSegmentsToDraw) {
-		if (a.ignore) {
-			continue;
-		}
-
-		for (auto& b : laserSegmentsToDraw) {
-
 		}
 	}
 	static bool hideLaser = false;
@@ -1046,6 +1088,17 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 				goto selectedEntity;
 			}
 		}
+
+		for (const auto& portalPair : portalPairs) {
+			for (const auto& portal : portalPair->portals) {
+				const auto endpoints = portal.endpoints();
+				if (stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
+					selectTool.selectedEntity = EditorEntityId(portalPair.id);
+					goto selectedEntity;
+				}
+			}
+		}
+
 	} else if (Input::isMouseButtonDown(MouseButton::RIGHT) && selectTool.selectedEntity != std::nullopt) {
 		actions.add(*this, new EditorActionModifiySelection(selectTool.selectedEntity, std::nullopt));
 		selectTool.selectedEntity = std::nullopt;

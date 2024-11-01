@@ -76,9 +76,14 @@ void editorTargetRadiusInput(f32& radius);
 
 using EditorTargetId = EntityArrayId<EditorTarget>;
 
+enum class EditorPortalWallType {
+	PORTAL, REFLECTING, ABSORBING,
+};
+
 struct EditorPortal {
 	Vec2 center;
 	f32 normalAngle;
+	EditorPortalWallType wallType;
 
 	static constexpr auto defaultLength = 0.6f;
 
