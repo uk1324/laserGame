@@ -69,3 +69,22 @@ TODO: An orb that you can't hit.
 The continue button would be ungreyed when a solution is reached only after pressing the button is the next level opened.
 
 TODO: Could add a flag that makes mirrors one sided.
+
+
+
+Not sure if there is any issue with portals working like they do. Topologically this space is homeomorphic to the projective plane which is nonoritentable.
+If there is a portal and you move forward the portal should reverse direction.
+That is the portal would move outside the hemisphere
+This would map the portal to antipodal points which would reverse it's direction.
+But wouldn't this also translate the laser going though the portal. Wouldn't this lead to a contradiction?
+I guess when it passes through the boundary it also has to pass through the origin so maybe there would be no discontinuity. This doesn't seem right.
+
+You could conside the situtation on the mobius band, and it might be simpler. The issue is that I don't know the geodesics.
+
+If you place things in this order from bottom to top.
+Wall, Laser, Portal 1, Wall, Portal 2
+The laser is pointing into the left side of the portal 1
+The Portal 2 is pointing upward.
+Then things look correct.
+
+TODO: Maybe add orientation reversing portals (mirroring portals).

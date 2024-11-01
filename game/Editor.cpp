@@ -220,6 +220,7 @@ void Editor::update(GameRenderer& renderer) {
 
 		case TARGET:
 			editorTargetRadiusInput(targetCreateTool.targetRadius);
+			break;
 
 		case NONE:
 			break;
@@ -434,7 +435,7 @@ void Editor::update(GameRenderer& renderer) {
 
 		auto laserPosition = laser->position;
 		auto laserDirection = Vec2::oriented(laser->angle);
-		std::optional<EditorEntityId> hitOnLastIteration;
+		std::optional<EditorEntityId> hitOnLastIteration; // TODO: Add index for portals.
 		for (i64 i = 0; i < maxReflections; i++) {
 			/*
 			The current version is probably better, because it doesn't have an optional return.
@@ -471,6 +472,7 @@ void Editor::update(GameRenderer& renderer) {
 				StereographicLine objectHit;
 				IntersectionType type;
 				EditorEntityId id;
+				i32 index;
 			};
 			std::optional<Intersection> closest;
 			std::optional<Intersection> closestToWrappedAround;
@@ -479,7 +481,8 @@ void Editor::update(GameRenderer& renderer) {
 				Vec2 endpoint0,
 				Vec2 endpoint1,
 				IntersectionType type,
-				EditorEntityId id) {
+				EditorEntityId id,
+				i32 index = 0) {
 
 				const auto line = stereographicLine(endpoint0, endpoint1);
 				const auto intersections = stereographicLineVsStereographicLineIntersection(line, laserLine);
@@ -505,7 +508,7 @@ void Editor::update(GameRenderer& renderer) {
 						&& !(hitOnLastIteration.has_value() && hitOnLastIteration == id)) {
 
 						if (!closest.has_value() || distance < closest->distance) {
-							closest = Intersection{ intersection, distance, line, type, id };
+							closest = Intersection{ intersection, distance, line, type, id, index };
 						}
 					} else {
 						if (!closestToWrappedAround.has_value()
@@ -515,7 +518,8 @@ void Editor::update(GameRenderer& renderer) {
 								distanceToWrappedAround,
 								line,
 								type,
-								id
+								id,
+								index
 							};
 						}
 					}
@@ -533,6 +537,14 @@ void Editor::update(GameRenderer& renderer) {
 			for (const auto& mirror : mirrors) {
 				const auto endpoints = mirror->calculateEndpoints();
 				processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::REFLECT, EditorEntityId(mirror.id));
+			}
+
+			for (const auto& portalPair : portalPairs) {
+				for (i32 i = 0; i < 2; i++) {
+					const auto& portal = portalPair->portals[i];
+					const auto endpoints = portal.endpoints();
+					processLineSegmentIntersections(endpoints[0], endpoints[1], IntersectionType::REFLECT, EditorEntityId(portalPair.id), i);
+				}
 			}
 
 			/*for (const auto& target : targets) {
@@ -566,23 +578,71 @@ void Editor::update(GameRenderer& renderer) {
 				}
 			}*/
 
-			auto doReflection = [&](Vec2 hitPoint, StereographicLine objectHit) {
-				auto laserTangentAtIntersection = laserLine.type == StereographicLine::Type::CIRCLE
+			auto doReflection = [&](Vec2 hitPoint, StereographicLine objectHit, const Intersection& i) {
+				/*auto laserTangentAtIntersection = laserLine.type == StereographicLine::Type::CIRCLE
 					? (hitPoint - laserLine.circle.center).rotBy90deg().normalized()
-					: laserLine.lineNormal.rotBy90deg();
+					: laserLine.lineNormal.rotBy90deg();*/
 
+				auto laserTangentAtIntersection = stereographicLineNormalAt(laserLine, hitPoint).rotBy90deg();
 				if (dot(laserTangentAtIntersection, laserDirection) > 0.0f) {
 					laserTangentAtIntersection = -laserTangentAtIntersection;
 				}
-				auto mirrorNormal = objectHit.type == StereographicLine::Type::CIRCLE
-					? (hitPoint - objectHit.circle.center).normalized()
-					: objectHit.lineNormal;
-				if (dot(mirrorNormal, laserDirection) > 0.0f) {
-					mirrorNormal = -mirrorNormal;
-				}
-				laserDirection = laserTangentAtIntersection.reflectedAroundNormal(mirrorNormal);
-				laserPosition = hitPoint;
 
+				auto normalAtHitPoint = stereographicLineNormalAt(objectHit, hitPoint);
+				if (dot(normalAtHitPoint, laserDirection) > 0.0f) {
+					normalAtHitPoint = -normalAtHitPoint;
+				}
+
+				if (i.id.type == EditorEntityType::PORTAL_PAIR) {
+					const auto portalPair = portalPairs.get(i.id.portalPair());
+					if (!portalPair.has_value()) {
+						CHECK_NOT_REACHED();
+						return;
+					}
+					const auto inPortal = portalPair->portals[i.index];
+					const auto inPortalEndpoints = inPortal.endpoints();
+					const auto inPortalLine = stereographicLine(inPortalEndpoints[0], inPortalEndpoints[1]);
+					const auto& outPortal = portalPair->portals[(i.index + 1) % 2];
+					const auto outPortalEndpoints = outPortal.endpoints();
+					const auto outPortalLine = stereographicLine(outPortalEndpoints[0], outPortalEndpoints[1]);
+
+					auto dist = stereographicDistance(inPortal.center, hitPoint);
+					if (dot(hitPoint - inPortal.center, Vec2::oriented(inPortal.normalAngle + PI<f32> / 2.0f)) < 0.0f) {
+						dist *= -1.0f;
+					}
+					laserPosition = moveOnStereographicGeodesic(outPortal.center, outPortal.normalAngle + PI<f32> / 2.0f, dist);
+
+					//auto normalAtHitpoint = stereographicLineNormalAt(inPortalLine, hitPoint);
+
+					ImGui::Text("%g", normalAtHitPoint.angle());
+					renderer.gfx.line(hitPoint, hitPoint + normalAtHitPoint * 0.05f, 0.01f, Color3::GREEN);
+					renderer.gfx.line(hitPoint, hitPoint + laserTangentAtIntersection * 0.05f, 0.01f, Color3::BLUE);
+
+					//if (dot(normalAtHitPoint, laserDirection) > 0.0f) {
+					//	normalAtHitpoint = -normalAtHitpoint;
+					//}
+
+					auto laserDirectionAngle = laserTangentAtIntersection.angle() - normalAtHitPoint.angle();
+					auto outPortalNormalAtOutPoint = stereographicLineNormalAt(outPortalLine, laserPosition);
+					if (dot(outPortalNormalAtOutPoint, Vec2::oriented(outPortal.normalAngle)) < 0.0f) {
+						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
+					}
+
+
+					if (dot(normalAtHitPoint, Vec2::oriented(inPortal.normalAngle)) > 0.0f) {
+						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
+					}
+
+					//ImGui::Text("%g", outPortal.normalAngle);
+					laserDirectionAngle += outPortalNormalAtOutPoint.angle();
+					laserDirection = Vec2::oriented(laserDirectionAngle);
+
+					hitOnLastIteration = i.id;
+					return;
+				}
+				laserDirection = laserTangentAtIntersection.reflectedAroundNormal(normalAtHitPoint);
+				laserPosition = hitPoint;
+				hitOnLastIteration = i.id;
 				//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
 				//renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
 				//renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
@@ -600,8 +660,7 @@ void Editor::update(GameRenderer& renderer) {
 					goto laserEnd;
 
 				case REFLECT: {
-					doReflection(closest->position, closest->objectHit);
-					hitOnLastIteration = closest->id;
+					doReflection(closest->position, closest->objectHit, *closest);
 					break;
 				}
 
@@ -620,8 +679,7 @@ void Editor::update(GameRenderer& renderer) {
 					goto laserEnd;
 
 				case REFLECT:
-					doReflection(closestToWrappedAround->position, closestToWrappedAround->objectHit);
-					hitOnLastIteration = closestToWrappedAround->id;
+					doReflection(closestToWrappedAround->position, closestToWrappedAround->objectHit, *closestToWrappedAround);
 					break;
 				}
 			} else {
@@ -1226,10 +1284,12 @@ std::optional<Editor::GrabbedRotatableSegment> Editor::rotatableSegmentCheckGrab
 	updateGrabbed(center, RotatableSegmentGizmoType::TRANSLATION);
 	const auto endpoints = rotatableSegmentEndpoints(center, normalAngle, length);
 
-	for (const auto& endpoint : endpoints) {
-		if (!cursorCaptured) {
-			updateGrabbed(endpoint, RotatableSegmentGizmoType::ROTATION);
-		}
+	if (!cursorCaptured) {
+		updateGrabbed(endpoints[0], RotatableSegmentGizmoType::ROTATION_0);
+	}
+
+	if (!cursorCaptured) {
+		updateGrabbed(endpoints[1], RotatableSegmentGizmoType::ROTATION_1);
 	}
 
 	return grabbed;
@@ -1246,18 +1306,31 @@ void Editor::grabbedRotatableSegmentUpdate(RotatableSegmentGizmoType type, Vec2 
 		center = newPosition;
 		break;
 
-	case ROTATION: {
+	case ROTATION_0:
+	case ROTATION_1: {
 		const auto line = stereographicLine(newPosition, center);
-		f32 angleAtCenter = 0.0f;
+
+		const auto normalWithCorrectDirection = (newPosition - center).rotBy90deg();
+		Vec2 normal(0.0f);
 		switch (line.type) {
 			using enum StereographicLine::Type;
 		case CIRCLE:
-			angleAtCenter = (center - line.circle.center).angle();
+			normal = center - line.circle.center;
 			break;
 		case LINE:
-			angleAtCenter = line.lineNormal.angle();
+			normal = line.lineNormal;
 		}
-		normalAngle = angleAtCenter;
+
+		// This is done, because stereographicLine changes the center position when the line transitions from CIRCLE to LINE to CIRCLE. This also causes the normal (center - line.circle.center) to change direction, which is visible for example when using portals.
+		if (dot(normal, normalWithCorrectDirection) < 0.0f) {
+			normal = -normal;
+		}
+
+		if (type == ROTATION_1) {
+			normal = -normal;
+		}
+
+		normalAngle = normal.angle();
 		break;
 	}
 

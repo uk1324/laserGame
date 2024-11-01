@@ -151,6 +151,34 @@ f32 circularArcDistance(Vec2 p, Circle circle, f32 startAngle, f32 endAngle) {
 	);
 }
 
+f32 sphericalDistance(Vec3 a, Vec3 b) {
+	return acos(dot(a.normalized(), b.normalized()));
+}
+
+f32 stereographicDistance(Vec2 a, Vec2 b) {
+	return sphericalDistance(fromStereographic(a), fromStereographic(b));
+}
+
+//f32 signedSphericalDistance(Vec3 a, Vec3 b) {
+//	a = a.normalized();
+//	b = b.normalized();
+//	const auto dist = acos(dot(a.normalized(), b.normalized()));
+//	if (dot(cross(a, b), a) > 0.0f) {
+//		return -dist;
+//	}
+//	return dist;
+//}
+//
+//f32 signedStereographicDistance(Vec2 a, Vec2 b) {
+//	return signedSphericalDistance(fromStereographic(a), fromStereographic(b));
+//}
+
+Vec2 stereographicLineNormalAt(const StereographicLine& line, Vec2 p) {
+	return line.type == StereographicLine::Type::CIRCLE
+		? (p - line.circle.center).normalized()
+		: line.lineNormal;
+}
+
 // https://stackoverflow.com/questions/55816902/finding-the-intersection-of-two-circles
 StaticList<Vec2, 2> circleVsCircleIntersection(const Circle& c0, const Circle& c1) {
 	StaticList<Vec2, 2> out;

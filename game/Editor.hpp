@@ -85,7 +85,7 @@ struct Editor {
 	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	enum class RotatableSegmentGizmoType {
-		TRANSLATION, ROTATION
+		TRANSLATION, ROTATION_0, ROTATION_1
 	};
 	struct GrabbedRotatableSegment {
 		Vec2 grabOffset;
