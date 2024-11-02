@@ -41,22 +41,29 @@ using EditorLaserId = EntityArrayId<EditorLaser>;
 
 std::array<Vec2, 2> rotatableSegmentEndpoints(Vec2 center, f32 normalAngle, f32 length);
 
+enum class EditorMirrorWallType {
+	REFLECTING,
+	ABSORBING
+};
+
 struct EditorMirror {
 	struct DefaultInitialize {
 		EditorMirror operator()();
 	};
 
-	EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked);
+	EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked, EditorMirrorWallType wallType);
 
 	Vec2 center;
 	f32 normalAngle;
 	f32 length;
 	bool positionLocked;
+	EditorMirrorWallType wallType;
 
 	std::array<Vec2, 2> calculateEndpoints() const;
 };
 
 void editorMirrorLengthInput(f32& length);
+void editorMirrorWallTypeInput(EditorMirrorWallType& type);
 
 using EditorMirrorId = EntityArrayId<EditorMirror>;
 

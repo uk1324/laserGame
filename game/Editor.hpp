@@ -81,6 +81,7 @@ struct Editor {
 		std::optional<Vec2> center;
 		f32 mirrorLength = 0.6f;
 		bool mirrorPositionLocked = true;
+		EditorMirrorWallType mirrorWallType = EditorMirrorWallType::REFLECTING;
 	} mirrorCreateTool;
 	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 

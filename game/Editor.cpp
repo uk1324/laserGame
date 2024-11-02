@@ -44,7 +44,15 @@ StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAn
 
 void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {
 	const auto endpoints = mirror.calculateEndpoints();
-	renderer.stereographicSegment(endpoints[0], endpoints[1], Color3::WHITE / 2.0f);
+	switch (mirror.wallType) {
+		using enum EditorMirrorWallType;
+		case ABSORBING: 
+			renderer.multicoloredSegment(endpoints, mirror.normalAngle, reflectingColor, absorbingColor);
+			break;
+		case REFLECTING:
+			renderer.stereographicSegment(endpoints[0], endpoints[1], reflectingColor);
+			break;
+	}
 	for (const auto endpoint : endpoints) {
 		renderer.gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(false));
 	}
@@ -186,6 +194,7 @@ void Editor::update(GameRenderer& renderer) {
 				}
 				editorMirrorLengthInput(mirror->length);
 				ImGui::Checkbox("position locked", &mirror->positionLocked);
+				editorMirrorWallTypeInput(mirror->wallType);
 				break;
 			}
 
@@ -235,6 +244,7 @@ void Editor::update(GameRenderer& renderer) {
 		case MIRROR:
 			editorMirrorLengthInput(mirrorCreateTool.mirrorLength);
 			ImGui::Checkbox("position locked", &mirrorCreateTool.mirrorPositionLocked);
+			editorMirrorWallTypeInput(mirrorCreateTool.mirrorWallType);
 			break;
 
 		case TARGET:
@@ -426,25 +436,19 @@ void Editor::update(GameRenderer& renderer) {
 		for (const auto& portal : portalPair->portals) {
 			const auto endpoints = portal.endpoints();
 
-			const auto normal = Vec2::oriented(portal.normalAngle);
 			// Instead of rendering 2 segments could render on that has 2 colors by making a custom triangulation. Then the rendering would need to swap wether the inside or outside of the circle is the side with the normal.
-			/*renderer.stereographicSegment(endpoints[0] - normal * 0.007f, endpoints[1] - normal * 0.007, Color3::WHITE);*/
 			const auto portalColor = (Color3::RED + Color3::YELLOW) / 2.0f;
-			const auto forward = normal * 0.005f;
-			const auto back = -normal * 0.005f;
 			switch (portal.wallType) {
 				using enum EditorPortalWallType;
 			case PORTAL:
 				renderer.stereographicSegment(endpoints[0], endpoints[1], portalColor);
 				break;
 			case ABSORBING:
-				renderer.stereographicSegment(endpoints[0] + forward, endpoints[1] + forward, portalColor);
-				renderer.stereographicSegment(endpoints[0] + back, endpoints[1] + back, absorbingColor);
+				renderer.multicoloredSegment(endpoints, portal.normalAngle, portalColor, absorbingColor);
 				break;
 
 			case REFLECTING:
-				renderer.stereographicSegment(endpoints[0] + forward, endpoints[1] + forward, portalColor);
-				renderer.stereographicSegment(endpoints[0] + back, endpoints[1] + back, reflectingColor);
+				renderer.multicoloredSegment(endpoints, portal.normalAngle, portalColor, reflectingColor);
 				break;
 			}
 			for (const auto endpoint : endpoints) {
@@ -456,7 +460,7 @@ void Editor::update(GameRenderer& renderer) {
 
 	struct Segment {
 		Vec2 endpoints[2];
-		Vec3 color; // inefficient
+		Vec3 color; // space inefficient
 		bool ignore = false;
 	};
 
@@ -643,7 +647,21 @@ void Editor::update(GameRenderer& renderer) {
 				}
 
 				case MIRROR: {
-					//const auto& mirror = mirrors.get(hit.id.mirror());
+					const auto& mirror = mirrors.get(hit.id.mirror());
+					if (!mirror.has_value()) {
+						CHECK_NOT_REACHED();
+						return HitResult::END;
+					}
+					const auto hitHappenedOnNormalSide = hitOnNormalSide(mirror->normalAngle);
+					if (!hitHappenedOnNormalSide) {
+						switch (mirror->wallType) {
+						case EditorMirrorWallType::REFLECTING:
+							doReflection();
+							return HitResult::CONTINUE;
+						case EditorMirrorWallType::ABSORBING:
+							return HitResult::END;
+						}
+					}
 					doReflection();
 					return HitResult::CONTINUE;
 				}
@@ -1532,7 +1550,7 @@ void Editor::MirrorCreateTool::reset() {
 }
 
 EditorMirror Editor::MirrorCreateTool::makeMirror(Vec2 center, Vec2 cursorPos) {
-	return EditorMirror(center, (cursorPos - center).angle(), mirrorLength, mirrorPositionLocked);
+	return EditorMirror(center, (cursorPos - center).angle(), mirrorLength, mirrorPositionLocked, mirrorWallType);
 }
 
 void Editor::LevelSaveOpen::openSaveLevelErrorModal() {

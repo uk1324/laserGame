@@ -11,6 +11,14 @@ GameRenderer GameRenderer::make() {
 	};
 }
 
+void GameRenderer::multicoloredSegment(const std::array<Vec2, 2>& endpoints, f32 normalAngle, Vec3 normalColor, Vec3 backColor) {
+	const auto normal = Vec2::oriented(normalAngle);
+	const auto forward = normal * 0.005f;
+	const auto back = -normal * 0.005f;
+	stereographicSegment(endpoints[0] + forward, endpoints[1] + forward, normalColor);
+	stereographicSegment(endpoints[0] + back, endpoints[1] + back, backColor);
+}
+
 void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color) {
 	gfx.disk(e0, grabbableCircleRadius, Color3::RED);
 	gfx.disk(e1, grabbableCircleRadius, Color3::RED);

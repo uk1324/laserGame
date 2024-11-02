@@ -21,7 +21,7 @@ EditorLaser EditorLaser::DefaultInitialize::operator()() {
 }
 
 EditorMirror EditorMirror::DefaultInitialize::operator()() {
-	return EditorMirror(Vec2(0.0f), 0.0f, 1.0f, false);
+	return EditorMirror(Vec2(0.0f), 0.0f, 1.0f, false, EditorMirrorWallType::REFLECTING);
 }
 
 EditorTarget EditorTarget::DefaultInitialize::operator()() {
@@ -88,11 +88,12 @@ EditorPortalPairId EditorEntityId::portalPair() const {
 	return EditorPortalPairId(index, version);
 }
 
-EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked)
+EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked, EditorMirrorWallType wallType)
 	: center(center)
 	, normalAngle(normalAngle)
 	, length(length) 
 	, positionLocked(positionLocked)
+	, wallType(wallType)
 {}
 
 // Could do this https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
@@ -246,6 +247,10 @@ void sliderFloat(const char* label, f32& value, f32 min, f32 max) {
 
 void editorMirrorLengthInput(f32& length) {
 	sliderFloat("length", length, 0.1f, 2.0f);
+}
+
+void editorMirrorWallTypeInput(EditorMirrorWallType& type) {
+	ImGui::Combo("wall type", reinterpret_cast<int*>(&type), "reflecting\0absorbing\0");
 }
 
 void editorTargetRadiusInput(f32& radius) {

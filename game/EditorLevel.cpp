@@ -54,11 +54,21 @@ bool Editor::trySaveLevel(std::string_view path) {
 	{
 		auto& jsonMirrors = makeArrayAt(level, levelMirrorsName);
 		for (const auto& e : mirrors) {
+			auto convertWallType = [](EditorMirrorWallType type) {
+				switch (type) {
+					using enum EditorMirrorWallType;
+				case REFLECTING: return LevelMirrorWallType::REFLECTING;
+				case ABSORBING: return LevelMirrorWallType::ABSORBING;
+				}
+				return LevelMirrorWallType::REFLECTING;
+			};
+
 			const auto levelMirror = LevelMirror{
 				.center = e->center,
 				.normalAngle = e->normalAngle,
 				.length = e->length,
-				.positionLocked = e->positionLocked
+				.positionLocked = e->positionLocked,
+				.wallType = convertWallType(e->wallType)
 			};
 			jsonMirrors.push_back(toJson(levelMirror));
 		}
@@ -171,9 +181,18 @@ bool Editor::tryLoadLevel(std::string_view path) {
 
 		if (const auto& jsonMirrors = tryArrayAt(json, levelMirrorsName); jsonMirrors.has_value()) {
 			for (const auto& jsonMirror : *jsonMirrors) {
+				auto convertWallType = [](LevelMirrorWallType type) {
+					switch (type) {
+						using enum LevelMirrorWallType;
+					case REFLECTING: return EditorMirrorWallType::REFLECTING;
+					case ABSORBING: return EditorMirrorWallType::ABSORBING;
+					}
+					return EditorMirrorWallType::REFLECTING;
+				};
+
 				const auto levelMirror = fromJson<LevelMirror>(jsonMirror);
 				auto mirror = mirrors.create();
-				mirror.entity = EditorMirror(levelMirror.center, levelMirror.normalAngle, levelMirror.length, levelMirror.positionLocked);
+				mirror.entity = EditorMirror(levelMirror.center, levelMirror.normalAngle, levelMirror.length, levelMirror.positionLocked, convertWallType(levelMirror.wallType));
 			}
 		}
 

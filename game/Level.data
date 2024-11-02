@@ -15,11 +15,16 @@ struct [[Json]] LevelLaser {
 	bool positionLocked = `false`;
 }
 
+enum [[Json]] LevelMirrorWallType {
+	REFLECTING, ABSORBING,
+}
+
 struct [[Json]] LevelMirror {
 	Vec2 center;
 	float normalAngle;
 	float length;
 	bool positionLocked = `false`;
+	LevelMirrorWallType wallType = `LevelMirrorWallType::REFLECTING`;
 }
 
 struct [[Json]] LevelTarget {
