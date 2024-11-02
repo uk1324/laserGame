@@ -331,6 +331,8 @@ StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const Stere
 	}
 
 	}
+
+	return StaticList<Vec2, 2>();
 }
 
 StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const StereographicLine& line, Vec2 lineEndpoint0, Vec2 lineEndpoint1, const Circle& circle) {

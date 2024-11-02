@@ -2,7 +2,6 @@
 #include <engine/Math/Color.hpp>
 #include <Overloaded.hpp>
 #include <engine/Math/Constants.hpp>
-#include <game/Constants.hpp>
 #include <game/Stereographic.hpp>
 
 GameRenderer GameRenderer::make() {
@@ -40,14 +39,18 @@ void GameRenderer::stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color) {
 }
 
 void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) { 
+	stereographicSegment(e0, e1, Vec4(color, 1.0f));
+}
+
+void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width) {
 	const auto stereographicLine = ::stereographicLine(e0, e1);
 	if (stereographicLine.type == StereographicLine::Type::LINE) {
-		gfx.lineTriangulated(e0, e1, Constants::wallWidth, color);
+		gfx.lineTriangulated(e0, e1, width, color);
 	} else {
 		const auto& line = stereographicLine.circle;
 
 		const auto range = angleRangeBetweenPointsOnCircle(line.center, e0, e1);
-		gfx.circleArcTriangulated(line.center, line.radius, range.min, range.max, Constants::wallWidth, color, 1000);
+		gfx.circleArcTriangulated(line.center, line.radius, range.min, range.max, width, color, 1000);
 	}
 }
 

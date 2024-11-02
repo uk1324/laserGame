@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gfx2d/Gfx2d.hpp>
+#include <game/Constants.hpp>
 
 const auto grabbableCircleRadius = 0.015f;
 
@@ -13,6 +14,7 @@ struct GameRenderer {
 	void renderWalls();
 	void stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color);
 	void stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color);
+	void stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width = Constants::wallWidth);
 
 	Gfx2d gfx;
 };

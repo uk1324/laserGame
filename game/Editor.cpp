@@ -10,6 +10,7 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include <engine/Math/Quat.hpp>
+#include <gfx2d/DbgGfx2d.hpp>
 #include <game/Stereographic.hpp>
 
 const auto dt = 1.0f / 60.0f;
@@ -627,11 +628,13 @@ void Editor::update(GameRenderer& renderer) {
 				if (dot(laserTangentAtHitPoint, laserDirection) > 0.0f) {
 					laserTangentAtHitPoint = -laserTangentAtHitPoint;
 				}
+				//Dbg::line(hit.point, hit.point + laserTangentAtHitPoint * 0.1f, 0.02f, Color3::RED);
 
 				auto normalAtHitPoint = stereographicLineNormalAt(hit.line, hit.point);
-				if (dot(normalAtHitPoint, laserDirection) > 0.0f) {
+				if (dot(normalAtHitPoint, laserTangentAtHitPoint) < 0.0f) {
 					normalAtHitPoint = -normalAtHitPoint;
 				}
+				//Dbg::line(hit.point, hit.point + normalAtHitPoint * 0.1f, 0.01f);
 
 				auto hitOnNormalSide = [&normalAtHitPoint](f32 hitObjectNormalAngle) {
 					return dot(Vec2::oriented(hitObjectNormalAngle), normalAtHitPoint) > 0.0f;
@@ -857,15 +860,20 @@ void Editor::update(GameRenderer& renderer) {
 
 	// TODO: Use additive blending with transaprency maybe.
 	i32 drawnSegments = 0;
+	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
+	// srcAlpha * srcColor + 1 * dstColor
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	if (!hideLaser) {
 		for (const auto& segment : laserSegmentsToDraw) {
 			if (segment.ignore) {
 				continue;
 			}
 			drawnSegments++;
-			renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], segment.color);
+			/*renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color, 0.5f), 0.05f);*/
+			renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color));
 		}
 	}
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	const auto activatableObjectColor = [](Vec3 baseColor, bool isActivated) {
 		return isActivated ? baseColor : baseColor / 2.0f;
