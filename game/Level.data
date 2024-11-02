@@ -46,3 +46,9 @@ struct [[Json]] LevelPortalPair {
 	LevelPortal portal0;
 	LevelPortal portal1;
 }
+
+struct [[Json]] LevelTrigger {
+	Vec2 position;
+	Vec3 color;
+	i32 index;
+}

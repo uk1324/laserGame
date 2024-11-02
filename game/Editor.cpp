@@ -31,6 +31,24 @@ Vec2 laserDirectionGrabPoint(const EditorLaser& laser) {
 	return laser.position + Vec2::oriented(laser.angle) * 0.15f;
 }
 
+template<typename Entity, typename ModifyAction>
+void addModifyAction(
+	Editor& editor, 
+	EditorActions& actions, 
+	EntityArray<Entity, typename Entity::DefaultInitialize>& entities,
+	EntityArrayId<Entity> id,
+	Entity&& oldState) {
+
+	auto entity = entities.get(id);
+
+	if (!entity.has_value()) {
+		CHECK_NOT_REACHED();
+		return;
+	}
+	auto action = new ModifyAction(id, std::move(oldState), std::move(*entity));
+	actions.add(editor, action);
+}
+
 // This reuses code from EditorMirror::calculateEndpoints().
 // Could combine them maybe.
 StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAngle, f32 translation = 0.1f) {
@@ -149,11 +167,11 @@ void Editor::update(GameRenderer& renderer) {
 			firstFrame = false;
 		}
 	}
-
+	
 	{
 		ImGui::Begin(sideBarWindowName);
 
-		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0create portals\0");
+		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0create portals\0create trigger\0");
 
 		ImGui::SeparatorText("tool settings");
 		switch (selectedTool) {
@@ -182,7 +200,7 @@ void Editor::update(GameRenderer& renderer) {
 				if (!laser.has_value()) {
 					break;
 				}
-				editorLaserColorCombo("color", laser->color);
+				editorLaserColorCombo(laser->color);
 				ImGui::Checkbox("position locked", &laser->positionLocked);
 				break;
 			}
@@ -226,6 +244,17 @@ void Editor::update(GameRenderer& renderer) {
 				break;
 			}
 
+			case EditorEntityType::TRIGGER: {
+				auto trigger = triggers.get(selectTool.selectedEntity->trigger());
+				if (!trigger.has_value()) {
+					break;
+				}
+				editorTriggerColorCombo(trigger->color);
+				ImGui::InputInt("index", &trigger->index);
+				trigger->index = std::clamp(trigger->index, 0, 1000);
+				break;
+			}
+
 			default:
 				break;
 			}
@@ -237,7 +266,7 @@ void Editor::update(GameRenderer& renderer) {
 			break;
 
 		case LASER:
-			editorLaserColorCombo("color", laserCreateTool.laserColor);
+			editorLaserColorCombo(laserCreateTool.laserColor);
 			ImGui::Checkbox("position locked", &laserCreateTool.laserPositionLocked);
 			break;
 
@@ -272,6 +301,7 @@ void Editor::update(GameRenderer& renderer) {
 
 		ImGui::SeparatorText("debug");
 		ImGui::InputInt("max reflections", &maxReflections);
+		maxReflections = std::clamp(maxReflections, 0, 100);
 
 		ImGui::End();
 	}
@@ -360,6 +390,7 @@ void Editor::update(GameRenderer& renderer) {
 		case MIRROR: mirrorCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case TARGET: targetCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case PORTAL_PAIR: portalCreateToolUpdate(cursorPos, cursorCaptured); break;
+		case TRIGGER: triggerCreateToolUpdate(cursorPos, cursorCaptured); break;
 		}
 	};
 
@@ -369,6 +400,7 @@ void Editor::update(GameRenderer& renderer) {
 		mirrorGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 		targetGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 		portalGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+		triggerGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 	};
 
 	if (cursorExact) {
@@ -413,9 +445,13 @@ void Editor::update(GameRenderer& renderer) {
 	case MIRROR: mirrorCreateTool.render(renderer, cursorPos); break;
 	case TARGET: break;
 	case PORTAL_PAIR: break;
+	case TRIGGER: break;
 	}
 
+	//const auto darkGreen = Vec3(2, 48, 32) / 255.0f;
+	//const auto darkRed = Vec3(255, 87, 51) / 255.0f;
 	renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN);
+	//renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, darkGreen);
 
 	const auto boundary = Circle{ Vec2(0.0f), 1.0f };
 
@@ -466,6 +502,9 @@ void Editor::update(GameRenderer& renderer) {
 
 	for (auto target : targets) {
 		target->activated = false;
+	}
+	for (auto trigger : triggers) {
+		trigger->activated = false;
 	}
 
 	std::vector<Segment> laserSegmentsToDraw;
@@ -735,28 +774,33 @@ void Editor::update(GameRenderer& renderer) {
 				return HitResult::END;
 			};
 
-			auto checkSegmentVsTargetCollision = [&](const Segment& segment) {
+			auto checkLaserVsTargetCollision = [&](const Segment& segment) {
 				for (auto target : targets) {
-					const auto circle = target->calculateCircle();
-					const auto intersections = stereographicLineVsCircleIntersection(laserLine, circle);
-
-					// TODO: Somehow abstract this, this is copied from above.
-					const auto epsilon = 0.001f;
-					const auto lineDirection = (segment.endpoints[1] - segment.endpoints[0]).normalized();
-					const auto dAlong0 = dot(lineDirection, segment.endpoints[0]);
-					const auto dAlong1 = dot(lineDirection, segment.endpoints[1]);
-					for (const auto& intersection : intersections) {
-						const auto intersectionDAlong = dot(lineDirection, intersection);
-						if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
-							target->activated = true;
-						}
+					const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], target->calculateCircle());
+					if (intersections.size() > 0) {
+						target->activated = true;
 					}
 				}
 			};
 
+			auto checkLaserVsTriggerCollision = [&](const Segment& segment) {
+				for (auto trigger : triggers) {
+					const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], trigger->circle());
+					if (intersections.size() > 0) {
+						trigger->activated = true;
+					}
+				}
+			};
+
+			// Non interfering means that they don't change the direction and position of the laser.
+			auto checkNonInterferingLaserCollisions = [&](const Segment& segment) {
+				checkLaserVsTargetCollision(segment);
+				checkLaserVsTriggerCollision(segment);
+			};
+
 			if (closest.has_value()) {
 				const auto s = Segment{ laserPosition, closest->point, laser->color };
-				checkSegmentVsTargetCollision(s);
+				checkNonInterferingLaserCollisions(s);
 				laserSegmentsToDraw.push_back(s);
 				const auto result = processHit(*closest);
 				if (result == HitResult::END) {
@@ -765,8 +809,8 @@ void Editor::update(GameRenderer& renderer) {
 			} else if (closestToWrappedAround.has_value()) {
 				const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
 				const auto s1 = Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->point, laser->color };
-				checkSegmentVsTargetCollision(s0);
-				checkSegmentVsTargetCollision(s1);
+				checkNonInterferingLaserCollisions(s0);
+				checkNonInterferingLaserCollisions(s1);
 				laserSegmentsToDraw.push_back(s0);
 				laserSegmentsToDraw.push_back(s1);
 
@@ -777,8 +821,8 @@ void Editor::update(GameRenderer& renderer) {
 			} else {
 				const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
 				const auto s1 = Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color };
-				checkSegmentVsTargetCollision(s0);
-				checkSegmentVsTargetCollision(s1);
+				checkNonInterferingLaserCollisions(s0);
+				checkNonInterferingLaserCollisions(s1);
 				laserSegmentsToDraw.push_back(s0);
 				laserSegmentsToDraw.push_back(s1);
 			}
@@ -824,11 +868,23 @@ void Editor::update(GameRenderer& renderer) {
 		}
 	}
 
+	auto drawOrb = [&](Vec2 center, const Circle& circle, Vec3 color) {
+		renderer.gfx.circle(circle.center, circle.radius, 0.01f, color);
+		renderer.gfx.disk(center, 0.01f, color);
+	};
+
+	const auto activatableObjectColor = [](Vec3 baseColor, bool isActivated) {
+		return isActivated ? baseColor : baseColor / 2.0f;
+	};
+
 	for (const auto& target : targets) {
 		const auto circle = target->calculateCircle();
-		const auto color = target->activated ? Color3::MAGENTA : Color3::MAGENTA / 2.0f;
-		renderer.gfx.circle(circle.center, circle.radius, 0.01f, color);
-		renderer.gfx.disk(target->position, 0.01f, color);
+		drawOrb(target->position, circle, activatableObjectColor(Color3::MAGENTA, target->activated));
+	}
+
+	for (const auto& trigger : triggers) {
+		const auto circle = trigger->circle();
+		drawOrb(trigger->position, circle, activatableObjectColor(trigger->color, trigger->activated));
 	}
 
 	renderer.gfx.drawFilledTriangles();
@@ -943,41 +999,34 @@ void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !targetGrabTool.grabbed.has_value()) {
 		for (const auto& target : targets) {
-			if (distance(target->position, cursorPos) > Constants::endpointGrabPointRadius) {
-				continue;
+			const auto result = orbCheckGrab(target->position, target->radius,
+				cursorPos, cursorCaptured);
+
+			if (result.has_value()) {
+				targetGrabTool.grabbed = TargetGrabTool::Grabbed{
+					.id = target.id,
+					.grabStartState = target.entity,
+					.grabOffset = result->grabOffset,
+				};
+				break;
 			}
-			cursorCaptured = true;
-			targetGrabTool.grabbed = TargetGrabTool::Grabbed{
-				.id = target.id,
-				.grabStartState = target.entity,
-				.grabOffset = target->position - cursorPos,
-			};
-			break;
 		}
 	}
 
 	if (Input::isMouseButtonHeld(MouseButton::LEFT) && targetGrabTool.grabbed.has_value()) {
-		cursorCaptured = true;
 		auto target = targets.get(targetGrabTool.grabbed->id);
 		if (target.has_value()) {
-			target->position = cursorPos + targetGrabTool.grabbed->grabOffset * !cursorExact;
+			grabbedOrbUpdate(targetGrabTool.grabbed->grabOffset, 
+				target->position, 
+				cursorPos, cursorCaptured, cursorExact);
 		} else {
 			CHECK_NOT_REACHED();
-		}
+		}		
 	}
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && targetGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		auto target = targets.get(targetGrabTool.grabbed->id);
-		if (target.has_value()) {
-			auto action = new EditorActionModifyTarget(
-				targetGrabTool.grabbed->id,
-				std::move(targetGrabTool.grabbed->grabStartState),
-				std::move(*target));
-			actions.add(*this, action);
-		} else {
-			CHECK_NOT_REACHED();
-		}
+		addModifyAction<EditorTarget, EditorActionModifyTarget>(*this, actions, targets, targetGrabTool.grabbed->id, std::move(targetGrabTool.grabbed->grabStartState));
 		targetGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -1055,11 +1104,64 @@ void Editor::portalGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 	}
 }
 
+void Editor::triggerCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (cursorCaptured) {
+		return;
+	}
+	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
+		auto trigger = triggers.create();
+		trigger.entity = EditorTrigger{
+			.position = cursorPos,
+			.color = EditorTrigger::defaultColor.color,
+			.index = 0,
+		};
+		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(trigger.id)));
+		cursorCaptured = true;
+	}
+}
+
+void Editor::triggerGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT) && !triggerGrabTool.grabbed.has_value()) {
+		for (const auto& trigger : triggers) {
+			const auto result = orbCheckGrab(trigger->position, trigger->defaultRadius,
+				cursorPos, cursorCaptured);
+
+			if (result.has_value()) {
+				triggerGrabTool.grabbed = TriggerGrabTool::Grabbed{
+					.id = trigger.id,
+					.grabStartState = trigger.entity,
+					.grabOffset = result->grabOffset,
+				};
+				break;
+			}
+		}
+	}
+
+	if (Input::isMouseButtonHeld(MouseButton::LEFT) && triggerGrabTool.grabbed.has_value()) {
+		auto trigger = triggers.get(triggerGrabTool.grabbed->id);
+		if (trigger.has_value()) {
+			grabbedOrbUpdate(triggerGrabTool.grabbed->grabOffset,
+				trigger->position,
+				cursorPos, cursorCaptured, cursorExact);
+		} else {
+			CHECK_NOT_REACHED();
+		}
+	}
+
+	if (Input::isMouseButtonUp(MouseButton::LEFT) && triggerGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		addModifyAction<EditorTrigger, EditorActionModifyTrigger>(*this, actions, triggers, triggerGrabTool.grabbed->id, std::move(triggerGrabTool.grabbed->grabStartState));
+		triggerGrabTool.grabbed = std::nullopt;
+	}
+}
+
 void Editor::freeAction(EditorAction& action) {
 	// TODO: Fix entity leaks.
 }
-
-#include <iostream>
 
 void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (Input::isKeyDown(KeyCode::DELETE) && selectTool.selectedEntity.has_value()) {
@@ -1113,15 +1215,18 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			}
 		}
 
-		for (const auto& target : targets) {
-			const auto circle = target->calculateCircle();
+		auto isCursorUnderOrb = [](Circle circle, Vec2 center, Vec2 cursorPos) {
 			const auto d = distance(cursorPos, circle.center);
+			// If the circle is too small then check the distance from the center.
 			const auto smallCircle = circle.radius < Constants::endpointGrabPointRadius
 				&& d < Constants::endpointGrabPointRadius;
-
 			const auto normalCircle = d < circle.radius;
+			return smallCircle || normalCircle;
+		};
 
-			if (smallCircle || normalCircle) {
+		for (const auto& target : targets) {
+			const auto circle = target->calculateCircle();
+			if (isCursorUnderOrb(circle, target->position, cursorPos)) {
 				selectTool.selectedEntity = EditorEntityId(target.id);
 				goto selectedEntity;
 			}
@@ -1135,6 +1240,14 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 					selectTool.selectedEntity = EditorEntityId(portalPair.id);
 					goto selectedEntity;
 				}
+			}
+		}
+
+		for (const auto& trigger : triggers) {
+			const auto circle = trigger->circle();
+			if (isCursorUnderOrb(circle, trigger->position, cursorPos)) {
+				selectTool.selectedEntity = EditorEntityId(trigger.id);
+				goto selectedEntity;
 			}
 		}
 
@@ -1159,6 +1272,7 @@ void Editor::activateEntity(const EditorEntityId& id) {
 	case MIRROR: mirrors.activate(id.mirror()); break;
 	case TARGET: targets.activate(id.target()); break;
 	case PORTAL_PAIR: portalPairs.activate(id.portalPair()); break;
+	case TRIGGER: triggers.activate(id.trigger()); break;
 	}
 }
 
@@ -1170,6 +1284,7 @@ void Editor::deactivateEntity(const EditorEntityId& id) {
 	case MIRROR: mirrors.deactivate(id.mirror()); break;
 	case TARGET: targets.deactivate(id.target()); break;
 	case PORTAL_PAIR: portalPairs.deactivate(id.portalPair()); break;
+	case TRIGGER: triggers.deactivate(id.trigger()); break;
 	}
 }
 
@@ -1191,6 +1306,7 @@ void Editor::undoAction(const EditorAction& action) {
 	case MODIFY_MIRROR: undoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
 	case MODIFY_TARGET: undoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
 	case MODIFY_PORTAL_PAIR: undoModify(portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
+	case MODIFY_TRIGGER: undoModify(triggers, static_cast<const EditorActionModifyTrigger&>(action)); break;
 
 	case CREATE_ENTITY: {
 		deactivateEntity(static_cast<const EditorActionDestroyEntity&>(action).id);
@@ -1442,6 +1558,22 @@ void Editor::grabbedRotatableSegmentUpdate(RotatableSegmentGizmoType type, Vec2 
 	}
 }
 
+std::optional<Editor::GrabbedOrb> Editor::orbCheckGrab(Vec2 position, f32 radius, 
+	Vec2 cursorPos, bool& cursorCaptured) {
+	if (distance(position, cursorPos) > Constants::endpointGrabPointRadius) {
+		return std::nullopt;
+	}
+	cursorCaptured = true;
+	return GrabbedOrb{ .grabOffset = position - cursorPos };
+}
+
+void Editor::grabbedOrbUpdate(Vec2& grabOffset, 
+	Vec2& position, Vec2 cursorPos, 
+	bool& cursorCaptured, bool cursorExact) {
+	position = cursorPos + grabOffset * !cursorExact;
+	cursorCaptured = true;
+}
+
 template<typename Entity, typename Action>
 void redoModify(EntityArray<Entity, typename Entity::DefaultInitialize>& array, const Action& action) {
 	auto entity = array.get(action.id);
@@ -1460,6 +1592,7 @@ void Editor::redoAction(const EditorAction& action) {
 	case MODIFY_MIRROR: redoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
 	case MODIFY_TARGET: redoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
 	case MODIFY_PORTAL_PAIR: redoModify(portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
+	case MODIFY_TRIGGER: redoModify(triggers, static_cast<const EditorActionModifyTrigger&>(action)); break;
 
 	case CREATE_ENTITY: {
 		activateEntity(static_cast<const EditorActionCreateEntity&>(action).id);

@@ -64,6 +64,7 @@ struct AngleRange {
 
 f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange);
 
+Circle stereographicCircle(Vec2 center, f32 radius);
 
 AngleRange angleRangeBetweenPointsOnCircle(Vec2 circleCenter, Vec2 pointOnCircle0, Vec2 pointOnCircle1);
 
@@ -79,3 +80,4 @@ StaticList<Vec2, 2> circleVsCircleIntersection(const Circle& a, const Circle& b)
 StaticList<Vec2, 2> lineVsCircleIntersection(Vec2 linePoint, Vec2 lineDirection, const Circle& circle);
 StaticList<Vec2, 2> stereographicLineVsCircleIntersection(const StereographicLine& l, const Circle& c);
 StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const StereographicLine& a, const StereographicLine& b);
+StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const StereographicLine& line, Vec2 lineEndpoint0, Vec2 lineEndpoint1, const Circle& circle);

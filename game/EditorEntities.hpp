@@ -4,6 +4,13 @@
 #include <game/EntityArray.hpp>
 #include <game/Stereographic.hpp>
 #include <engine/Math/Color.hpp>
+#include <View.hpp>
+
+struct ColorEntry {
+	Vec3 color;
+	const char* name;
+};
+void colorCombo(const char* label, View<const ColorEntry> colors, ColorEntry defaultColor, Vec3& selectedColor);
 
 enum class EditorWallType {
 	REFLECTING,
@@ -32,10 +39,11 @@ struct EditorLaser {
 	Vec3 color;
 	bool positionLocked;
 
-	static constexpr Vec3 defaultColor = Color3::CYAN;
+	//static constexpr ColorEntry defaultColor{ Color3::BLUE, "blue" };
+	static constexpr ColorEntry defaultColor{ Color3::CYAN, "cyan" };
 };
 
-void editorLaserColorCombo(const char* label, Vec3& color);
+void editorLaserColorCombo(Vec3& color);
 
 using EditorLaserId = EntityArrayId<EditorLaser>;
 
@@ -122,17 +130,34 @@ using EditorPortalPairId = EntityArrayId<EditorPortalPair>;
 //	Vec2 endpoints[2];
 //};
 //
-//struct EditorTriggerOrb {
-//	i32 index;
-//	Vec2 position;
-//};
+struct EditorTrigger {
+	struct DefaultInitialize {
+		EditorTrigger operator()();
+	};
+
+	Vec2 position;
+	Vec3 color;
+	i32 index;
+
+	bool activated = false;
+
+	Circle circle() const;
+
+	static constexpr auto defaultRadius = 0.1f;
+	static constexpr ColorEntry defaultColor{ Vec3(0.0f, 1.0f, 0.5f), "spring green"};
+};
+
+void editorTriggerColorCombo(Vec3& color);
+
+using EditorTriggerId = EntityArrayId<EditorTrigger>;
 
 enum class EditorEntityType {
 	WALL,
 	LASER,
 	MIRROR,
 	TARGET,
-	PORTAL_PAIR
+	PORTAL_PAIR,
+	TRIGGER,
 };
 
 struct EditorEntityId {
@@ -145,12 +170,14 @@ struct EditorEntityId {
 	explicit EditorEntityId(const EditorMirrorId& id);
 	explicit EditorEntityId(const EditorTargetId& id);
 	explicit EditorEntityId(const EditorPortalPairId& id);
+	explicit EditorEntityId(const EditorTriggerId& id);
 
 	EditorWallId wall() const;
 	EditorLaserId laser() const;
 	EditorMirrorId mirror() const;
 	EditorTargetId target() const;
 	EditorPortalPairId portalPair() const;
+	EditorTriggerId trigger() const;
 
 	bool operator==(const EditorEntityId&) const = default;
 };

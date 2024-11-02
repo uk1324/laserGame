@@ -151,6 +151,18 @@ f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange) {
 	);
 }
 
+Circle stereographicCircle(Vec2 position, f32 radius) {
+	const auto center = fromStereographic(position);
+
+	// This could be simplified, because we don't care what direction the movement is in. The previous code (in EditorEntities.hpp) doesn't handle the cross product edge case.
+	const auto p0 = moveOnSphericalGeodesic(center, 0.0f, radius);
+	const auto rotate = Quat(PI<f32> / 2.0f, center);
+	const auto p1 = rotate * p0;
+	const auto p2 = rotate * p1;
+	// The stereographic projection of center isn't necessarily the center of the stereograhic of the `circle on the sphere`. For small radii this isn't very noticible.
+	return circleThroughPoints(toStereographic(p0), toStereographic(p1), toStereographic(p2));
+}
+
 AngleRange angleRangeBetweenPointsOnCircle(Vec2 circleCenter, Vec2 pointOnCircle0, Vec2 pointOnCircle1) { 
 	f32 a0 = angleToRangeZeroTau((pointOnCircle0 - circleCenter).angle());
 	f32 a1 = angleToRangeZeroTau((pointOnCircle1 - circleCenter).angle());
@@ -310,6 +322,24 @@ StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const Stere
 	}
 
 	}
+}
+
+StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const StereographicLine& line, Vec2 lineEndpoint0, Vec2 lineEndpoint1, const Circle& circle) {
+	const auto intersections = stereographicLineVsCircleIntersection(line, circle);
+	//const auto epsilon = 0.001f;
+	const auto lineDirection = (lineEndpoint1 - lineEndpoint0).normalized();
+	const auto dAlong0 = dot(lineDirection, lineEndpoint0);
+	const auto dAlong1 = dot(lineDirection, lineEndpoint1);
+
+	StaticList<Vec2, 2> result;
+	for (const auto& intersection : intersections) {
+		const auto intersectionDAlong = dot(lineDirection, intersection);
+		// Using the regular segment check works, because the stereographic segment is convex.
+		if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
+			result.add(intersection);
+		}
+	}
+	return result;
 }
 
 StereographicLine::StereographicLine(const StereographicLine& other)

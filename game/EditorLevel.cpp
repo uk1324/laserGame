@@ -114,6 +114,18 @@ bool Editor::trySaveLevel(std::string_view path) {
 		}
 	}
 
+	{
+		auto& jsonTriggers = makeArrayAt(level, levelTriggersName);
+		for (const auto& e : triggers) {
+			const auto levelE = LevelTrigger{
+				.position = e->position,
+				.color = e->color,
+				.index = e->index,
+			};
+			jsonTriggers.push_back(toJson(levelE));
+		}
+	}
+
 	std::ofstream file(path.data());
 	Json::print(file, level);
 
@@ -225,6 +237,18 @@ bool Editor::tryLoadLevel(std::string_view path) {
 				};
 				portalPair.entity = EditorPortalPair{
 					.portals = { convertPortal(levelPortalPair.portal0), convertPortal(levelPortalPair.portal1) }
+				};
+			}
+		}
+
+		if (const auto& jsonTriggers = tryArrayAt(json, levelTriggersName); jsonTriggers.has_value()) {
+			for (const auto& jsonTrigger : *jsonTriggers) {
+				const auto levelTrigger = fromJson<LevelTrigger>(jsonTrigger);
+				auto trigger = triggers.create();
+				trigger.entity = EditorTrigger{
+					.position = levelTrigger.position,
+					.color = levelTrigger.color,
+					.index = levelTrigger.index,
 				};
 			}
 		}

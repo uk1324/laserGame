@@ -38,6 +38,10 @@ EditorPortalPair EditorPortalPair::DefaultInitialize::operator()() {
 	};
 }
 
+EditorTrigger EditorTrigger::DefaultInitialize::operator()() {
+	return EditorTrigger{ .position = Vec2(0.0f), .color = Vec3(0.0f), .index = 0};
+}
+
 EditorEntityId::EditorEntityId(const EditorWallId& id) 
 	: type(EditorEntityType::WALL) 
 	, index(id.index())
@@ -60,6 +64,11 @@ EditorEntityId::EditorEntityId(const EditorTargetId& id)
 
 EditorEntityId::EditorEntityId(const EditorPortalPairId& id)
 	: type(EditorEntityType::PORTAL_PAIR)
+	, index(id.index())
+	, version(id.version()) {}
+
+EditorEntityId::EditorEntityId(const EditorTriggerId& id)
+	: type(EditorEntityType::TRIGGER)
 	, index(id.index())
 	, version(id.version()) {}
 
@@ -86,6 +95,11 @@ EditorTargetId EditorEntityId::target() const {
 EditorPortalPairId EditorEntityId::portalPair() const {
 	ASSERT(type == EditorEntityType::PORTAL_PAIR);
 	return EditorPortalPairId(index, version);
+}
+
+EditorTriggerId EditorEntityId::trigger() const {
+	ASSERT(type == EditorEntityType::TRIGGER);
+	return EditorTriggerId(index, version);
 }
 
 EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked, EditorMirrorWallType wallType)
@@ -163,21 +177,36 @@ std::array<Vec2, 2> EditorMirror::calculateEndpoints() const {
 }
 
 Circle EditorTarget::calculateCircle() const {
-	const auto center = fromStereographic(position);
+	return stereographicCircle(position, radius);
+}
 
-	//const auto axis = cross(center, Vec3(0.0f, 0.0f, 1.0f)).normalized();
-	//// Point equidistant from center in there sphere metric.
-	//const auto p0 = Quat(radius, axis) * center;
-	//const auto p1 = Quat(-radius, axis) * center;
-	//const auto p2 = Quat(PI<f32> / 2.0f, center) * p1;
+void colorCombo(const char* label, View<const ColorEntry> colors, ColorEntry defaultColor, Vec3& selectedColor) {
+	const char* selectedName = nullptr;
 
-	// This could be simplified, because we don't care what direction the movement is in. The previous code doesn't handle the cross product edge case.
-	const auto p0 = moveOnSphericalGeodesic(center, 0.0f, radius);
-	const auto rotate = Quat(PI<f32> / 2.0f, center);
-	const auto p1 = rotate * p0;
-	const auto p2 = rotate * p1;
-	// The stereographic projection of center isn't necessarily the center of the stereograhic of the `circle on the sphere`. For small radii this isn't very noticible.
-	return circleThroughPoints(toStereographic(p0), toStereographic(p1), toStereographic(p2));
+	for (const auto& [color, name] : colors) {
+		if (selectedColor == color) {
+			selectedName = name;
+			break;
+		}
+	}
+
+	if (selectedName == nullptr) {
+		selectedColor = defaultColor.color;
+	}
+
+	if (ImGui::BeginCombo(label, selectedName)) {
+		for (const auto& [color, name] : colors) {
+			const auto isSelected = selectedColor == color;
+			ImGui::ColorButton("##colorDisplay", ImVec4(color.x, color.y, color.z, 1.0f));
+			ImGui::SameLine();
+			if (ImGui::Selectable(name, isSelected)) {
+				selectedColor = color;
+			}
+
+			if (isSelected) ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
 }
 
 void wallTypeCombo(const char* label, EditorWallType& type) {
@@ -187,42 +216,13 @@ void wallTypeCombo(const char* label, EditorWallType& type) {
 		"reflecting\0absorbing\0");
 }
 
-void editorLaserColorCombo(const char* label, Vec3& selectedColor) {
-	struct ColorName {
-		Vec3 color;
-		const char* name;
-	};
-	ColorName pairs[]{
-		{ Color3::CYAN, "cyan" },
+void editorLaserColorCombo(Vec3& selectedColor) {
+	ColorEntry entries[]{
+		EditorLaser::defaultColor,
 		{ Vec3(81, 255, 13) / 255.0f, "green"},
 		{ Color3::RED, "red" }
 	};
-
-	const char* selectedName = nullptr;
-
-	for (const auto& [color, name] : pairs) {
-		if (selectedColor == color) {
-			selectedName = name;
-			break;
-		}
-	}
-
-	if (selectedName == nullptr) {
-		selectedName = "cyan";
-	}
-
-	if (ImGui::BeginCombo(label, selectedName)) {
-		for (const auto& [color, name] : pairs) {
-			const auto isSelected = selectedColor == color;
-			if (ImGui::Selectable(name, isSelected)) {
-				selectedColor = color;
-			}
-
-			if (isSelected) ImGui::SetItemDefaultFocus();
-				
-		}
-		ImGui::EndCombo();
-	}
+	colorCombo("color", constView(entries), EditorLaser::defaultColor, selectedColor);
 }
 
 std::array<Vec2, 2> rotatableSegmentEndpoints(Vec2 center, f32 normalAngle, f32 length) {
@@ -257,6 +257,19 @@ void editorTargetRadiusInput(f32& radius) {
 	sliderFloat("radius", radius, 0.05f, 1.5f);
 }
 
+void editorTriggerColorCombo(Vec3& color) {
+	ColorEntry entries[]{
+		EditorTrigger::defaultColor,
+		{ Vec3(0.0f, 0.5f, 1.0f), "azure"},
+		{ Vec3(1.0f, 0.0f, 0.5f), "rose"}
+	};
+	colorCombo("color", constView(entries), EditorLaser::defaultColor, color);
+}
+
 std::array<Vec2, 2> EditorPortal::endpoints() const {
 	return rotatableSegmentEndpoints(center, normalAngle, defaultLength);
+}
+
+Circle EditorTrigger::circle() const {
+	return stereographicCircle(position, defaultRadius);
 }

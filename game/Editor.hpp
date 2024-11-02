@@ -17,7 +17,8 @@ struct Editor {
 		LASER,
 		MIRROR,
 		TARGET,
-		PORTAL_PAIR
+		PORTAL_PAIR,
+		TRIGGER,
 	};
 
 	Tool selectedTool = Tool::WALL;
@@ -50,7 +51,7 @@ struct Editor {
 	void wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
 	struct LaserCreateTool {
-		Vec3 laserColor = EditorLaser::defaultColor;
+		Vec3 laserColor = EditorLaser::defaultColor.color;
 		bool laserPositionLocked = true;
 	} laserCreateTool;
 	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
@@ -98,6 +99,15 @@ struct Editor {
 		Vec2& center, f32& normalAngle,
 		Vec2 cursorPos, bool cursorExact);
 
+	struct GrabbedOrb {
+		Vec2 grabOffset;
+	};
+	static std::optional<GrabbedOrb> orbCheckGrab(Vec2 position, f32 radius,
+		Vec2 cursorPos, bool& cursorCaptured);
+	static void grabbedOrbUpdate(Vec2& grabOffset,
+		Vec2& position,
+		Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
+
 	struct MirrorGrabTool {
 		struct Grabbed {
 			EditorMirrorId id;
@@ -137,6 +147,18 @@ struct Editor {
 	} portalGrabTool;
 	void portalGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
+	void triggerCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+
+	struct TriggerGrabTool {
+		struct Grabbed {
+			EditorTriggerId id;
+			EditorTrigger grabStartState;
+			Vec2 grabOffset;
+		};
+		std::optional<Grabbed> grabbed;
+	} triggerGrabTool;
+	void triggerGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
+
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);
 
@@ -173,4 +195,5 @@ struct Editor {
 	EntityArray<EditorMirror, EditorMirror::DefaultInitialize> mirrors;
 	EntityArray<EditorTarget, EditorTarget::DefaultInitialize> targets;
 	EntityArray<EditorPortalPair, EditorPortalPair::DefaultInitialize> portalPairs;
+	EntityArray<EditorTrigger, EditorTrigger::DefaultInitialize> triggers;
 };
