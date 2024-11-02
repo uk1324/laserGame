@@ -252,10 +252,19 @@ void Editor::update(GameRenderer& renderer) {
 					break;
 				}
 				editorTriggerColorCombo(trigger->color);
-				ImGui::InputInt("index", &trigger->index);
-				trigger->index = std::clamp(trigger->index, 0, 1000);
+				editorTriggerIndexInput("index", trigger->index);
 				break;
 			}
+
+			case EditorEntityType::DOOR: {
+				auto door = doors.get(selectTool.selectedEntity->door());
+				if (!door.has_value()) {
+					break;
+				}
+				editorTriggerIndexInput("trigger index", door->triggerIndex);
+				break;
+			}
+				
 
 			default:
 				break;
@@ -1324,6 +1333,13 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			const auto circle = trigger->circle();
 			if (isCursorUnderOrb(circle, trigger->position, cursorPos)) {
 				selectTool.selectedEntity = EditorEntityId(trigger.id);
+				goto selectedEntity;
+			}
+		}
+
+		for (const auto& door : doors) {
+			if (stereographicSegmentDistance(door->endpoints[0], door->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
+				selectTool.selectedEntity = EditorEntityId(door.id);
 				goto selectedEntity;
 			}
 		}

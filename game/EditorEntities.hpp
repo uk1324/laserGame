@@ -144,6 +144,7 @@ struct EditorTrigger {
 using EditorTriggerId = EntityArrayId<EditorTrigger>;
 
 void editorTriggerColorCombo(Vec3& color);
+void editorTriggerIndexInput(const char* label, i32& index);
 
 struct EditorDoorSegment {
 	Vec2 endpoints[2];

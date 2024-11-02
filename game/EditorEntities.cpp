@@ -281,6 +281,11 @@ void editorTriggerColorCombo(Vec3& color) {
 	colorCombo("color", constView(entries), EditorLaser::defaultColor, color);
 }
 
+void editorTriggerIndexInput(const char* label, i32& index) {
+	ImGui::InputInt("index", &index);
+	index = std::clamp(index, 0, 1000);
+}
+
 std::array<Vec2, 2> EditorPortal::endpoints() const {
 	return rotatableSegmentEndpoints(center, normalAngle, defaultLength);
 }
