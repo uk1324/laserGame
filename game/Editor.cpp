@@ -978,8 +978,12 @@ void Editor::reset() {
 	mirrors.reset();
 	targets.reset();
 	portalPairs.reset();
-	selectTool.selectedEntity = std::nullopt;
+	triggers.reset();
+	doors.reset();
+
 	actions.reset();
+
+	selectTool.selectedEntity = std::nullopt;
 }
 
 void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {

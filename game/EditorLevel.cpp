@@ -126,6 +126,18 @@ bool Editor::trySaveLevel(std::string_view path) {
 		}
 	}
 
+	{
+		auto& jsonDoors = makeArrayAt(level, levelDoorsName);
+		for (const auto& e : doors) {
+			const auto levelE = LevelDoor{
+				.endpoint0 = e->endpoints[0],
+				.endpoint1 = e->endpoints[1],
+				.triggerIndex = e->triggerIndex
+			};
+			jsonDoors.push_back(toJson(levelE));
+		}
+	}
+
 	std::ofstream file(path.data());
 	Json::print(file, level);
 
@@ -249,6 +261,17 @@ bool Editor::tryLoadLevel(std::string_view path) {
 					.position = levelTrigger.position,
 					.color = levelTrigger.color,
 					.index = levelTrigger.index,
+				};
+			}
+		}
+
+		if (const auto& jsonDoors = tryArrayAt(json, levelDoorsName); jsonDoors.has_value()) {
+			for (const auto& jsonDoor : *jsonDoors) {
+				const auto levelDoor = fromJson<LevelDoor>(jsonDoor);
+				auto door = doors.create();
+				door.entity = EditorDoor{
+					.endpoints = { levelDoor.endpoint0, levelDoor.endpoint1 },
+					.triggerIndex = levelDoor.triggerIndex
 				};
 			}
 		}

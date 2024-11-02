@@ -52,3 +52,9 @@ struct [[Json]] LevelTrigger {
 	Vec3 color;
 	i32 index;
 }
+
+struct [[Json]] LevelDoor {
+	Vec2 endpoint0;
+	Vec2 endpoint1;
+	i32 triggerIndex;
+}
