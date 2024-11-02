@@ -39,8 +39,8 @@ struct EditorLaser {
 	Vec3 color;
 	bool positionLocked;
 
-	//static constexpr ColorEntry defaultColor{ Color3::BLUE, "blue" };
-	static constexpr ColorEntry defaultColor{ Color3::CYAN, "cyan" };
+	static constexpr ColorEntry defaultColor{ Color3::BLUE, "blue" };
+	//static constexpr ColorEntry defaultColor{ Color3::CYAN, "cyan" };
 };
 
 void editorLaserColorCombo(Vec3& color);
@@ -125,11 +125,6 @@ using EditorPortalPairId = EntityArrayId<EditorPortalPair>;
 //};
 // The above version could allow cloning lasers with portals, by making 3 portals with the same index for example. One big issue with this is that doors work based on order and there would need to be an order found for which portal the laser goes through first. Maybe based on distance. It could be cool, but it seems unnescecarily complicated.
 
-//struct EditorDoor {
-//	i32 triggerIndex;
-//	Vec2 endpoints[2];
-//};
-//
 struct EditorTrigger {
 	struct DefaultInitialize {
 		EditorTrigger operator()();
@@ -146,10 +141,27 @@ struct EditorTrigger {
 	static constexpr auto defaultRadius = 0.1f;
 	static constexpr ColorEntry defaultColor{ Vec3(0.0f, 1.0f, 0.5f), "spring green"};
 };
+using EditorTriggerId = EntityArrayId<EditorTrigger>;
 
 void editorTriggerColorCombo(Vec3& color);
 
-using EditorTriggerId = EntityArrayId<EditorTrigger>;
+struct EditorDoorSegment {
+	Vec2 endpoints[2];
+};
+
+struct EditorDoor {
+	struct DefaultInitialize {
+		EditorDoor operator()();
+	};
+
+	Vec2 endpoints[2];
+	i32 triggerIndex;
+
+	f32 openingT = 0.0f;
+
+	StaticList<EditorDoorSegment, 2> segments() const;
+};
+using EditorDoorId = EntityArrayId<EditorDoor>;
 
 enum class EditorEntityType {
 	WALL,
@@ -158,6 +170,7 @@ enum class EditorEntityType {
 	TARGET,
 	PORTAL_PAIR,
 	TRIGGER,
+	DOOR,
 };
 
 struct EditorEntityId {
@@ -171,6 +184,7 @@ struct EditorEntityId {
 	explicit EditorEntityId(const EditorTargetId& id);
 	explicit EditorEntityId(const EditorPortalPairId& id);
 	explicit EditorEntityId(const EditorTriggerId& id);
+	explicit EditorEntityId(const EditorDoorId& id);
 
 	EditorWallId wall() const;
 	EditorLaserId laser() const;
@@ -178,6 +192,7 @@ struct EditorEntityId {
 	EditorTargetId target() const;
 	EditorPortalPairId portalPair() const;
 	EditorTriggerId trigger() const;
+	EditorDoorId door() const;
 
 	bool operator==(const EditorEntityId&) const = default;
 };

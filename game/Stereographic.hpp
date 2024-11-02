@@ -68,10 +68,11 @@ Circle stereographicCircle(Vec2 center, f32 radius);
 
 AngleRange angleRangeBetweenPointsOnCircle(Vec2 circleCenter, Vec2 pointOnCircle0, Vec2 pointOnCircle1);
 
+Vec3 sphericalGeodesicSegmentMidpoint(Vec3 e0, Vec3 e1);
+Vec2 stereographicSegmentMidpoint(Vec2 e0, Vec2 e1);
+
 f32 sphericalDistance(Vec3 a, Vec3 b);
 f32 stereographicDistance(Vec2 a, Vec2 b);
-f32 signedSphericalDistance(Vec3 a, Vec3 b);
-f32 signedStereographicDistance(Vec2 a, Vec2 b);
 
 // p is assued to lie on the line.
 Vec2 stereographicLineNormalAt(const StereographicLine& line, Vec2 p);

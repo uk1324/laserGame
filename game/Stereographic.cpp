@@ -180,6 +180,15 @@ AngleRange angleRangeBetweenPointsOnCircle(Vec2 circleCenter, Vec2 pointOnCircle
 	return AngleRange{ .min = a0, .max = a1 };
 }
 
+Vec3 sphericalGeodesicSegmentMidpoint(Vec3 e0, Vec3 e1) {
+	// By adding 2 vectors on a circle we get a rhombus which bisects the angle.
+	return (e0 + e1).normalized();
+}
+
+Vec2 stereographicSegmentMidpoint(Vec2 e0, Vec2 e1) {
+	return toStereographic(sphericalGeodesicSegmentMidpoint(fromStereographic(e0), fromStereographic(e1)));
+}
+
 f32 sphericalDistance(Vec3 a, Vec3 b) {
 	return acos(dot(a.normalized(), b.normalized()));
 }

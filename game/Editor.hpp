@@ -19,7 +19,31 @@ struct Editor {
 		TARGET,
 		PORTAL_PAIR,
 		TRIGGER,
+		DOOR,
 	};
+
+	struct WallLikeEntity {
+		Vec2 endpoints[2];
+	};
+
+	struct WallLikeEntityCreateTool {
+		std::optional<WallLikeEntity> update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured);
+		std::optional<WallLikeEntity> preview(Vec2 cursorPos) const;
+		void reset();
+
+		std::optional<Vec2> endpoint;
+	};
+
+	struct GrabbedWallLikeEntity {
+		i32 grabbedEndpointIndex;
+		Vec2 grabOffset;
+	};
+
+	static std::optional<GrabbedWallLikeEntity> wallLikeEntityCheckGrab(View<const Vec2> endpoints,
+		Vec2 cursorPos, bool& cursorCaptured);
+	static void grabbedWallLikeEntityUpdate(const GrabbedWallLikeEntity& grabbed,
+		View<Vec2> endpoints,
+		Vec2 cursorPos, bool cursorExact);
 
 	Tool selectedTool = Tool::WALL;
 
@@ -29,21 +53,19 @@ struct Editor {
 	void selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	struct WallCreateTool {
+		WallLikeEntityCreateTool tool;
+
 		std::optional<EditorWall> update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured);
 		void render(GameRenderer& renderer, Vec2 cursorPos);
-		void reset();
-
-		std::optional<Vec2> endpoint;
 
 		EditorWallType wallType = EditorWallType::ABSORBING;
 	} wallCreateTool;
 	void wallCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	struct WallGrabTool {
-		struct Grabbed {
+		struct Grabbed : GrabbedWallLikeEntity {
+			Grabbed(GrabbedWallLikeEntity grabbed, EditorWallId id, EditorWall grabStartState);
 			EditorWallId id;
-			i32 index;
-			Vec2 offset;
 			EditorWall grabStartState;
 		};
 		std::optional<Grabbed> grabbed;
@@ -159,6 +181,23 @@ struct Editor {
 	} triggerGrabTool;
 	void triggerGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
+	struct DoorCreateTool {
+		WallLikeEntityCreateTool tool;
+		void render(GameRenderer& renderer, Vec2 cursorPos);
+
+	} doorCreateTool;
+	void doorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+
+	struct DoorGrabTool {
+		struct Grabbed : GrabbedWallLikeEntity {
+			Grabbed(const GrabbedWallLikeEntity& grabbed, EditorDoorId id, EditorDoor grabStartState);
+			EditorDoorId id;
+			EditorDoor grabStartState;
+		};
+		std::optional<Grabbed> grabbed;
+	} doorGrabTool;
+	void doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
+
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);
 
@@ -196,4 +235,5 @@ struct Editor {
 	EntityArray<EditorTarget, EditorTarget::DefaultInitialize> targets;
 	EntityArray<EditorPortalPair, EditorPortalPair::DefaultInitialize> portalPairs;
 	EntityArray<EditorTrigger, EditorTrigger::DefaultInitialize> triggers;
+	EntityArray<EditorDoor, EditorDoor::DefaultInitialize> doors;
 };

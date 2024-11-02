@@ -42,6 +42,10 @@ EditorTrigger EditorTrigger::DefaultInitialize::operator()() {
 	return EditorTrigger{ .position = Vec2(0.0f), .color = Vec3(0.0f), .index = 0};
 }
 
+EditorDoor EditorDoor::DefaultInitialize::operator()() {
+	return EditorDoor{ .endpoints = { Vec2(0.0f), Vec2(1.0f) }, .triggerIndex = 0 };
+}
+
 EditorEntityId::EditorEntityId(const EditorWallId& id) 
 	: type(EditorEntityType::WALL) 
 	, index(id.index())
@@ -69,6 +73,11 @@ EditorEntityId::EditorEntityId(const EditorPortalPairId& id)
 
 EditorEntityId::EditorEntityId(const EditorTriggerId& id)
 	: type(EditorEntityType::TRIGGER)
+	, index(id.index())
+	, version(id.version()) {}
+
+EditorEntityId::EditorEntityId(const EditorDoorId& id)
+	: type(EditorEntityType::DOOR)
 	, index(id.index())
 	, version(id.version()) {}
 
@@ -100,6 +109,11 @@ EditorPortalPairId EditorEntityId::portalPair() const {
 EditorTriggerId EditorEntityId::trigger() const {
 	ASSERT(type == EditorEntityType::TRIGGER);
 	return EditorTriggerId(index, version);
+}
+
+EditorDoorId EditorEntityId::door() const {
+	ASSERT(type == EditorEntityType::DOOR);
+	return EditorDoorId(index, version);
 }
 
 EditorMirror::EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked, EditorMirrorWallType wallType)
@@ -219,7 +233,8 @@ void wallTypeCombo(const char* label, EditorWallType& type) {
 void editorLaserColorCombo(Vec3& selectedColor) {
 	ColorEntry entries[]{
 		EditorLaser::defaultColor,
-		{ Vec3(81, 255, 13) / 255.0f, "green"},
+		/*{ Vec3(81, 255, 13) / 255.0f, "green"},*/
+		{ Color3::GREEN, "green" },
 		{ Color3::RED, "red" }
 	};
 	colorCombo("color", constView(entries), EditorLaser::defaultColor, selectedColor);
@@ -272,4 +287,40 @@ std::array<Vec2, 2> EditorPortal::endpoints() const {
 
 Circle EditorTrigger::circle() const {
 	return stereographicCircle(position, defaultRadius);
+}
+
+StaticList<EditorDoorSegment, 2> EditorDoor::segments() const {
+	StaticList<EditorDoorSegment, 2> result;
+	if (openingT == 0.0f) {
+		result.add(EditorDoorSegment{ .endpoints = { endpoints[0], endpoints[1] } });
+		return result;
+	} 
+	if (openingT == 1.0f) {
+		return result;
+	}
+	const auto line = stereographicLine(endpoints[0], endpoints[1]);
+	const auto length = stereographicDistance(endpoints[0], endpoints[1]);
+
+	auto tangentAtE0TowardsE1 = stereographicLineNormalAt(line, endpoints[0]).rotBy90deg();
+	if (dot(tangentAtE0TowardsE1, endpoints[1] - endpoints[0]) < 0.0f) {
+		tangentAtE0TowardsE1 = -tangentAtE0TowardsE1;
+	}
+	const auto tangentAngle = tangentAtE0TowardsE1.angle();
+
+	const auto segmentLength = length / 2.0f * (1.0f - openingT);
+	const auto m0 = moveOnStereographicGeodesic(endpoints[0], tangentAngle, segmentLength);
+	const auto m1 = moveOnStereographicGeodesic(endpoints[0], tangentAngle, length - segmentLength);
+
+	result.add(EditorDoorSegment{ { endpoints[0], m0 }});
+	result.add(EditorDoorSegment{ { m1, endpoints[1] }});
+
+	return result;
+
+	// Could instead of calculating midpoint move from on endpoint d units and length - d units. This would require calculating the direction and 2 goedesic move operations.
+	//const auto e0 = fromStereographic(endpoints[0]);
+	//const auto e1 = fromStereographic(endpoints[1]);
+
+	//const auto midpoint = sphericalGeodesicSegmentMidpoint(e0, e1);
+	//const auto tangentAtMidpoint = stereographicLineNormalAt(line, toStereographic(midpoint)).rotBy90deg();
+	//const auto moveOnSphericalGeodesic(midpoint, tangentAtMidpoint.angle(), openAmount);
 }

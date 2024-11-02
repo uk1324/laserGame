@@ -12,6 +12,8 @@
 #include <engine/Math/Quat.hpp>
 #include <game/Stereographic.hpp>
 
+const auto dt = 1.0f / 60.0f;
+
 Editor::Editor()
 	: actions(EditorActions::make()) {
 
@@ -171,7 +173,7 @@ void Editor::update(GameRenderer& renderer) {
 	{
 		ImGui::Begin(sideBarWindowName);
 
-		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0create portals\0create trigger\0");
+		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0create portals\0create trigger\0create door\0");
 
 		ImGui::SeparatorText("tool settings");
 		switch (selectedTool) {
@@ -391,6 +393,7 @@ void Editor::update(GameRenderer& renderer) {
 		case TARGET: targetCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case PORTAL_PAIR: portalCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case TRIGGER: triggerCreateToolUpdate(cursorPos, cursorCaptured); break;
+		case DOOR: doorCreateToolUpdate(cursorPos, cursorCaptured); break;
 		}
 	};
 
@@ -401,6 +404,7 @@ void Editor::update(GameRenderer& renderer) {
 		targetGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 		portalGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 		triggerGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+		doorGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 	};
 
 	if (cursorExact) {
@@ -410,6 +414,8 @@ void Editor::update(GameRenderer& renderer) {
 		grabToolsUpdate();
 		updateSelectedTool();
 	}
+
+	const auto boundary = Circle{ Vec2(0.0f), 1.0f };
 
 	renderer.gfx.camera.aspectRatio = Window::aspectRatio();
 	renderer.gfx.camera.zoom = 0.9f;
@@ -446,52 +452,7 @@ void Editor::update(GameRenderer& renderer) {
 	case TARGET: break;
 	case PORTAL_PAIR: break;
 	case TRIGGER: break;
-	}
-
-	//const auto darkGreen = Vec3(2, 48, 32) / 255.0f;
-	//const auto darkRed = Vec3(255, 87, 51) / 255.0f;
-	renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN);
-	//renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, darkGreen);
-
-	const auto boundary = Circle{ Vec2(0.0f), 1.0f };
-
-	for (const auto& wall : walls) {
-		renderer.wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type));
-	}
-	renderer.renderWalls();
-
-	for (const auto& mirror : mirrors) {
-		renderMirror(renderer, mirror.entity);
-	}
-
-	renderer.gfx.drawCircles();
-	renderer.gfx.drawFilledTriangles();
-	renderer.gfx.drawDisks();
-
-	for (const auto& portalPair : portalPairs) {
-		for (const auto& portal : portalPair->portals) {
-			const auto endpoints = portal.endpoints();
-
-			// Instead of rendering 2 segments could render on that has 2 colors by making a custom triangulation. Then the rendering would need to swap wether the inside or outside of the circle is the side with the normal.
-			const auto portalColor = (Color3::RED + Color3::YELLOW) / 2.0f;
-			switch (portal.wallType) {
-				using enum EditorPortalWallType;
-			case PORTAL:
-				renderer.stereographicSegment(endpoints[0], endpoints[1], portalColor);
-				break;
-			case ABSORBING:
-				renderer.multicoloredSegment(endpoints, portal.normalAngle, portalColor, absorbingColor);
-				break;
-
-			case REFLECTING:
-				renderer.multicoloredSegment(endpoints, portal.normalAngle, portalColor, reflectingColor);
-				break;
-			}
-			for (const auto endpoint : endpoints) {
-				renderer.gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(portal.rotationLocked));
-			}
-			renderer.gfx.disk(portal.center, grabbableCircleRadius, movablePartColor(portal.positionLocked));
-		}
+	case DOOR: doorCreateTool.render(renderer, cursorPos); break;
 	}
 
 	struct Segment {
@@ -521,7 +482,7 @@ void Editor::update(GameRenderer& renderer) {
 			i32 partIndex; // Used for portals.
 		};
 		std::optional<EditorEntity> hitOnLastIteration;
-		for (i64 i = 0; i < maxReflections; i++) {
+		for (i64 iteration = 0; iteration < maxReflections; iteration++) {
 			/*
 			The current version is probably better, because it doesn't have an optional return.
 			const auto laserCircle = circleThroughPointsWithNormalAngle(laserPosition, laserDirection.angle() + PI<f32> / 2.0f, antipodalPoint(laserPosition));
@@ -617,6 +578,14 @@ void Editor::update(GameRenderer& renderer) {
 					const auto& portal = portalPair->portals[i];
 					const auto endpoints = portal.endpoints();
 					processLineSegmentIntersections(endpoints[0], endpoints[1], EditorEntityId(portalPair.id), i);
+				}
+			}
+
+			for (const auto& door : doors) {
+				const auto segments = door->segments();
+				for (const auto& segment : segments) {
+					// Should this include index? Probably not.
+					processLineSegmentIntersections(segment.endpoints[0], segment.endpoints[1], EditorEntityId(door.id));
 				}
 			}
 
@@ -798,10 +767,14 @@ void Editor::update(GameRenderer& renderer) {
 				checkLaserVsTriggerCollision(segment);
 			};
 
+			auto processLaserSegment = [&](const Segment& segment) {
+				checkNonInterferingLaserCollisions(segment);
+				laserSegmentsToDraw.push_back(segment);
+			};
+
 			if (closest.has_value()) {
 				const auto s = Segment{ laserPosition, closest->point, laser->color };
-				checkNonInterferingLaserCollisions(s);
-				laserSegmentsToDraw.push_back(s);
+				processLaserSegment(s);
 				const auto result = processHit(*closest);
 				if (result == HitResult::END) {
 					break;
@@ -809,10 +782,8 @@ void Editor::update(GameRenderer& renderer) {
 			} else if (closestToWrappedAround.has_value()) {
 				const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
 				const auto s1 = Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->point, laser->color };
-				checkNonInterferingLaserCollisions(s0);
-				checkNonInterferingLaserCollisions(s1);
-				laserSegmentsToDraw.push_back(s0);
-				laserSegmentsToDraw.push_back(s1);
+				processLaserSegment(s0);
+				processLaserSegment(s1);
 
 				const auto result = processHit(*closestToWrappedAround);
 				if (result == HitResult::END) {
@@ -821,10 +792,8 @@ void Editor::update(GameRenderer& renderer) {
 			} else {
 				const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
 				const auto s1 = Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color };
-				checkNonInterferingLaserCollisions(s0);
-				checkNonInterferingLaserCollisions(s1);
-				laserSegmentsToDraw.push_back(s0);
-				laserSegmentsToDraw.push_back(s1);
+				processLaserSegment(s0);
+				processLaserSegment(s1);
 			}
 		}
 	}
@@ -854,6 +823,27 @@ void Editor::update(GameRenderer& renderer) {
 	}
 	static bool hideLaser = false;
 
+	struct TriggerInfo {
+		Vec3 color;
+		bool active;
+	};
+	auto triggerInfo = [&](i32 triggerIndex) -> std::optional<TriggerInfo> {
+		for (const auto& trigger : triggers) {
+			if (trigger->index == triggerIndex) {
+				return TriggerInfo{ .color = trigger->color, .active = trigger->activated };
+			}
+		}
+		return std::nullopt;
+	};
+
+	for (auto door : doors) {
+		const auto info = triggerInfo(door->triggerIndex);
+		const auto isOpening = info.has_value() && info->active;
+		const auto speed = 1.5f;
+		door->openingT += speed * dt * (isOpening ? 1.0f : -1.0f);
+		door->openingT = std::clamp(door->openingT, 0.0f, 1.0f);
+	}
+
 	//ImGui::Checkbox("hide laser", &hideLaser);
 
 	// TODO: Use additive blending with transaprency maybe.
@@ -868,13 +858,74 @@ void Editor::update(GameRenderer& renderer) {
 		}
 	}
 
+	const auto activatableObjectColor = [](Vec3 baseColor, bool isActivated) {
+		return isActivated ? baseColor : baseColor / 2.0f;
+	};
+
+	//const auto darkGreen = Vec3(2, 48, 32) / 255.0f;
+	//const auto darkRed = Vec3(255, 87, 51) / 255.0f;
+	renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN / 2.0f);
+	//renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, darkGreen);
+
+	for (const auto& wall : walls) {
+		renderer.wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type));
+	}
+
+	for (const auto& door : doors) {
+		const auto info = triggerInfo(door->triggerIndex);
+		Vec3 color = absorbingColor;
+		if (info.has_value()) {
+			color = activatableObjectColor(info->color, info->active);
+		}
+
+		renderer.gfx.disk(door->endpoints[0], grabbableCircleRadius, Color3::RED);
+		renderer.gfx.disk(door->endpoints[1], grabbableCircleRadius, Color3::RED);
+
+		const auto segments = door->segments();
+		for (const auto& segment : segments) {
+			renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], color);
+		}
+	}
+
+	renderer.renderWalls();
+
+	for (const auto& mirror : mirrors) {
+		renderMirror(renderer, mirror.entity);
+	}
+
+	renderer.gfx.drawCircles();
+	renderer.gfx.drawFilledTriangles();
+	renderer.gfx.drawDisks();
+
+	for (const auto& portalPair : portalPairs) {
+		for (const auto& portal : portalPair->portals) {
+			const auto endpoints = portal.endpoints();
+
+			// Instead of rendering 2 segments could render on that has 2 colors by making a custom triangulation. Then the rendering would need to swap wether the inside or outside of the circle is the side with the normal.
+			const auto portalColor = (Color3::RED + Color3::YELLOW) / 2.0f;
+			switch (portal.wallType) {
+				using enum EditorPortalWallType;
+			case PORTAL:
+				renderer.stereographicSegment(endpoints[0], endpoints[1], portalColor);
+				break;
+			case ABSORBING:
+				renderer.multicoloredSegment(endpoints, portal.normalAngle, portalColor, absorbingColor);
+				break;
+
+			case REFLECTING:
+				renderer.multicoloredSegment(endpoints, portal.normalAngle, portalColor, reflectingColor);
+				break;
+			}
+			for (const auto endpoint : endpoints) {
+				renderer.gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(portal.rotationLocked));
+			}
+			renderer.gfx.disk(portal.center, grabbableCircleRadius, movablePartColor(portal.positionLocked));
+		}
+	}
+
 	auto drawOrb = [&](Vec2 center, const Circle& circle, Vec3 color) {
 		renderer.gfx.circle(circle.center, circle.radius, 0.01f, color);
 		renderer.gfx.disk(center, 0.01f, color);
-	};
-
-	const auto activatableObjectColor = [](Vec3 baseColor, bool isActivated) {
-		return isActivated ? baseColor : baseColor / 2.0f;
 	};
 
 	for (const auto& target : targets) {
@@ -1163,6 +1214,28 @@ void Editor::freeAction(EditorAction& action) {
 	// TODO: Fix entity leaks.
 }
 
+std::optional<Editor::GrabbedWallLikeEntity> Editor::wallLikeEntityCheckGrab(View<const Vec2> endpoints, 
+	Vec2 cursorPos, bool& cursorCaptured) {
+	
+	for (i32 i = 0; i < endpoints.size(); i++) {
+		const auto& endpoint = endpoints[i];
+		if (distance(cursorPos, endpoint) < Constants::endpointGrabPointRadius) {
+			cursorCaptured = true;
+			return GrabbedWallLikeEntity{
+				.grabbedEndpointIndex = i,
+				.grabOffset = endpoint - cursorPos
+			};
+		}
+	}
+	return std::nullopt;
+}
+
+void Editor::grabbedWallLikeEntityUpdate(const GrabbedWallLikeEntity& grabbed, 
+	View<Vec2> endpoints, 
+	Vec2 cursorPos, bool cursorExact) {
+	endpoints[grabbed.grabbedEndpointIndex] = cursorPos + grabbed.grabOffset * !cursorExact;
+}
+
 void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (Input::isKeyDown(KeyCode::DELETE) && selectTool.selectedEntity.has_value()) {
 		deactivateEntity(*selectTool.selectedEntity);
@@ -1263,6 +1336,60 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 }
 
+void Editor::doorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (cursorCaptured) {
+		return;
+	}
+	const auto result = doorCreateTool.tool.update(
+		Input::isMouseButtonDown(MouseButton::LEFT),
+		Input::isMouseButtonDown(MouseButton::RIGHT),
+		cursorPos,
+		cursorCaptured);
+
+	if (result.has_value()) {
+		auto entity = doors.create();
+		entity.entity = EditorDoor{ 
+			.endpoints = { result->endpoints[0], result->endpoints[1] },
+			.triggerIndex = 0,
+		};
+		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(entity.id)));
+	}
+}
+
+void Editor::doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT) && !doorGrabTool.grabbed.has_value()) {
+		for (const auto& door : doors) {
+			const auto result = wallLikeEntityCheckGrab(constView(door->endpoints),
+				cursorPos, cursorCaptured);
+
+			if (result.has_value()) {
+				doorGrabTool.grabbed = DoorGrabTool::Grabbed(*result, door.id, door.entity);
+			}
+		}
+	}
+
+	if (Input::isMouseButtonHeld(MouseButton::LEFT) && doorGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		const auto& id = doorGrabTool.grabbed->id;
+		auto door = doors.get(id);
+		if (door.has_value()) {
+			grabbedWallLikeEntityUpdate(*doorGrabTool.grabbed, view(door->endpoints), cursorPos, cursorExact);
+		} else {
+			CHECK_NOT_REACHED();
+		}
+	}
+
+	if (Input::isMouseButtonUp(MouseButton::LEFT) && doorGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		addModifyAction<EditorDoor, EditorActionModifyDoor>(*this, actions, doors, doorGrabTool.grabbed->id, std::move(doorGrabTool.grabbed->grabStartState));
+		doorGrabTool.grabbed = std::nullopt;
+	}
+}
+
 void Editor::activateEntity(const EditorEntityId& id) {
 	switch (id.type) {
 		using enum EditorEntityType;
@@ -1273,6 +1400,7 @@ void Editor::activateEntity(const EditorEntityId& id) {
 	case TARGET: targets.activate(id.target()); break;
 	case PORTAL_PAIR: portalPairs.activate(id.portalPair()); break;
 	case TRIGGER: triggers.activate(id.trigger()); break;
+	case DOOR: doors.activate(id.door()); break;
 	}
 }
 
@@ -1285,6 +1413,7 @@ void Editor::deactivateEntity(const EditorEntityId& id) {
 	case TARGET: targets.deactivate(id.target()); break;
 	case PORTAL_PAIR: portalPairs.deactivate(id.portalPair()); break;
 	case TRIGGER: triggers.deactivate(id.trigger()); break;
+	case DOOR: doors.deactivate(id.door()); break;
 	}
 }
 
@@ -1307,6 +1436,7 @@ void Editor::undoAction(const EditorAction& action) {
 	case MODIFY_TARGET: undoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
 	case MODIFY_PORTAL_PAIR: undoModify(portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
 	case MODIFY_TRIGGER: undoModify(triggers, static_cast<const EditorActionModifyTrigger&>(action)); break;
+	case MODIFY_DOOR: undoModify(doors, static_cast<const EditorActionModifyDoor&>(action)); break;
 
 	case CREATE_ENTITY: {
 		deactivateEntity(static_cast<const EditorActionDestroyEntity&>(action).id);
@@ -1328,54 +1458,36 @@ void Editor::undoAction(const EditorAction& action) {
 }
 
 void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
-	if (!cursorCaptured) {
-		if (Input::isMouseButtonDown(MouseButton::LEFT) && !wallGrabTool.grabbed.has_value()) {
-			for (const auto& wall : walls) {
-				for (i32 i = 0; i < std::size(wall->endpoints); i++) {
-					const auto& endpoint = wall->endpoints[i];
-					if (distance(cursorPos, endpoint) < Constants::endpointGrabPointRadius) {
-						cursorCaptured = true;
-						wallGrabTool.grabbed = WallGrabTool::Grabbed{
-							.id = wall.id,
-							.index = i,
-							.offset = endpoint - cursorPos,
-							.grabStartState = wall.entity,
-						};
-						goto grabbedWall;
-					}
-				}
-			}
-			grabbedWall:;
-		}
+	if (cursorCaptured) {
+		return;
+	}
 
-		if (Input::isMouseButtonHeld(MouseButton::LEFT) && wallGrabTool.grabbed.has_value()) {
-			cursorCaptured = true;
-			const auto& id = wallGrabTool.grabbed->id;
-			auto wall = walls.get(id);
-			if (wall.has_value()) {
-				wall->endpoints[wallGrabTool.grabbed->index] = cursorPos + wallGrabTool.grabbed->offset * !cursorExact;
-			} else {
-				CHECK_NOT_REACHED();
+	if (Input::isMouseButtonDown(MouseButton::LEFT) && !wallGrabTool.grabbed.has_value()) {
+		for (const auto& wall : walls) {
+			const auto result = wallLikeEntityCheckGrab(constView(wall->endpoints),
+				cursorPos, cursorCaptured);
+
+			if (result.has_value()) {
+				wallGrabTool.grabbed = WallGrabTool::Grabbed(*result, wall.id, wall.entity);
 			}
 		}
+	}
 
-		if (Input::isMouseButtonUp(MouseButton::LEFT) && wallGrabTool.grabbed.has_value()) {
-			cursorCaptured = true;
-			const auto& id = wallGrabTool.grabbed->id;
-			auto wall = walls.get(id);
-			if (wall.has_value()) {
-				auto newEntity = *wall;
-				auto action = new EditorActionModifyWall(
-					id,
-					std::move(wallGrabTool.grabbed->grabStartState),
-					std::move(newEntity));
-
-				actions.add(*this, action);
-			} else {
-				CHECK_NOT_REACHED();
-			}
-			wallGrabTool.grabbed = std::nullopt;
+	if (Input::isMouseButtonHeld(MouseButton::LEFT) && wallGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		const auto& id = wallGrabTool.grabbed->id;
+		auto wall = walls.get(id);
+		if (wall.has_value()) {
+			grabbedWallLikeEntityUpdate(*wallGrabTool.grabbed, view(wall->endpoints), cursorPos, cursorExact);
+		} else {
+			CHECK_NOT_REACHED();
 		}
+	}
+
+	if (Input::isMouseButtonUp(MouseButton::LEFT) && wallGrabTool.grabbed.has_value()) {
+		cursorCaptured = true;
+		addModifyAction<EditorWall, EditorActionModifyWall>(*this, actions, walls, wallGrabTool.grabbed->id, std::move(wallGrabTool.grabbed->grabStartState));
+		wallGrabTool.grabbed = std::nullopt;
 	}
 }
 
@@ -1593,6 +1705,7 @@ void Editor::redoAction(const EditorAction& action) {
 	case MODIFY_TARGET: redoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
 	case MODIFY_PORTAL_PAIR: redoModify(portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
 	case MODIFY_TRIGGER: redoModify(triggers, static_cast<const EditorActionModifyTrigger&>(action)); break;
+	case MODIFY_DOOR: redoModify(doors, static_cast<const EditorActionModifyDoor&>(action)); break;
 
 	case CREATE_ENTITY: {
 		activateEntity(static_cast<const EditorActionCreateEntity&>(action).id);
@@ -1614,38 +1727,19 @@ void Editor::redoAction(const EditorAction& action) {
 }
  
 std::optional<EditorWall> Editor::WallCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured) {
-	if (cancelDown) {
-		cursorCaptured = true;
-		reset();
+	const auto wall = tool.update(down, cancelDown, cursorPos, cursorCaptured);
+	if (!wall.has_value()) {
 		return std::nullopt;
 	}
-
-	if (!down) {
-		return std::nullopt;
-	}
-	cursorCaptured = true;
-
-	if (!endpoint.has_value()) {
-		endpoint = cursorPos;
-		return std::nullopt;
-	}
-	const auto result = EditorWall{ 
-		.endpoints = { *endpoint, cursorPos },
-		.type = wallType
-	};
-	reset();
-	return result;
+	return EditorWall{ .endpoints = { wall->endpoints[0], wall->endpoints[1] }, .type = wallType };
 }
 
 void Editor::WallCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
-	if (!endpoint.has_value()) {
+	const auto preview = tool.preview(cursorPos);
+	if (!preview.has_value()) {
 		return;
 	}
-	renderer.wall(*endpoint, cursorPos, wallColor(wallType));
-}
-
-void Editor::WallCreateTool::reset() {
-	endpoint = std::nullopt;
+	renderer.wall(preview->endpoints[0], preview->endpoints[1], wallColor(wallType));
 }
 
 std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured) {
@@ -1725,3 +1819,56 @@ void Editor::LevelSaveOpen::openLevelErrorModal() {
 	ImGui::EndPopup();
 }
 
+void Editor::DoorCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
+	const auto preview = tool.preview(cursorPos);
+	if (!preview.has_value()) {
+		return;
+	}
+	renderer.wall(preview->endpoints[0], preview->endpoints[1], absorbingColor);
+}
+
+std::optional<Editor::WallLikeEntity> Editor::WallLikeEntityCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured) {
+	
+	if (cancelDown) {
+		cursorCaptured = true;
+		reset();
+		return std::nullopt;
+	}
+
+	if (!down) {
+		return std::nullopt;
+	}
+	cursorCaptured = true;
+
+	if (!endpoint.has_value()) {
+		endpoint = cursorPos;
+		return std::nullopt;
+	}
+	const auto result = WallLikeEntity{
+		.endpoints = { *endpoint, cursorPos },
+	};
+	reset();
+	return result;
+
+}
+
+std::optional<Editor::WallLikeEntity> Editor::WallLikeEntityCreateTool::preview(Vec2 cursorPos) const{
+	if (!endpoint.has_value()) {
+		return std::nullopt;
+	}
+	return WallLikeEntity{ .endpoints = { *endpoint, cursorPos } };
+}
+
+void Editor::WallLikeEntityCreateTool::reset() {
+	endpoint = std::nullopt;
+}
+
+Editor::WallGrabTool::Grabbed::Grabbed(GrabbedWallLikeEntity grabbed, EditorWallId id, EditorWall grabStartState)
+	: GrabbedWallLikeEntity(grabbed)
+	, id(id)
+	, grabStartState(grabStartState) {}
+
+Editor::DoorGrabTool::Grabbed::Grabbed(const GrabbedWallLikeEntity& grabbed, EditorDoorId id, EditorDoor grabStartState)
+	: GrabbedWallLikeEntity(grabbed)
+	, id(id)
+	, grabStartState(grabStartState) {}

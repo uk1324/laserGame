@@ -11,6 +11,7 @@ enum class EditorActionType {
 	MODIFY_TARGET,
 	MODIFY_PORTAL_PAIR,
 	MODIFY_TRIGGER,
+	MODIFY_DOOR,
 	CREATE_ENTITY,
 	DESTROY_ENTITY,
 	MODIFY_SELECTION,
@@ -35,6 +36,7 @@ using EditorActionModifyMirror = EditorActionModify<EditorMirror, EditorActionTy
 using EditorActionModifyTarget = EditorActionModify<EditorTarget, EditorActionType::MODIFY_TARGET>;
 using EditorActionModifyPortalPair = EditorActionModify<EditorPortalPair, EditorActionType::MODIFY_PORTAL_PAIR>;
 using EditorActionModifyTrigger = EditorActionModify<EditorTrigger, EditorActionType::MODIFY_TRIGGER>;
+using EditorActionModifyDoor = EditorActionModify<EditorDoor, EditorActionType::MODIFY_DOOR>;
 
 struct EditorActionCreateEntity : EditorAction {
 	EditorActionCreateEntity(EditorEntityId id);
