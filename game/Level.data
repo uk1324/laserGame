@@ -57,4 +57,5 @@ struct [[Json]] LevelDoor {
 	Vec2 endpoint0;
 	Vec2 endpoint1;
 	i32 triggerIndex;
+	bool openByDefault = `false`;
 }

@@ -43,7 +43,7 @@ EditorTrigger EditorTrigger::DefaultInitialize::operator()() {
 }
 
 EditorDoor EditorDoor::DefaultInitialize::operator()() {
-	return EditorDoor{ .endpoints = { Vec2(0.0f), Vec2(1.0f) }, .triggerIndex = 0 };
+	return EditorDoor{ .endpoints = { Vec2(0.0f), Vec2(1.0f) }, .triggerIndex = 0, .openByDefault = false };
 }
 
 EditorEntityId::EditorEntityId(const EditorWallId& id) 
@@ -296,11 +296,17 @@ Circle EditorTrigger::circle() const {
 
 StaticList<EditorDoorSegment, 2> EditorDoor::segments() const {
 	StaticList<EditorDoorSegment, 2> result;
-	if (openingT == 0.0f) {
+
+	auto t = openingT;
+	if (openByDefault) {
+		t = 1.0f - t;
+	}
+
+	if (t == 0.0f) {
 		result.add(EditorDoorSegment{ .endpoints = { endpoints[0], endpoints[1] } });
 		return result;
 	} 
-	if (openingT == 1.0f) {
+	if (t == 1.0f) {
 		return result;
 	}
 	const auto line = stereographicLine(endpoints[0], endpoints[1]);
@@ -312,7 +318,7 @@ StaticList<EditorDoorSegment, 2> EditorDoor::segments() const {
 	}
 	const auto tangentAngle = tangentAtE0TowardsE1.angle();
 
-	const auto segmentLength = length / 2.0f * (1.0f - openingT);
+	const auto segmentLength = length / 2.0f * (1.0f - t);
 	const auto m0 = moveOnStereographicGeodesic(endpoints[0], tangentAngle, segmentLength);
 	const auto m1 = moveOnStereographicGeodesic(endpoints[0], tangentAngle, length - segmentLength);
 

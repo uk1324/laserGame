@@ -157,6 +157,7 @@ struct EditorDoor {
 
 	Vec2 endpoints[2];
 	i32 triggerIndex;
+	bool openByDefault;
 
 	f32 openingT = 0.0f;
 

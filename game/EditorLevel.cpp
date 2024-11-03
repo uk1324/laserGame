@@ -132,7 +132,8 @@ bool Editor::trySaveLevel(std::string_view path) {
 			const auto levelE = LevelDoor{
 				.endpoint0 = e->endpoints[0],
 				.endpoint1 = e->endpoints[1],
-				.triggerIndex = e->triggerIndex
+				.triggerIndex = e->triggerIndex,
+				.openByDefault = e->openByDefault
 			};
 			jsonDoors.push_back(toJson(levelE));
 		}
@@ -271,7 +272,8 @@ bool Editor::tryLoadLevel(std::string_view path) {
 				auto door = doors.create();
 				door.entity = EditorDoor{
 					.endpoints = { levelDoor.endpoint0, levelDoor.endpoint1 },
-					.triggerIndex = levelDoor.triggerIndex
+					.triggerIndex = levelDoor.triggerIndex,
+					.openByDefault = levelDoor.openByDefault
 				};
 			}
 		}

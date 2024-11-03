@@ -263,6 +263,7 @@ void Editor::update(GameRenderer& renderer) {
 					break;
 				}
 				editorTriggerIndexInput("trigger index", door->triggerIndex);
+				ImGui::Checkbox("open by default", &door->openByDefault);
 				break;
 			}
 				
@@ -1379,6 +1380,7 @@ void Editor::doorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		entity.entity = EditorDoor{ 
 			.endpoints = { result->endpoints[0], result->endpoints[1] },
 			.triggerIndex = 0,
+			.openByDefault = false
 		};
 		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(entity.id)));
 	}
