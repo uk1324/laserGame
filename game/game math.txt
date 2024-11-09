@@ -99,3 +99,5 @@ TODO: Walls that can pass only certain colors of lasers or maybe triggers that c
 One issue with doors is that when there are multiple layers there isn't really a correct way to decide the order in which things are executed.
 
 One option would be to introuce actual time. Then doors wouldn't open instantly. If the doors were to move out of the way then order would make sense I think not sure.
+
+Maybe make doors that open from different sides. LEFT, RIGHT, CENTER,

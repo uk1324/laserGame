@@ -77,6 +77,9 @@ f32 stereographicDistance(Vec2 a, Vec2 b);
 // p is assued to lie on the line.
 Vec2 stereographicLineNormalAt(const StereographicLine& line, Vec2 p);
 
+f32 eucledianDistanceToStereographicSegment(const StereographicLine& line, Vec2 eucledianPoint);
+f32 eucledianDistanceToStereographicSegment(Vec2 e0, Vec2 e1, Vec2 eucledianPoint);
+
 StaticList<Vec2, 2> circleVsCircleIntersection(const Circle& a, const Circle& b);
 StaticList<Vec2, 2> lineVsCircleIntersection(Vec2 linePoint, Vec2 lineDirection, const Circle& circle);
 StaticList<Vec2, 2> stereographicLineVsCircleIntersection(const StereographicLine& l, const Circle& c);

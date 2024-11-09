@@ -6,7 +6,6 @@
 #include <engine/Input/Input.hpp>
 #include <game/Constants.hpp>
 #include <glad/glad.h>
-#include <engine/Math/LineSegment.hpp>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include <engine/Math/Quat.hpp>
@@ -299,18 +298,7 @@ void Editor::update(GameRenderer& renderer) {
 			break;
 		}
 
-		ImGui::SeparatorText("grid");
-		{
-			ImGui::Checkbox("show", &showGrid);
-			ImGui::TextDisabled("(?)");
-			ImGui::SetItemTooltip("Hold ctrl to snap cursor to grid.");
-
-			ImGui::InputInt("lines", &gridLineCount);
-			gridLineCount = std::max(gridLineCount, 1);
-
-			ImGui::InputInt("circles", &gridCircleCount);
-			gridCircleCount = std::max(gridCircleCount, 1);
-		}
+		gridTool.gui();
 
 		ImGui::SeparatorText("debug");
 		ImGui::InputInt("max reflections", &maxReflections);
@@ -321,63 +309,12 @@ void Editor::update(GameRenderer& renderer) {
 
 	undoRedoUpdate();
 
-	bool snappedCursor = false;
 	auto cursorPos = Input::cursorPosClipSpace() * renderer.gfx.camera.clipSpaceToWorldSpace();
-
+	bool snappedCursor = false;
 	if (Input::isKeyHeld(KeyCode::LEFT_CONTROL)) {
-		const auto snapDistance = Constants::endpointGrabPointRadius;
-
-		for (i32 iLine = 0; iLine < gridLineCount; iLine++) {
-			for (i32 iCircle = 0; iCircle < gridCircleCount + 1; iCircle++) {
-				auto r = f32(iCircle) / f32(gridCircleCount);
-				const auto t = f32(iLine) / f32(gridLineCount);
-				const auto a = t * TAU<f32>;
-				const auto v = Vec2::fromPolar(a, r);
-
-				if (iCircle == gridCircleCount) {
-					r -= 0.01f;
-				}
-
-				if (distance(v, cursorPos) < snapDistance) {
-					snappedCursor = true;
-					cursorPos = v;
-					goto exitLoop;
-				}
-			}
-		}
-		exitLoop:;
-
-		struct ClosestFeature {
-			Vec2 pointOnFeature;
-			f32 distance;
-		};
-		std::optional<ClosestFeature> closestFeature;
-		// This could be done without the loop.
-		for (i32 iLine = 0; iLine < gridLineCount; iLine++) {
-			const auto t = f32(iLine) / f32(gridLineCount);
-			const auto a = t * TAU<f32>;
-			const auto p = Vec2::oriented(a);
-
-			const auto closestPointOnLine = LineSegment(Vec2(0.0f), p).closestPointTo(cursorPos);
-			const auto dist = distance(closestPointOnLine, cursorPos);
-			if (!closestFeature.has_value() || dist < closestFeature->distance) {
-				closestFeature = ClosestFeature{ .pointOnFeature = closestPointOnLine, .distance = dist };
-			}
-		}
-		// This also could be done without the loop.
-		for (i32 iCircle = 1; iCircle < gridCircleCount + 1; iCircle++) {
-			const auto r = f32(iCircle) / f32(gridCircleCount);
-			const auto pointOnCircle = cursorPos.normalized() * r;
-			const auto dist = distance(pointOnCircle, cursorPos);
-			if (!closestFeature.has_value() || dist < closestFeature->distance) {
-				closestFeature = ClosestFeature{ .pointOnFeature = pointOnCircle, .distance = dist };
-			}
-		}
-
-		if (!snappedCursor && closestFeature.has_value() && closestFeature->distance < snapDistance) {
-			snappedCursor = true;
-			cursorPos = closestFeature->pointOnFeature;
-		}
+		const auto result = gridTool.snapCursor(cursorPos);
+		cursorPos = result.cursorPos;
+		snappedCursor = result.snapped;
 	}
 
 	bool cursorCaptured = false;
@@ -435,22 +372,7 @@ void Editor::update(GameRenderer& renderer) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
 
-	const auto gridColor = Color3::WHITE / 15.0f;
-	if (showGrid) {
-		for (i32 i = 1; i < gridCircleCount; i++) {
-			const auto r = f32(i) / f32(gridCircleCount);
-			renderer.gfx.circle(Vec2(0.0f), r, 0.01f, gridColor);
-		}
-
-		for (i32 i = 0; i < gridLineCount; i++) {
-			const auto t = f32(i) / f32(gridLineCount);
-			const auto a = t * TAU<f32>;
-			const auto v = Vec2::oriented(a);
-			renderer.gfx.line(Vec2(0.0f), v, 0.01f, gridColor);
-		}
-	}
-	renderer.gfx.drawLines();
-	renderer.gfx.drawCircles();
+	gridTool.render(renderer);
 
 	switch (selectedTool) {
 		using enum Tool;
@@ -1276,19 +1198,9 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 	const auto oldSelection = selectTool.selectedEntity;
 
-	auto stereographicSegmentDistance = [](Vec2 e0, Vec2 e1, Vec2 cursorPos) {
-		const auto line = stereographicLine(e0, e1);
-		if (line.type == StereographicLine::Type::LINE) {
-			return LineSegment(e0, e1).distance(cursorPos);
-		} else {
-			const auto range = angleRangeBetweenPointsOnCircle(line.circle.center, e0, e1);
-			return circularArcDistance(cursorPos, line.circle, range);
-		}
-	};
-
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		for (const auto& wall : walls) {
-			if (stereographicSegmentDistance(wall->endpoints[0], wall->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
+			if (eucledianDistanceToStereographicSegment(wall->endpoints[0], wall->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(wall.id);
 				goto selectedEntity;
 			}
@@ -1296,7 +1208,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 		for (const auto& mirror : mirrors) {
 			const auto endpoints = mirror->calculateEndpoints();
-			const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
+			const auto dist = eucledianDistanceToStereographicSegment(endpoints[0], endpoints[1], cursorPos);
 			if (dist < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(mirror.id);
 				goto selectedEntity;
@@ -1330,7 +1242,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		for (const auto& portalPair : portalPairs) {
 			for (const auto& portal : portalPair->portals) {
 				const auto endpoints = portal.endpoints();
-				const auto dist = stereographicSegmentDistance(endpoints[0], endpoints[1], cursorPos);
+				const auto dist = eucledianDistanceToStereographicSegment(endpoints[0], endpoints[1], cursorPos);
 				if (dist < Constants::endpointGrabPointRadius) {
 					selectTool.selectedEntity = EditorEntityId(portalPair.id);
 					goto selectedEntity;
@@ -1347,7 +1259,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		}
 
 		for (const auto& door : doors) {
-			if (stereographicSegmentDistance(door->endpoints[0], door->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
+			if (eucledianDistanceToStereographicSegment(door->endpoints[0], door->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(door.id);
 				goto selectedEntity;
 			}

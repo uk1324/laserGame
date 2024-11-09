@@ -4,6 +4,72 @@
 #include <game/EditorActions.hpp>
 #include <game/EditorEntities.hpp>
 
+struct EditorGridTool {
+	EditorGridTool();
+
+	enum class GridType {
+		POLAR,
+		HEMI_ICOSAHEDRAL,
+	};
+
+	struct EllipticIsometry {
+		EllipticIsometry(f32 a0, f32 a1, f32 a2);
+		f32 a[3];
+		 Quat toQuaternion() const;
+	};
+
+	struct Ratio {
+		Ratio(i32 numerator, i32 denominator);
+
+		i32 numerator;
+		i32 denominator;
+
+		f32 toF32() const;
+	};
+
+	struct EllipticIsometryInput {
+		static EllipticIsometryInput defaultInit();
+
+		Ratio a[3];
+
+		EllipticIsometry toEllipticIsometry() const;
+	};
+
+	struct EllipticSegment {
+		// Vertex indices
+		i32 endpoints[2];
+		bool connectedThroughHemisphere;
+	};
+
+	bool showGrid = true;
+
+	//GridType gridType = GridType::POLAR;
+	GridType gridType = GridType::HEMI_ICOSAHEDRAL;
+
+	i32 polarGridLineCount = 16;
+	i32 polarGridCircleCount = 10;
+
+	EllipticIsometryInput hemiIcosahedronIsometry;
+
+	struct SnapCursorResult {
+		Vec2 cursorPos;
+		bool snapped;
+	};
+
+	// First check if there is a vertex to snap to. If yes then snap, else try to snap to curve.
+	SnapCursorResult snapCursor(Vec2 cursorPos);
+	SnapCursorResult snapCursorToPolarGrid(Vec2 cursorPos);
+	static SnapCursorResult snapCursorToShapeGrid(Vec2 cursorPos, const std::vector<Vec3>& vertices, const std::vector<EllipticSegment>& segments);
+
+	void render(GameRenderer& renderer);
+	void gui();
+
+	static void renderEllipticSegment(GameRenderer& renderer, const EllipticSegment& segment, const std::vector<Vec3>& vertices, Vec3 color);
+
+	std::vector<Vec3> hemiIcosahedronVertices;
+	std::vector<EllipticSegment> hemiIcosahedronSegments;
+};
+
 struct Editor {
 	Editor();
 
@@ -206,9 +272,7 @@ struct Editor {
 	void undoAction(const EditorAction& action);
 	void redoAction(const EditorAction& action);
 
-	bool showGrid = true;
-	i32 gridLineCount = 16;
-	i32 gridCircleCount = 10;
+	EditorGridTool gridTool;
 
 	i32 maxReflections = 30;
 

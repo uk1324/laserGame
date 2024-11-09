@@ -1,7 +1,7 @@
 #include "Stereographic.hpp"
 #include <engine/Math/Constants.hpp>
 #include <array>
-#include <engine/Math/Line.hpp>
+#include <engine/Math/LineSegment.hpp>
 
 // The 3d coordinate system is the set of points satisfying x^2 + y^2 + z^2 = 1, z <= 0, hemisphere.
 // The 2d coordinate system is the set of points satisfying x^2 + y^2 <= 1, circle
@@ -215,6 +215,16 @@ Vec2 stereographicLineNormalAt(const StereographicLine& line, Vec2 p) {
 	return line.type == StereographicLine::Type::CIRCLE
 		? (p - line.circle.center).normalized()
 		: line.lineNormal;
+}
+
+f32 eucledianDistanceToStereographicSegment(Vec2 e0, Vec2 e1, Vec2 eucledianPoint) {
+	const auto line = stereographicLine(e0, e1);
+	if (line.type == StereographicLine::Type::LINE) {
+		return LineSegment(e0, e1).distance(eucledianPoint);
+	} else {
+		const auto range = angleRangeBetweenPointsOnCircle(line.circle.center, e0, e1);
+		return circularArcDistance(eucledianPoint, line.circle, range);
+	}
 }
 
 // https://stackoverflow.com/questions/55816902/finding-the-intersection-of-two-circles
