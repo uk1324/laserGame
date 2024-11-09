@@ -51,10 +51,6 @@ Vec2 antipodalPoint(Vec2 p) {
 	return r1;
 }
 
-Circle::Circle(Vec2 center, f32 radius)
-	: center(center)
-	, radius(radius) {}
-
 
 // https://www.johndcook.com/blog/2023/06/18/circle-through-three-points/
 Circle circleThroughPoints(Vec2 p0, Vec2 p1, Vec2 p2) {
@@ -86,6 +82,14 @@ std::optional<Circle> circleThroughPointsWithNormalAngle(Vec2 p0, f32 angle0, Ve
 	}
 
 	return Circle(*result, distance(p0, *result));
+}
+
+StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAngle, f32 translation) {
+	//if (p == Vec2(0.0f)) {
+	//	return StereographicLine(Vec2::oriented(tangentAngle + PI<f32> / 2.0f));
+	//}
+	const auto pointAhead = moveOnStereographicGeodesic(p, tangentAngle, translation);
+	return stereographicLine(p, pointAhead);
 }
 
 Circle stereographicLineOld(Vec2 p0, Vec2 p1) {

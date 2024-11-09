@@ -28,6 +28,7 @@ struct EditorWall {
 	EditorWallType type;
 };
 using EditorWallId = EntityArrayId<EditorWall>;
+using WallArray = EntityArray<EditorWall, EditorWall::DefaultInitialize>;
 
 struct EditorLaser {
 	struct DefaultInitialize {
@@ -42,6 +43,7 @@ struct EditorLaser {
 	static constexpr ColorEntry defaultColor{ Color3::BLUE, "blue" };
 	//static constexpr ColorEntry defaultColor{ Color3::CYAN, "cyan" };
 };
+using LaserArray = EntityArray<EditorLaser, EditorLaser::DefaultInitialize>;
 
 void editorLaserColorCombo(Vec3& color);
 
@@ -74,6 +76,7 @@ void editorMirrorLengthInput(f32& length);
 void editorMirrorWallTypeInput(EditorMirrorWallType& type);
 
 using EditorMirrorId = EntityArrayId<EditorMirror>;
+using MirrorArray = EntityArray<EditorMirror, EditorMirror::DefaultInitialize>;
 
 struct EditorTarget {
 	struct DefaultInitialize {
@@ -92,6 +95,7 @@ struct EditorTarget {
 void editorTargetRadiusInput(f32& radius);
 
 using EditorTargetId = EntityArrayId<EditorTarget>;
+using TargetArray = EntityArray<EditorTarget, EditorTarget::DefaultInitialize>;
 
 enum class EditorPortalWallType {
 	PORTAL, REFLECTING, ABSORBING,
@@ -117,6 +121,7 @@ struct EditorPortalPair {
 };
 
 using EditorPortalPairId = EntityArrayId<EditorPortalPair>;
+using PortalPairArray = EntityArray<EditorPortalPair, EditorPortalPair::DefaultInitialize>;
 
 //struct EditorPortal {
 //	Vec2 position;
@@ -142,6 +147,7 @@ struct EditorTrigger {
 	static constexpr ColorEntry defaultColor{ Vec3(0.0f, 1.0f, 0.5f), "spring green"};
 };
 using EditorTriggerId = EntityArrayId<EditorTrigger>;
+using TriggerArray = EntityArray<EditorTrigger, EditorTrigger::DefaultInitialize>;
 
 void editorTriggerColorCombo(Vec3& color);
 void editorTriggerIndexInput(const char* label, i32& index);
@@ -164,6 +170,7 @@ struct EditorDoor {
 	StaticList<EditorDoorSegment, 2> segments() const;
 };
 using EditorDoorId = EntityArrayId<EditorDoor>;
+using DoorArray = EntityArray<EditorDoor, EditorDoor::DefaultInitialize>;
 
 enum class EditorEntityType {
 	WALL,

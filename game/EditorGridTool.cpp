@@ -1,5 +1,6 @@
 #include <game/Editor.hpp>
 #include <imgui/imgui.h>
+#include <game/Constants.hpp>
 #include <engine/Input/Input.hpp>
 #include <engine/Math/Constants.hpp>
 #include <engine/Math/LineSegment.hpp>
@@ -399,7 +400,6 @@ EditorGridTool::SnapCursorResult EditorGridTool::snapCursorToShapeGrid(Vec2 curs
 			return SnapCursorResult{ .cursorPos = v, .snapped = true };
 		}
 	}
-	const Circle boundary(Vec2(0.0f), 1.0f);
 	for (const auto& segment : segments) {
 		const auto se0 = toStereographic(vertices[segment.endpoints[0]]);
 		const auto se1 = toStereographic(vertices[segment.endpoints[1]]);
@@ -407,7 +407,7 @@ EditorGridTool::SnapCursorResult EditorGridTool::snapCursorToShapeGrid(Vec2 curs
 			continue;
 		}
 		const auto stereographicLine = ::stereographicLine(se0, se1);
-		const auto boundaryIntersections = stereographicLineVsCircleIntersection(stereographicLine, boundary);
+		const auto boundaryIntersections = stereographicLineVsCircleIntersection(stereographicLine, Constants::boundary);
 		for (const auto& intersection : boundaryIntersections) {
 			if (cursorPos.distanceTo(intersection) < snapDistance) {
 				return SnapCursorResult{ .cursorPos = intersection, .snapped = true };

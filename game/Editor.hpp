@@ -2,7 +2,7 @@
 
 #include <game/GameRenderer.hpp>
 #include <game/EditorActions.hpp>
-#include <game/EditorEntities.hpp>
+#include <game/GameUpdate.hpp>
 
 struct EditorGridTool {
 	EditorGridTool();
@@ -294,8 +294,6 @@ struct Editor {
 
 	EditorGridTool gridTool;
 
-	i32 maxReflections = 30;
-
 	void reset();
 
 	bool trySaveLevel(std::string_view path);
@@ -313,11 +311,13 @@ struct Editor {
 		std::optional<std::string> lastLoadedLevelPath;
 	} levelSaveOpen;
 
-	EntityArray<EditorWall, EditorWall::DefaultInitialize> walls;
-	EntityArray<EditorLaser, EditorLaser::DefaultInitialize> lasers;
-	EntityArray<EditorMirror, EditorMirror::DefaultInitialize> mirrors;
-	EntityArray<EditorTarget, EditorTarget::DefaultInitialize> targets;
-	EntityArray<EditorPortalPair, EditorPortalPair::DefaultInitialize> portalPairs;
-	EntityArray<EditorTrigger, EditorTrigger::DefaultInitialize> triggers;
-	EntityArray<EditorDoor, EditorDoor::DefaultInitialize> doors;
+	GameState game;
+
+	WallArray walls;
+	LaserArray lasers;
+	MirrorArray mirrors;
+	TargetArray targets;
+	PortalPairArray portalPairs;
+	TriggerArray triggers;
+	DoorArray doors;
 };
