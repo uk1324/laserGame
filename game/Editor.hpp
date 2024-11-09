@@ -44,8 +44,8 @@ struct EditorGridTool {
 
 	bool showGrid = true;
 
-	//GridType gridType = GridType::POLAR;
-	GridType gridType = GridType::HEMI_DODECAHEDRAL;
+	GridType gridType = GridType::POLAR;
+	//GridType gridType = GridType::HEMI_DODECAHEDRAL;
 
 	i32 polarGridLineCount = 16;
 	i32 polarGridCircleCount = 10;
@@ -68,10 +68,26 @@ struct EditorGridTool {
 	std::vector<Vec3> hemiIcosahedronVertices;
 	std::vector<EllipticSegment> hemiIcosahedronSegments;
 	EllipticIsometryInput hemiIcosahedronIsometry;
+	Quat icosahedronTriangleCenterSystemTransformation = Quat::identity;
+	Quat icosahedronVertexCenterSystemTransformation = Quat::identity;
+	enum class IcosahedronCoordinateSystem {
+		VERTEX_CENTER,
+		TRIANGLE_CENTER,
+		EDGE_CENTER
+	} icosahedronCoordinateSystem = IcosahedronCoordinateSystem::VERTEX_CENTER;
+	Quat currentIcosahedronIsometry() const;
 
 	std::vector<Vec3> hemiDodecahedronVertices;
 	std::vector<EllipticSegment> hemiDodecahedronSegments;
 	EllipticIsometryInput hemiDodecahedronIsometry;
+	enum class DodecahedronCoordinateSystem {
+		VERTEX_CENTER,
+		PENTAGON_CENTER,
+		EDGE_CENTER
+	} dodecahedronCoordinateSystem = DodecahedronCoordinateSystem::VERTEX_CENTER;
+	Quat dodecahedronPentagonCenterSystemTransformation = Quat::identity;
+	Quat dodecahedronVertexCenterSystemTransformation = Quat::identity;
+	Quat currentDodecahedronIsometry() const;
 };
 
 struct Editor {
