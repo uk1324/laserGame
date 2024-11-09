@@ -10,6 +10,7 @@ struct EditorGridTool {
 	enum class GridType {
 		POLAR,
 		HEMI_ICOSAHEDRAL,
+		HEMI_DODECAHEDRAL,
 	};
 
 	struct EllipticIsometry {
@@ -44,12 +45,10 @@ struct EditorGridTool {
 	bool showGrid = true;
 
 	//GridType gridType = GridType::POLAR;
-	GridType gridType = GridType::HEMI_ICOSAHEDRAL;
+	GridType gridType = GridType::HEMI_DODECAHEDRAL;
 
 	i32 polarGridLineCount = 16;
 	i32 polarGridCircleCount = 10;
-
-	EllipticIsometryInput hemiIcosahedronIsometry;
 
 	struct SnapCursorResult {
 		Vec2 cursorPos;
@@ -68,6 +67,11 @@ struct EditorGridTool {
 
 	std::vector<Vec3> hemiIcosahedronVertices;
 	std::vector<EllipticSegment> hemiIcosahedronSegments;
+	EllipticIsometryInput hemiIcosahedronIsometry;
+
+	std::vector<Vec3> hemiDodecahedronVertices;
+	std::vector<EllipticSegment> hemiDodecahedronSegments;
+	EllipticIsometryInput hemiDodecahedronIsometry;
 };
 
 struct Editor {

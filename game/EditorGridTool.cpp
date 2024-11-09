@@ -61,8 +61,12 @@ static void transformShape(const std::vector<Vec3>& inputVertices,
 }
 
 EditorGridTool::EditorGridTool() 
-	: hemiIcosahedronIsometry{ .a = { Ratio(0, 3), Ratio(0, 3), Ratio(0, 3) }} {
+	: hemiIcosahedronIsometry{ .a = { Ratio(0, 3), Ratio(0, 3), Ratio(0, 3) }}
+	, hemiDodecahedronIsometry{ .a = { Ratio(0, 5), Ratio(0, 5), Ratio(0, 5) } }{
 	const auto phi = (1.0f + sqrt(5.0f)) / 2.0f;
+
+	// To make a hemi-<shape> take a regular <shape> and take choose only the vertices that lie on the bottom hemisphere.
+
 	{
 		// https://en.wikipedia.org/wiki/Hemi-icosahedron
 		auto addV = [this](f32 x, f32 y, f32 z) {
@@ -79,8 +83,7 @@ EditorGridTool::EditorGridTool()
 
 		auto addS = [this](i32 i0, i32 i1, bool connectedThroughHemisphere) {
 			hemiIcosahedronSegments.push_back(EllipticSegment{
-				.endpoints = { i0, i1 },
-				.connectedThroughHemisphere = connectedThroughHemisphere,
+				{ i0, i1 }, connectedThroughHemisphere,
 			});
 		};
 
@@ -89,15 +92,13 @@ EditorGridTool::EditorGridTool()
 		const auto bringPentagonToCenter = Quat(
 			sphericalDistance(currentCenter, centerOfPentagon),
 			Vec3(0.0f, 1.0f, 0.0f));
-
 		const auto moveStartAngleFromXToYAxis = Quat(PI<f32> / 2.0f, Vec3(0.0f, 0.0f, 1.0f));
 		const auto transformation = moveStartAngleFromXToYAxis * bringPentagonToCenter;
 
 		for (auto& vertex : hemiIcosahedronVertices) {
-			vertex *= transformation;
+			//vertex *= transformation;
 			vertex = vertex.normalized();
 		}
-
 
 		addS(0, 1, false);
 
@@ -122,24 +123,94 @@ EditorGridTool::EditorGridTool()
 		addS(0, 5, false);
 		addS(0, 4, false);
 	}
+	{
+		const auto iphi = 1.0f / phi;
+		// https://en.wikipedia.org/wiki/Hemi-dodecahedron
+		auto addV = [this](f32 x, f32 y, f32 z) {
+			hemiDodecahedronVertices.push_back(Vec3(x, y, z));
+		};
+		// https://en.wikipedia.org/wiki/Regular_dodecahedron#Relation_to_the_golden_ratio
+		addV(1.0f, 1.0f, -1.0f); // 0
+		addV(-1.0f, 1.0f, -1.0f); // 1
+		addV(1.0f, -1.0f, -1.0f); // 2
+		addV(-1.0f, -1.0f, -1.0f); // 3
+
+		addV(0.0f, phi, -iphi); // 4
+		addV(0.0f, -phi, -iphi); // 5
+
+		addV(iphi, 0.0f, -phi); // 6
+		addV(-iphi, 0.0f, -phi); // 7
+
+		addV(phi, iphi, 0.0f); // 8
+		addV(-phi, iphi, 0.0f); // 9
+		
+
+		auto addS = [this](i32 i0, i32 i1, bool connectedThroughHemisphere) {
+			hemiDodecahedronSegments.push_back(EllipticSegment{
+				{ i0, i1 }, connectedThroughHemisphere,
+			});
+		};
+
+		const auto currentCenter = Vec3(0.0f, 0.0f, -1.0f);
+		const auto someVertex = hemiDodecahedronVertices[6];
+		const auto bringPentagonToCenter = Quat(sphericalDistance(currentCenter, someVertex), Vec3(0.0f, 1.0f, 0.0f));
+		const auto rotate = Quat(PI<f32> / 2.0f, Vec3(0.0f, 0.0f, 1.0f));
+		const auto transformation = rotate * bringPentagonToCenter;
+
+		for (auto& vertex : hemiDodecahedronVertices) {
+			vertex *= transformation;
+			vertex = vertex.normalized();
+		}
+
+		addS(1, 7, false);
+		addS(0, 6, false);
+
+		addS(1, 4, false);
+		addS(0, 4, false);
+
+		addS(3, 7, false);
+		addS(2, 6, false);
+
+		addS(3, 5, false);
+		addS(2, 5, false);
+
+		addS(7, 6, false);
+
+		addS(5, 4, true);
+
+		addS(1, 9, false);
+		addS(3, 8, true);
+		addS(9, 8, true);
+
+		addS(0, 8, false);
+		addS(2, 9, true);
+
+	}
 }
 
 EditorGridTool::SnapCursorResult EditorGridTool::snapCursor(Vec2 cursorPos) {
+	auto snapCursorToShape = [&cursorPos](const std::vector<Vec3>& originalVertices, const std::vector<EllipticSegment>& originalSegments, const EllipticIsometryInput& isometryInput) {
+		std::vector<Vec3> vertices;
+		std::vector<EllipticSegment> segments;
+		const auto isometry = isometryInput.toEllipticIsometry().toQuaternion();
+		transformShape(originalVertices, originalSegments, vertices, segments, isometry);
+		return snapCursorToShapeGrid(cursorPos, vertices, segments);
+	};
+
 	switch (gridType) {
 		using enum GridType;
 	case POLAR: return snapCursorToPolarGrid(cursorPos);
-	case HEMI_ICOSAHEDRAL: {
-		std::vector<Vec3> vertices;
-		std::vector<EllipticSegment> segments;
-		const auto isometry = hemiIcosahedronIsometry.toEllipticIsometry().toQuaternion();
-		transformShape(hemiIcosahedronVertices, hemiIcosahedronSegments, vertices, segments, isometry);
-		return snapCursorToShapeGrid(cursorPos, vertices, segments);
-	}
+	case HEMI_ICOSAHEDRAL:
+		return snapCursorToShape(hemiIcosahedronVertices, hemiIcosahedronSegments, hemiIcosahedronIsometry);
 
+	case HEMI_DODECAHEDRAL:
+		return snapCursorToShape(hemiDodecahedronVertices, hemiDodecahedronSegments, hemiDodecahedronIsometry);
 	}
 
 	return SnapCursorResult{ .cursorPos = cursorPos, .snapped = false };
 }
+
+#include <engine/gfx2d/DbgGfx2d.hpp>
 
 void EditorGridTool::render(GameRenderer& renderer) {
 	if (!showGrid) {
@@ -147,6 +218,22 @@ void EditorGridTool::render(GameRenderer& renderer) {
 	}
 
 	const auto gridColor = Color3::WHITE / 15.0f;
+
+	auto drawShapeGrid = [&renderer, &gridColor](const std::vector<Vec3>& originalVertices,
+		const std::vector<EllipticSegment>& originalSegments,
+		EllipticIsometryInput& isometryInput) {
+
+		std::vector<Vec3> vertices;
+		std::vector<EllipticSegment> segments;
+		const auto isometry = isometryInput.toEllipticIsometry().toQuaternion();
+		transformShape(originalVertices, originalSegments, vertices, segments, isometry);
+		for (const auto& segment : segments) {
+			renderEllipticSegment(renderer, segment, vertices, gridColor);
+		}
+		/*for (const auto& vertex : vertices) {
+			Dbg::disk(toStereographic(vertex), 0.01f, Color3::RED);
+		}*/
+	};
 
 	switch (gridType) {
 		using enum GridType;
@@ -171,13 +258,12 @@ void EditorGridTool::render(GameRenderer& renderer) {
 	}
 
 	case HEMI_ICOSAHEDRAL: {
-		std::vector<Vec3> vertices;
-		std::vector<EllipticSegment> segments;
-		const auto isometry = hemiIcosahedronIsometry.toEllipticIsometry().toQuaternion();
-		transformShape(hemiIcosahedronVertices, hemiIcosahedronSegments, vertices, segments, isometry);
-		for (const auto& segment : segments) {
-			renderEllipticSegment(renderer, segment, vertices, gridColor);
-		}
+		drawShapeGrid(hemiIcosahedronVertices, hemiIcosahedronSegments, hemiIcosahedronIsometry);
+		break;
+	}
+
+	case HEMI_DODECAHEDRAL: {
+		drawShapeGrid(hemiDodecahedronVertices, hemiDodecahedronSegments, hemiDodecahedronIsometry);
 		break;
 	}
 
@@ -216,7 +302,7 @@ void EditorGridTool::gui() {
 	ImGui::PushID("grid");
 	{
 		ImGui::Checkbox("show", &showGrid);
-		ImGui::Combo("type", reinterpret_cast<int*>(&gridType), "polar\0hemi-icosahedral\0");
+		ImGui::Combo("type", reinterpret_cast<int*>(&gridType), "polar\0hemi-icosahedral\0hemi-dodecahedral\0");
 		ImGui::TextDisabled("(?)");
 		ImGui::SetItemTooltip("Hold ctrl to snap cursor to grid.");
 
@@ -233,6 +319,10 @@ void EditorGridTool::gui() {
 
 		case HEMI_ICOSAHEDRAL:
 			ellipticIsometryGui("transformation angles", hemiIcosahedronIsometry);
+			break;
+
+		case HEMI_DODECAHEDRAL:
+			ellipticIsometryGui("transformation angles", hemiDodecahedronIsometry);
 			break;
 		}
 		
