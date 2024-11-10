@@ -11,6 +11,16 @@ include("../engine/codeGenTool/targetAddGenerated.cmake")
 
 target_link_libraries(game PUBLIC gfx2d)
 
+configure_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/../engine/dependencies/freetype.dll" 
+	"${CMAKE_CURRENT_SOURCE_DIR}/../freetype.dll" 
+	COPYONLY)
+if (WIN32)
+	target_link_libraries(game PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../engine/dependencies/freetype.lib")
+else()
+	target_link_libraries(game PUBLIC freetype)
+endif()
+
 # enumerator 'identifier' in switch of enum 'enumeration' is not handled
 target_compile_options(game PRIVATE /we4062)
 

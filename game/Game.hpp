@@ -18,4 +18,6 @@ struct Game {
 
 	GameEntities e;
 	GameState s;
+
+	Font font;
 };

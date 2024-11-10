@@ -2,7 +2,8 @@
 #include <game/GameSerialization.hpp>
 #include <engine/Input/Input.hpp>
 
-Game::Game() {
+Game::Game() 
+	: font(FontRenderer::loadFont("engine/assets/fonts/", "RobotoMono-Regular")) {
 	tryLoadLevel("./generated/test");
 }
 
@@ -43,6 +44,9 @@ void Game::update(GameRenderer& renderer) {
 	
 	renderer.renderClear();
 	renderer.render(e, s, false, objectsInValidState);
+
+	renderer.gfx.fontRenderer.addTextToDraw(font, Vec2(0.0f), renderer.gfx.camera.makeTransform(Vec2(0.0f), 0.0f, Vec2(1.0f)), 0.2f, "test text");
+	renderer.gfx.fontRenderer.render(font, renderer.gfx.instancesVbo);
 }
 
 void Game::reset() {

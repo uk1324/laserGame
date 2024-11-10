@@ -7,6 +7,7 @@ cached/
 *Data.hpp
 *Data.glsl
 settings.json
+freetype.dll
 
 # https://github.com/github/gitignore/blob/main/CMake.gitignore
 CMakeLists.txt.user
