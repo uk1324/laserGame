@@ -105,12 +105,10 @@ void GameRenderer::render(GameEntities& e, const GameState& s) {
 
 	for (const auto& laser : e.lasers) {
 		gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
+		const auto arrowhead = laserArrowhead(laser.entity);
 		/*renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));*/
-		const auto direction0 = Vec2::oriented(laser->angle + 3.0f / 4.0f * PI<f32>) * 0.03f;
-		const auto direction1 = Vec2::oriented(laser->angle - 3.0f / 4.0f * PI<f32>) * 0.03f;
-		const auto grabPoint = laserDirectionGrabPoint(laser.entity);
-		gfx.lineTriangulated(grabPoint, grabPoint + direction0, 0.01f, movablePartColor(false));
-		gfx.lineTriangulated(grabPoint, grabPoint + direction1, 0.01f, movablePartColor(false));
+		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[0], 0.01f, movablePartColor(false));
+		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[1], 0.01f, movablePartColor(false));
 	}
 
 	const auto activatableObjectColor = [](Vec3 baseColor, bool isActivated) {

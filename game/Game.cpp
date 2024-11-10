@@ -2,7 +2,7 @@
 #include <game/GameSerialization.hpp>
 
 Game::Game() {
-	tryLoadLevel("C:/Users/user/Desktop/game idead/levels/l7");
+	//tryLoadLevel("C:/Users/user/Desktop/game idead/levels/l7");
 }
 
 void Game::update(GameRenderer& renderer) {

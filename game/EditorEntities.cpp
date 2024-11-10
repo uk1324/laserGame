@@ -1,6 +1,8 @@
 #include <game/EditorEntities.hpp>
 #include <array>
+#include <engine/Math/Rotation.hpp>
 #include <engine/Math/Quat.hpp>
+#include <engine/Math/LineSegment.hpp>
 #include <engine/Math/Constants.hpp>
 #include <imgui/imgui.h>
 #include <game/Stereographic.hpp>
@@ -240,8 +242,47 @@ void editorLaserColorCombo(Vec3& selectedColor) {
 	colorCombo("color", constView(entries), EditorLaser::defaultColor, selectedColor);
 }
 
-Vec2 laserDirectionGrabPoint(const EditorLaser& laser) {
-	return laser.position + Vec2::oriented(laser.angle) * 0.15f;
+LaserGrabPoint laserDirectionGrabPoint(const EditorLaser& laser) {
+	const auto eucledianLength = 0.15f;
+	const auto laserDirection = Vec2::oriented(laser.angle);
+	
+	const auto actualGrabPoint = laser.position + laserDirection * eucledianLength;
+	const auto endpoint0 = moveOnStereographicGeodesic(laser.position, laser.angle, 0.1f);
+	const auto line = stereographicLine(endpoint0, laser.position);
+	if (line.type == StereographicLine::Type::LINE) {
+		return LaserGrabPoint{
+			.point = actualGrabPoint,
+			.visualPoint = actualGrabPoint,
+			.visualTangent = laserDirection
+		};
+	}
+	auto arcLength = eucledianLength / line.circle.radius;
+	const auto startAngle = (laser.position - line.circle.center).angle();
+	const auto tangentAtStartAngle = Vec2::oriented(startAngle).rotBy90deg();
+	if (dot(tangentAtStartAngle, laserDirection) > 0.0f) {
+		arcLength = -arcLength;
+	}
+
+	const auto normalAtGrabPoint = Vec2::oriented(startAngle + arcLength);
+	const auto tangentAtGrabPoint = normalAtGrabPoint.rotBy90deg() * ((arcLength > 0.0f) ? -1.0f : 1.0f);
+
+	return LaserGrabPoint{
+		.point = actualGrabPoint,
+		.visualPoint = line.circle.center + normalAtGrabPoint * line.circle.radius,
+		.visualTangent = tangentAtGrabPoint
+	};
+}
+
+LaserArrowhead laserArrowhead(const EditorLaser& laser) {
+	const auto tip = laserDirectionGrabPoint(laser);
+	const auto rotation = Rotation(3.0f / 4.0f * PI<f32>);
+	const auto ear0 = tip.visualPoint + rotation * tip.visualTangent * 0.03f;
+	const auto ear1 = tip.visualPoint + rotation.inversed() * tip.visualTangent * 0.03f;
+	return LaserArrowhead{
+		.actualTip = tip.point,
+		.tip = tip.visualPoint,
+		.ears = { ear0, ear1 },
+	};
 }
 
 std::array<Vec2, 2> rotatableSegmentEndpoints(Vec2 center, f32 normalAngle, f32 length) {
@@ -348,4 +389,10 @@ void GameEntities::reset() {
 	portalPairs.reset();
 	triggers.reset();
 	doors.reset();
+}
+
+f32 LaserArrowhead::distanceTo(Vec2 v) const {
+	return std::min(
+		LineSegment(tip, ears[0]).distance(v), 
+		LineSegment(tip, ears[1]).distance(v));
 }

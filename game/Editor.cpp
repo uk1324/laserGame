@@ -1,7 +1,6 @@
 #include "Editor.hpp"
 #include <engine/Math/Color.hpp>
 #include <game/FileSelectWidget.hpp>
-#include <engine/Math/Interpolation.hpp>
 #include <engine/Math/Constants.hpp>
 #include <engine/Input/Input.hpp>
 #include <game/Constants.hpp>
@@ -931,8 +930,9 @@ void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curs
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !laserGrabTool.grabbed.has_value()) {
 		for (const auto& laser : e.lasers) {
-			auto updateGrabbed = [&](Vec2 p, LaserGrabTool::LaserPart part) {
-				if (distance(cursorPos, p) > Constants::endpointGrabPointRadius) {
+			const auto arrowhead = laserArrowhead(laser.entity);
+			auto updateGrabbed = [&](Vec2 p, f32 distance, LaserGrabTool::LaserPart part) {
+				if (distance > Constants::endpointGrabPointRadius) {
 					return;
 				}
 				laserGrabTool.grabbed = LaserGrabTool::Grabbed{
@@ -944,9 +944,9 @@ void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curs
 				cursorCaptured = true;
 			};
 
-			updateGrabbed(laserDirectionGrabPoint(laser.entity), LaserGrabTool::LaserPart::DIRECTION);
+			updateGrabbed(arrowhead.actualTip, arrowhead.distanceTo(cursorPos), LaserGrabTool::LaserPart::DIRECTION);
 			if (!cursorCaptured) {
-				updateGrabbed(laser->position, LaserGrabTool::LaserPart::ORIGIN);
+				updateGrabbed(laser->position, distance(laser->position, cursorPos), LaserGrabTool::LaserPart::ORIGIN);
 			}
 		}
 	}
