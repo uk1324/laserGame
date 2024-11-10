@@ -164,21 +164,6 @@ struct Editor {
 	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
 	LaserGrabTool laserGrabTool;
-	//struct LaserGrabTool {
-	//	enum class LaserPart {
-	//		ORIGIN, DIRECTION,
-	//	};
-
-	//	struct Grabbed {
-	//		EditorLaserId id;
-	//		LaserPart part;
-	//		EditorLaser grabStartState;
-	//		Vec2 offset;
-	//	};
-
-	//	std::optional<Grabbed> grabbed;
-	//} laserGrabTool;
-	//void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
 	struct MirrorCreateTool {
 		std::optional<EditorMirror> update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured);
@@ -194,19 +179,6 @@ struct Editor {
 	} mirrorCreateTool;
 	void mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
-	enum class RotatableSegmentGizmoType {
-		TRANSLATION, ROTATION_0, ROTATION_1
-	};
-	struct GrabbedRotatableSegment {
-		Vec2 grabOffset;
-		RotatableSegmentGizmoType grabbedGizmo;
-	};
-	static std::optional<GrabbedRotatableSegment> rotatableSegmentCheckGrab(Vec2 center, f32 normalAngle, f32 length,
-		Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
-	static void grabbedRotatableSegmentUpdate(RotatableSegmentGizmoType type, Vec2 grabOffset,
-		Vec2& center, f32& normalAngle,
-		Vec2 cursorPos, bool cursorExact);
-
 	struct GrabbedOrb {
 		Vec2 grabOffset;
 	};
@@ -216,16 +188,7 @@ struct Editor {
 		Vec2& position,
 		Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
-	struct MirrorGrabTool {
-		struct Grabbed {
-			EditorMirrorId id;
-			EditorMirror grabStartState;
-			GrabbedRotatableSegment grabbed;
-		};
-
-		std::optional<Grabbed> grabbed;
-	} mirrorGrabTool;
-	void mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
+	MirrorGrabTool mirrorGrabTool;
 
 	struct TargetCreateTool {
 		f32 targetRadius = EditorTarget::defaultRadius;
@@ -244,16 +207,7 @@ struct Editor {
 
 	void portalCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
-	struct PortalGrabTool {
-		struct Grabbed {
-			EditorPortalPairId id;
-			i32 portalIndex;
-			EditorPortalPair grabStartState;
-			GrabbedRotatableSegment grabbed;
-		};
-		std::optional<Grabbed> grabbed;
-	} portalGrabTool;
-	void portalGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
+	PortalGrabTool portalGrabTool;
 
 	void triggerCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 

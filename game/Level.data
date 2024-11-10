@@ -40,8 +40,10 @@ struct [[Json]] LevelPortal {
 	Vec2 center;
 	float normalAngle;
 	LevelPortalWallType wallType;
+	bool positionLocked = `false`;
+	bool rotationLocked = `false`;
 }
-
+ 
 struct [[Json]] LevelPortalPair {
 	LevelPortal portal0;
 	LevelPortal portal1;

@@ -495,10 +495,14 @@ void GameState::update(GameEntities& e) {
 }
 
 std::optional<GameState::TriggerInfo> GameState::triggerInfo(TriggerArray& triggers, i32 triggerIndex) {
+	std::optional<TriggerInfo> result;
 	for (const auto& trigger : triggers) {
-		if (trigger->index == triggerIndex) {
+		// If any trigger is activated the return that activated.
+		if (trigger->index == triggerIndex && trigger->activated) {
 			return TriggerInfo{ .color = trigger->color, .active = trigger->activated };
+		} else if (!result.has_value()) {
+			result = TriggerInfo{ .color = trigger->color, .active = trigger->activated };
 		}
 	}
-	return std::nullopt;
+	return result;
 }

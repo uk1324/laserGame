@@ -102,7 +102,9 @@ bool trySaveGameLevel(GameEntities& e, std::string_view path) {
 				return LevelPortal{
 					.center = portal.center,
 					.normalAngle = portal.normalAngle,
-					.wallType = convertWallType(portal.wallType)
+					.wallType = convertWallType(portal.wallType),
+					.positionLocked = portal.positionLocked,
+					.rotationLocked = portal.rotationLocked,
 				};
 			};
 
@@ -198,7 +200,7 @@ bool tryLoadGameLevel(GameEntities& e, std::string_view path) {
 					.position = levelLaser.position,
 					.angle = levelLaser.angle,
 					.color = levelLaser.color,
-					.positionLocked = levelLaser.positionLocked
+					.positionLocked = levelLaser.positionLocked,
 				};
 			}
 		}
@@ -245,7 +247,13 @@ bool tryLoadGameLevel(GameEntities& e, std::string_view path) {
 					return EditorPortalWallType::PORTAL;
 				};
 				auto convertPortal = [&convertPortalWallType](const LevelPortal& levelPortal) {
-					return EditorPortal{ .center = levelPortal.center, .normalAngle = levelPortal.normalAngle, .wallType = convertPortalWallType(levelPortal.wallType) };
+					return EditorPortal{ 
+						.center = levelPortal.center, 
+						.normalAngle = levelPortal.normalAngle, 
+						.wallType = convertPortalWallType(levelPortal.wallType),
+						.positionLocked = levelPortal.positionLocked,
+						.rotationLocked = levelPortal.rotationLocked,
+					};
 				};
 				portalPair.entity = EditorPortalPair{
 					.portals = { convertPortal(levelPortalPair.portal0), convertPortal(levelPortalPair.portal1) }

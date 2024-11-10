@@ -15,7 +15,7 @@ struct GameRenderer {
 	static Vec3 wallColor(EditorWallType type);
 
 	void multicoloredSegment(const std::array<Vec2, 2>& endpoints, f32 normalAngle, Vec3 normalColor, Vec3 backColor);
-	void wall(Vec2 e0, Vec2 e1, Vec3 color);
+	void wall(Vec2 e0, Vec2 e1, Vec3 color, bool editor = true);
 	void mirror(const EditorMirror& mirror);
 	void renderWalls();
 	void stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color);
@@ -23,7 +23,7 @@ struct GameRenderer {
 	void stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width = Constants::wallWidth);
 
 	void renderClear();
-	void render(GameEntities& e, const GameState& s);
+	void render(GameEntities& e, const GameState& s, bool editor);
 
 	Gfx2d gfx;
 };

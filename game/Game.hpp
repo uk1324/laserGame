@@ -12,6 +12,8 @@ struct Game {
 	bool tryLoadLevel(std::string_view path);
 
 	LaserGrabTool laserGrabTool;
+	MirrorGrabTool mirrorGrabTool;
+	PortalGrabTool portalGrabTool;
 
 	GameEntities e;
 	GameState s;

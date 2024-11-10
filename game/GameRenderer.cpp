@@ -26,9 +26,11 @@ void GameRenderer::multicoloredSegment(const std::array<Vec2, 2>& endpoints, f32
 	stereographicSegment(endpoints[0] + back, endpoints[1] + back, backColor);
 }
 
-void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color) {
-	gfx.disk(e0, grabbableCircleRadius, Color3::RED);
-	gfx.disk(e1, grabbableCircleRadius, Color3::RED);
+void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color, bool editor) {
+	if (editor) {
+		gfx.disk(e0, grabbableCircleRadius, Color3::RED);
+		gfx.disk(e1, grabbableCircleRadius, Color3::RED);
+	}
 	stereographicSegment(e0, e1, color);
 }
 
@@ -88,7 +90,7 @@ void GameRenderer::renderClear() {
 	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
 }
 
-void GameRenderer::render(GameEntities& e, const GameState& s) {
+void GameRenderer::render(GameEntities& e, const GameState& s, bool editor) {
 	i32 drawnSegments = 0;
 	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
 	// srcAlpha * srcColor + 1 * dstColor
@@ -121,7 +123,7 @@ void GameRenderer::render(GameEntities& e, const GameState& s) {
 	//renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, darkGreen);
 
 	for (const auto& wall : e.walls) {
-		this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type));
+		this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
 	}
 
 	for (const auto& door : e.doors) {
@@ -131,8 +133,10 @@ void GameRenderer::render(GameEntities& e, const GameState& s) {
 			color = activatableObjectColor(info->color, info->active);
 		}
 
-		gfx.disk(door->endpoints[0], grabbableCircleRadius, Color3::RED);
-		gfx.disk(door->endpoints[1], grabbableCircleRadius, Color3::RED);
+		if (editor) {
+			gfx.disk(door->endpoints[0], grabbableCircleRadius, Color3::RED);
+			gfx.disk(door->endpoints[1], grabbableCircleRadius, Color3::RED);
+		}
 
 		const auto segments = door->segments();
 		for (const auto& segment : segments) {
