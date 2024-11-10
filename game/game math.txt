@@ -101,3 +101,5 @@ One issue with doors is that when there are multiple layers there isn't really a
 One option would be to introuce actual time. Then doors wouldn't open instantly. If the doors were to move out of the way then order would make sense I think not sure.
 
 Maybe make doors that open from different sides. LEFT, RIGHT, CENTER,
+
+Could have a randomized title screen. Could diplay things like the vonoroi diagram, Boy's surface, Roman surface. Could have a menu item that allows to view all the alternative screens with explanations.

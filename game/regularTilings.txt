@@ -1,0 +1,17 @@
+https://eschermath.org/wiki/Spherical_Geometry.html
+https://en.wikipedia.org/wiki/3D_rotation_group
+https://en.wikipedia.org/wiki/3D_rotation_group#Complete_classification_of_finite_subgroups
+https://en.wikipedia.org/wiki/3D_rotation_group#Topology
+https://en.wikipedia.org/wiki/Spherical_polyhedron
+
+https://en.wikipedia.org/wiki/Projective_orthogonal_group
+More intrinsically, the (real positive definite) projective orthogonal group PO can be defined as the isometries of elliptic space (in the sense of elliptic geometry), while PSO can be defined as the orientation-preserving isometries of elliptic space (when the space is orientable; otherwise PSO = PO). 
+https://en.wikipedia.org/wiki/Projective_orthogonal_group#Subgroups
+https://en.wikipedia.org/wiki/Projective_polyhedron
+
+
+The regular tilings of elliptic space can be found by looking at the subgroups of the group of isometries. In the case of elliptic space the group of isometries is isomorphic to PO that is the qoutient group SO(3) / {I, -I} (transformations that differ only by a relfection are the same). 
+If there is a regular tiling of the sphere that has central symmetry (is invariant under reflection around hemisphere) then this also gives a tiling of the elliptic plane by just identifying the antipodal points. 
+The regular tilings can be found in the wikipedia page for projective polyhedron.
+
+Some configurations like the hemi-icosahedron and hemi-dodecahedron or hemi-cube and hemi-octahedron are dual. That is one can be obtained by creating vertices in the centers of the other and joining them so that they go through the edges of the other.

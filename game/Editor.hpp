@@ -2,7 +2,6 @@
 
 #include <game/GameRenderer.hpp>
 #include <game/EditorActions.hpp>
-#include <game/GameUpdate.hpp>
 
 struct EditorGridTool {
 	EditorGridTool();
@@ -311,13 +310,6 @@ struct Editor {
 		std::optional<std::string> lastLoadedLevelPath;
 	} levelSaveOpen;
 
-	GameState game;
-
-	WallArray walls;
-	LaserArray lasers;
-	MirrorArray mirrors;
-	TargetArray targets;
-	PortalPairArray portalPairs;
-	TriggerArray triggers;
-	DoorArray doors;
+	GameState s;
+	GameEntities e;
 };

@@ -1,10 +1,15 @@
 #pragma once
 
 #include <game/GameRenderer.hpp>
-#include <game/GameEntities.hpp>
+#include <game/GameUpdate.hpp>
 
 struct Game {
+	Game();
 	void update(GameRenderer& renderer);
 
-	void loadLevel(std::string_view path);
+	void reset();
+	bool tryLoadLevel(std::string_view path);
+
+	GameEntities e;
+	GameState s;
 };

@@ -240,6 +240,10 @@ void editorLaserColorCombo(Vec3& selectedColor) {
 	colorCombo("color", constView(entries), EditorLaser::defaultColor, selectedColor);
 }
 
+Vec2 laserDirectionGrabPoint(const EditorLaser& laser) {
+	return laser.position + Vec2::oriented(laser.angle) * 0.15f;
+}
+
 std::array<Vec2, 2> rotatableSegmentEndpoints(Vec2 center, f32 normalAngle, f32 length) {
 	const auto c = fromStereographic(center);
 	const auto endpoint0 = moveOnSphericalGeodesic(c, normalAngle + PI<f32> / 2.0f, length / 2.0f);
@@ -334,4 +338,14 @@ StaticList<EditorDoorSegment, 2> EditorDoor::segments() const {
 	//const auto midpoint = sphericalGeodesicSegmentMidpoint(e0, e1);
 	//const auto tangentAtMidpoint = stereographicLineNormalAt(line, toStereographic(midpoint)).rotBy90deg();
 	//const auto moveOnSphericalGeodesic(midpoint, tangentAtMidpoint.angle(), openAmount);
+}
+
+void GameEntities::reset() {
+	walls.reset();
+	lasers.reset();
+	mirrors.reset();
+	targets.reset();
+	portalPairs.reset();
+	triggers.reset();
+	doors.reset();
 }

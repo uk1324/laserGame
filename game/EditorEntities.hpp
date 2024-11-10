@@ -46,6 +46,7 @@ struct EditorLaser {
 using LaserArray = EntityArray<EditorLaser, EditorLaser::DefaultInitialize>;
 
 void editorLaserColorCombo(Vec3& color);
+Vec2 laserDirectionGrabPoint(const EditorLaser& laser);
 
 using EditorLaserId = EntityArrayId<EditorLaser>;
 
@@ -204,4 +205,16 @@ struct EditorEntityId {
 	EditorDoorId door() const;
 
 	bool operator==(const EditorEntityId&) const = default;
+};
+
+struct GameEntities {
+	WallArray walls;
+	LaserArray lasers;
+	MirrorArray mirrors;
+	TargetArray targets;
+	PortalPairArray portalPairs;
+	TriggerArray triggers;
+	DoorArray doors;
+
+	void reset();
 };

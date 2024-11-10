@@ -1,30 +1,21 @@
 #include "Game.hpp"
-#include <JsonFileIo.hpp>
-#include <game/Level.hpp>
-#include <game/LevelData.hpp>
+#include <game/GameSerialization.hpp>
 
-void Game::update(GameRenderer& renderer) {
-
-	/*for (const auto& wall : walls) {
-		renderer.wall(wall.endpoints[0], wall.endpoints[1]);
-	}
-	renderer.renderWalls();*/
+Game::Game() {
+	tryLoadLevel("C:/Users/user/Desktop/game idead/levels/l7");
 }
 
-void Game::loadLevel(std::string_view path) {
-	//const auto json = jsonFromFile(path);
-	//walls.clear();
-	//try {
+void Game::update(GameRenderer& renderer) {
+	s.update(e);
+	renderer.renderClear();
+	renderer.render(e, s);
+}
 
-	//	{
-	//		const auto& wallsJson = json.at(levelWallsName).array();
-	//		for (const auto& wallJson : wallsJson) {
-	//			const auto& wallLevel = fromJson<LevelWall>(wallJson);
-	//			walls.push_back(Wall{ .endpoints = { wallLevel.e0, wallLevel.e1 } });
-	//		}
-	//	}
+void Game::reset() {
+	e.reset();
+}
 
-	//} catch (const Json::Value::Exception&) {
-	//	ASSERT_NOT_REACHED();
-	//}
+bool Game::tryLoadLevel(std::string_view path) {
+	reset();
+	return tryLoadGameLevel(e, path);
 }

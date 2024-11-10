@@ -1,0 +1,2 @@
+It turns out that any curve of the form d(p, f0) + d(p, f1) = e. Where d is the geodesic distance on some surface. Has the reflective property of the ellipse.
+https://mathoverflow.net/questions/173723/ellipses-on-spheres-and-other-surfaces

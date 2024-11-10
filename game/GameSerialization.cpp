@@ -1,4 +1,4 @@
-#include <game/Editor.hpp>
+#include <game/GameSerialization.hpp>
 #include <game/LevelData.hpp>
 #include <engine/dependencies/Json/JsonPrinter.hpp>
 #include <game/Level.hpp>
@@ -13,7 +13,7 @@ Json::Value::ArrayType& makeArrayAt(Json::Value& v, std::string_view at) {
 	return (v[std::string(at)] = Json::Value::emptyArray()).array();
 }
 
-bool Editor::trySaveLevel(std::string_view path) {
+bool trySaveGameLevel(GameEntities& e, std::string_view path) {
 	auto level = Json::Value::emptyObject();
 
 	{
@@ -26,9 +26,9 @@ bool Editor::trySaveLevel(std::string_view path) {
 			case ABSORBING: return LevelWallType::ABSORBING;
 			}
 			return LevelWallType::ABSORBING;
-			};
+		};
 
-		for (const auto& wall : walls) {
+		for (const auto& wall : e.walls) {
 			const auto levelWall = LevelWall{
 				.endpoint0 = wall->endpoints[0],
 				.endpoint1 = wall->endpoints[1],
@@ -40,7 +40,7 @@ bool Editor::trySaveLevel(std::string_view path) {
 
 	{
 		auto& jsonLasers = makeArrayAt(level, levelLasersName);
-		for (const auto& laser : lasers) {
+		for (const auto& laser : e.lasers) {
 			const auto levelLaser = LevelLaser{
 				.position = laser->position,
 				.angle = laser->angle,
@@ -53,7 +53,7 @@ bool Editor::trySaveLevel(std::string_view path) {
 
 	{
 		auto& jsonMirrors = makeArrayAt(level, levelMirrorsName);
-		for (const auto& e : mirrors) {
+		for (const auto& e : e.mirrors) {
 			auto convertWallType = [](EditorMirrorWallType type) {
 				switch (type) {
 					using enum EditorMirrorWallType;
@@ -76,7 +76,7 @@ bool Editor::trySaveLevel(std::string_view path) {
 
 	{
 		auto& jsonTargets = makeArrayAt(level, levelTargetsName);
-		for (const auto& e : targets) {
+		for (const auto& e : e.targets) {
 			const auto& levelTarget = LevelTarget{
 				.position = e->position,
 				.radius = e->radius
@@ -87,7 +87,7 @@ bool Editor::trySaveLevel(std::string_view path) {
 
 	{
 		auto& jsonPortalPairs = makeArrayAt(level, levelPortalPairsName);
-		for (const auto& e : portalPairs) {
+		for (const auto& e : e.portalPairs) {
 			auto convertWallType = [](EditorPortalWallType type) {
 				switch (type) {
 					using enum EditorPortalWallType;
@@ -116,7 +116,7 @@ bool Editor::trySaveLevel(std::string_view path) {
 
 	{
 		auto& jsonTriggers = makeArrayAt(level, levelTriggersName);
-		for (const auto& e : triggers) {
+		for (const auto& e : e.triggers) {
 			const auto levelE = LevelTrigger{
 				.position = e->position,
 				.color = e->color,
@@ -128,7 +128,7 @@ bool Editor::trySaveLevel(std::string_view path) {
 
 	{
 		auto& jsonDoors = makeArrayAt(level, levelDoorsName);
-		for (const auto& e : doors) {
+		for (const auto& e : e.doors) {
 			const auto levelE = LevelDoor{
 				.endpoint0 = e->endpoints[0],
 				.endpoint1 = e->endpoints[1],
@@ -160,12 +160,11 @@ std::optional<const Json::Value::ArrayType&> tryArrayAt(const Json::Value& v, st
 	return a.array();
 }
 
-bool Editor::tryLoadLevel(std::string_view path) {
+bool tryLoadGameLevel(GameEntities& e, std::string_view path) {
 	const auto jsonOpt = tryLoadJsonFromFile(path);
 	if (!jsonOpt.has_value()) {
 		return false;
 	}
-	reset();
 	const auto& json = *jsonOpt;
 	try {
 
@@ -173,7 +172,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 			const auto& jsonWalls = json.at(levelWallsName).array();
 			for (const auto& jsonWall : jsonWalls) {
 				const auto levelWall = fromJson<LevelWall>(jsonWall);
-				auto wall = walls.create();
+				auto wall = e.walls.create();
 
 				auto levelWallTypeToWallType = [](LevelWallType type) {
 					switch (type) {
@@ -194,7 +193,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 		if (const auto jsonLasers = tryArrayAt(json, levelLasersName); jsonLasers.has_value()) {
 			for (const auto& jsonLaser : *jsonLasers) {
 				const auto levelLaser = fromJson<LevelLaser>(jsonLaser);
-				auto laser = lasers.create();
+				auto laser = e.lasers.create();
 				laser.entity = EditorLaser{
 					.position = levelLaser.position,
 					.angle = levelLaser.angle,
@@ -216,7 +215,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 				};
 
 				const auto levelMirror = fromJson<LevelMirror>(jsonMirror);
-				auto mirror = mirrors.create();
+				auto mirror = e.mirrors.create();
 				mirror.entity = EditorMirror(levelMirror.center, levelMirror.normalAngle, levelMirror.length, levelMirror.positionLocked, convertWallType(levelMirror.wallType));
 			}
 		}
@@ -224,7 +223,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 		if (const auto& jsonTargets = tryArrayAt(json, levelTargetsName); jsonTargets.has_value()) {
 			for (const auto& jsonTarget : *jsonTargets) {
 				const auto levelTarget = fromJson<LevelTarget>(jsonTarget);
-				auto target = targets.create();
+				auto target = e.targets.create();
 				target.entity = EditorTarget{
 					.position = levelTarget.position,
 					.radius = levelTarget.radius
@@ -235,7 +234,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 		if (const auto& jsonPortalPairs = tryArrayAt(json, levelPortalPairsName); jsonPortalPairs.has_value()) {
 			for (const auto& jsonPortalPair : *jsonPortalPairs) {
 				const auto levelPortalPair = fromJson<LevelPortalPair>(jsonPortalPair);
-				auto portalPair = portalPairs.create();
+				auto portalPair = e.portalPairs.create();
 				auto convertPortalWallType = [](LevelPortalWallType type) {
 					switch (type) {
 						using enum LevelPortalWallType;
@@ -257,7 +256,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 		if (const auto& jsonTriggers = tryArrayAt(json, levelTriggersName); jsonTriggers.has_value()) {
 			for (const auto& jsonTrigger : *jsonTriggers) {
 				const auto levelTrigger = fromJson<LevelTrigger>(jsonTrigger);
-				auto trigger = triggers.create();
+				auto trigger = e.triggers.create();
 				trigger.entity = EditorTrigger{
 					.position = levelTrigger.position,
 					.color = levelTrigger.color,
@@ -269,7 +268,7 @@ bool Editor::tryLoadLevel(std::string_view path) {
 		if (const auto& jsonDoors = tryArrayAt(json, levelDoorsName); jsonDoors.has_value()) {
 			for (const auto& jsonDoor : *jsonDoors) {
 				const auto levelDoor = fromJson<LevelDoor>(jsonDoor);
-				auto door = doors.create();
+				auto door = e.doors.create();
 				door.entity = EditorDoor{
 					.endpoints = { levelDoor.endpoint0, levelDoor.endpoint1 },
 					.triggerIndex = levelDoor.triggerIndex,

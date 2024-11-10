@@ -2,35 +2,21 @@
 #include <engine/Math/Color.hpp>
 #include <game/FileSelectWidget.hpp>
 #include <engine/Math/Interpolation.hpp>
-#include <engine/Window.hpp>
 #include <engine/Math/Constants.hpp>
 #include <engine/Input/Input.hpp>
 #include <game/Constants.hpp>
-#include <glad/glad.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include <engine/Math/Quat.hpp>
 #include <gfx2d/DbgGfx2d.hpp>
 #include <game/Stereographic.hpp>
+#include <game/GameSerialization.hpp>
 #include <Array2d.hpp>
 
 Editor::Editor()
 	: actions(EditorActions::make()) {
 
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-}
-
-const auto absorbingColor = Color3::WHITE;
-const auto reflectingColor = Color3::WHITE / 2.0f;
-
-Vec3 wallColor(EditorWallType type) {
-	return type == EditorWallType::REFLECTING
-		? reflectingColor
-		: absorbingColor;
-}
-
-Vec2 laserDirectionGrabPoint(const EditorLaser& laser) {
-	return laser.position + Vec2::oriented(laser.angle) * 0.15f;
 }
 
 template<typename Entity, typename ModifyAction>
@@ -49,23 +35,6 @@ void addModifyAction(
 	}
 	auto action = new ModifyAction(id, std::move(oldState), std::move(*entity));
 	actions.add(editor, action);
-}
-
-void renderMirror(GameRenderer& renderer, const EditorMirror& mirror) {
-	const auto endpoints = mirror.calculateEndpoints();
-	switch (mirror.wallType) {
-		using enum EditorMirrorWallType;
-		case ABSORBING: 
-			renderer.multicoloredSegment(endpoints, mirror.normalAngle, reflectingColor, absorbingColor);
-			break;
-		case REFLECTING:
-			renderer.stereographicSegment(endpoints[0], endpoints[1], reflectingColor);
-			break;
-	}
-	for (const auto endpoint : endpoints) {
-		renderer.gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(false));
-	}
-	renderer.gfx.disk(mirror.center, grabbableCircleRadius, movablePartColor(mirror.positionLocked));
 }
 
 void Editor::update(GameRenderer& renderer) {
@@ -177,7 +146,7 @@ void Editor::update(GameRenderer& renderer) {
 			switch (selectTool.selectedEntity->type) {
 
 			case EditorEntityType::WALL: {
-				auto entity = walls.get(selectTool.selectedEntity->wall());
+				auto entity = e.walls.get(selectTool.selectedEntity->wall());
 				if (!entity.has_value()) {
 					break;
 				}
@@ -187,7 +156,7 @@ void Editor::update(GameRenderer& renderer) {
 			}
 
 			case EditorEntityType::LASER: {
-				auto laser = lasers.get(selectTool.selectedEntity->laser());
+				auto laser = e.lasers.get(selectTool.selectedEntity->laser());
 				if (!laser.has_value()) {
 					break;
 				}
@@ -197,7 +166,7 @@ void Editor::update(GameRenderer& renderer) {
 			}
 
 			case EditorEntityType::MIRROR: {
-				auto mirror = mirrors.get(selectTool.selectedEntity->mirror());
+				auto mirror = e.mirrors.get(selectTool.selectedEntity->mirror());
 				if (!mirror.has_value()) {
 					break;
 				}
@@ -208,7 +177,7 @@ void Editor::update(GameRenderer& renderer) {
 			}
 
 			case EditorEntityType::TARGET: {
-				auto target = targets.get(selectTool.selectedEntity->target());
+				auto target = e.targets.get(selectTool.selectedEntity->target());
 				if (!target.has_value()) {
 					break;
 				}
@@ -217,7 +186,7 @@ void Editor::update(GameRenderer& renderer) {
 			}
 
 			case EditorEntityType::PORTAL_PAIR: {
-				auto portalPair = portalPairs.get(selectTool.selectedEntity->portalPair());
+				auto portalPair = e.portalPairs.get(selectTool.selectedEntity->portalPair());
 				if (!portalPair.has_value()) {
 					break;
 				}
@@ -236,7 +205,7 @@ void Editor::update(GameRenderer& renderer) {
 			}
 
 			case EditorEntityType::TRIGGER: {
-				auto trigger = triggers.get(selectTool.selectedEntity->trigger());
+				auto trigger = e.triggers.get(selectTool.selectedEntity->trigger());
 				if (!trigger.has_value()) {
 					break;
 				}
@@ -246,7 +215,7 @@ void Editor::update(GameRenderer& renderer) {
 			}
 
 			case EditorEntityType::DOOR: {
-				auto door = doors.get(selectTool.selectedEntity->door());
+				auto door = e.doors.get(selectTool.selectedEntity->door());
 				if (!door.has_value()) {
 					break;
 				}
@@ -290,8 +259,8 @@ void Editor::update(GameRenderer& renderer) {
 		gridTool.gui();
 
 		ImGui::SeparatorText("debug");
-		ImGui::InputInt("max reflections", &game.maxReflections);
-		game.maxReflections = std::clamp(game.maxReflections, 0, 100);
+		ImGui::InputInt("max reflections", &s.maxReflections);
+		s.maxReflections = std::clamp(s.maxReflections, 0, 100);
 
 		ImGui::End();
 	}
@@ -352,12 +321,9 @@ void Editor::update(GameRenderer& renderer) {
 		updateSelectedTool();
 	}
 
-	renderer.gfx.camera.aspectRatio = Window::aspectRatio();
-	renderer.gfx.camera.zoom = 0.9f;
-	glClear(GL_COLOR_BUFFER_BIT);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
+	s.update(e);
+
+	renderer.renderClear();
 
 	gridTool.render(renderer);
 
@@ -375,111 +341,7 @@ void Editor::update(GameRenderer& renderer) {
 	case DOOR: doorCreateTool.render(renderer, cursorPos); break;
 	}
 
-	game.update(walls, lasers, mirrors, targets, portalPairs, triggers, doors);
-
-	i32 drawnSegments = 0;
-	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
-	// srcAlpha * srcColor + 1 * dstColor
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	for (const auto& segment : game.laserSegmentsToDraw) {
-		if (segment.ignore) {
-			continue;
-		}
-		drawnSegments++;
-		/*renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color, 0.5f), 0.05f);*/
-		renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color));
-	}
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	for (const auto& laser : lasers) {
-		renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
-		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));
-	}
-
-	const auto activatableObjectColor = [](Vec3 baseColor, bool isActivated) {
-		return isActivated ? baseColor : baseColor / 2.0f;
-	};
-
-	//const auto darkGreen = Vec3(2, 48, 32) / 255.0f;
-	//const auto darkRed = Vec3(255, 87, 51) / 255.0f;
-	renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN / 2.0f);
-	//renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, darkGreen);
-
-	for (const auto& wall : walls) {
-		renderer.wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type));
-	}
-
-	for (const auto& door : doors) {
-		const auto info = game.triggerInfo(triggers, door->triggerIndex);
-		Vec3 color = absorbingColor;
-		if (info.has_value()) {
-			color = activatableObjectColor(info->color, info->active);
-		}
-
-		renderer.gfx.disk(door->endpoints[0], grabbableCircleRadius, Color3::RED);
-		renderer.gfx.disk(door->endpoints[1], grabbableCircleRadius, Color3::RED);
-
-		const auto segments = door->segments();
-		for (const auto& segment : segments) {
-			renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], color);
-		}
-	}
-
-	renderer.renderWalls();
-
-	for (const auto& mirror : mirrors) {
-		renderMirror(renderer, mirror.entity);
-	}
-
-	renderer.gfx.drawCircles();
-	renderer.gfx.drawFilledTriangles();
-	renderer.gfx.drawDisks();
-
-	for (const auto& portalPair : portalPairs) {
-		for (const auto& portal : portalPair->portals) {
-			const auto endpoints = portal.endpoints();
-
-			// Instead of rendering 2 segments could render on that has 2 colors by making a custom triangulation. Then the rendering would need to swap wether the inside or outside of the circle is the side with the normal.
-			const auto portalColor = (Color3::RED + Color3::YELLOW) / 2.0f;
-			switch (portal.wallType) {
-				using enum EditorPortalWallType;
-			case PORTAL:
-				renderer.stereographicSegment(endpoints[0], endpoints[1], portalColor);
-				break;
-			case ABSORBING:
-				renderer.multicoloredSegment(endpoints, portal.normalAngle, portalColor, absorbingColor);
-				break;
-
-			case REFLECTING:
-				renderer.multicoloredSegment(endpoints, portal.normalAngle, portalColor, reflectingColor);
-				break;
-			}
-			for (const auto endpoint : endpoints) {
-				renderer.gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(portal.rotationLocked));
-			}
-			renderer.gfx.disk(portal.center, grabbableCircleRadius, movablePartColor(portal.positionLocked));
-		}
-	}
-
-	auto drawOrb = [&](Vec2 center, const Circle& circle, Vec3 color) {
-		renderer.gfx.circle(circle.center, circle.radius, 0.01f, color);
-		renderer.gfx.disk(center, 0.01f, color);
-	};
-
-	for (const auto& target : targets) {
-		const auto circle = target->calculateCircle();
-		drawOrb(target->position, circle, activatableObjectColor(Color3::MAGENTA, target->activated));
-	}
-
-	for (const auto& trigger : triggers) {
-		const auto circle = trigger->circle();
-		drawOrb(trigger->position, circle, activatableObjectColor(trigger->color, trigger->activated));
-	}
-
-	renderer.gfx.drawFilledTriangles();
-	renderer.gfx.drawCircles();
-	renderer.gfx.drawDisks();
-	renderer.gfx.drawLines();
+	renderer.render(e, s);
 
 	if (snappedCursor) {
 		renderer.gfx.disk(cursorPos, 0.01f, Color3::WHITE);
@@ -511,17 +373,18 @@ void Editor::undoRedoUpdate() {
 }
 
 void Editor::reset() {
-	walls.reset();
-	lasers.reset();
-	mirrors.reset();
-	targets.reset();
-	portalPairs.reset();
-	triggers.reset();
-	doors.reset();
-
+	e.reset();
 	actions.reset();
-
 	selectTool.selectedEntity = std::nullopt;
+}
+
+bool Editor::trySaveLevel(std::string_view path) {
+	return trySaveGameLevel(e, path);
+}
+
+bool Editor::tryLoadLevel(std::string_view path) {
+	reset();
+	return tryLoadGameLevel(e, path);
 }
 
 void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
@@ -530,7 +393,7 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !mirrorGrabTool.grabbed.has_value()) {
-		for (const auto& mirror : mirrors) {
+		for (const auto& mirror : e.mirrors) {
 			const auto result = rotatableSegmentCheckGrab(mirror->center, mirror->normalAngle, mirror->length,
 				cursorPos, cursorCaptured, cursorExact);
 
@@ -546,7 +409,7 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonHeld(MouseButton::LEFT) && mirrorGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		auto mirror = mirrors.get(mirrorGrabTool.grabbed->id);
+		auto mirror = e.mirrors.get(mirrorGrabTool.grabbed->id);
 		if (mirror.has_value()) {
 			grabbedRotatableSegmentUpdate(mirrorGrabTool.grabbed->grabbed.grabbedGizmo, mirrorGrabTool.grabbed->grabbed.grabOffset,
 				mirror->center, mirror->normalAngle,
@@ -558,7 +421,7 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && mirrorGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		auto mirror = mirrors.get(mirrorGrabTool.grabbed->id);
+		auto mirror = e.mirrors.get(mirrorGrabTool.grabbed->id);
 		if (mirror.has_value()) {
 			auto action = new EditorActionModifyMirror(
 				mirrorGrabTool.grabbed->id,
@@ -578,7 +441,7 @@ void Editor::targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
-		auto target = targets.create();
+		auto target = e.targets.create();
 		target.entity = EditorTarget{ .position = cursorPos, .radius = targetCreateTool.targetRadius };
 		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(target.id)));
 		cursorCaptured = true;
@@ -591,7 +454,7 @@ void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !targetGrabTool.grabbed.has_value()) {
-		for (const auto& target : targets) {
+		for (const auto& target : e.targets) {
 			const auto result = orbCheckGrab(target->position, target->radius,
 				cursorPos, cursorCaptured);
 
@@ -607,7 +470,7 @@ void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 	}
 
 	if (Input::isMouseButtonHeld(MouseButton::LEFT) && targetGrabTool.grabbed.has_value()) {
-		auto target = targets.get(targetGrabTool.grabbed->id);
+		auto target = e.targets.get(targetGrabTool.grabbed->id);
 		if (target.has_value()) {
 			grabbedOrbUpdate(targetGrabTool.grabbed->grabOffset, 
 				target->position, 
@@ -619,7 +482,7 @@ void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && targetGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		addModifyAction<EditorTarget, EditorActionModifyTarget>(*this, actions, targets, targetGrabTool.grabbed->id, std::move(targetGrabTool.grabbed->grabStartState));
+		addModifyAction<EditorTarget, EditorActionModifyTarget>(*this, actions, e.targets, targetGrabTool.grabbed->id, std::move(targetGrabTool.grabbed->grabStartState));
 		targetGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -630,7 +493,7 @@ void Editor::portalCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
-		auto portalPair = portalPairs.create();
+		auto portalPair = e.portalPairs.create();
 		const auto offset = Vec2(-0.1f, 0.0f);
 		auto makePortal = [&cursorPos](Vec2 offset) {
 			return EditorPortal{ .center = cursorPos + offset, .normalAngle = 0.0f, .wallType = EditorPortalWallType::PORTAL, .positionLocked = false, .rotationLocked = false };
@@ -649,7 +512,7 @@ void Editor::portalGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !portalGrabTool.grabbed.has_value()) {
-		for (const auto& portalPair : portalPairs) {
+		for (const auto& portalPair : e.portalPairs) {
 			for (i32 i = 0; i < 2; i++) {
 				const auto& portal = portalPair->portals[i];
 
@@ -670,7 +533,7 @@ void Editor::portalGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonHeld(MouseButton::LEFT) && portalGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		auto portalPair = portalPairs.get(portalGrabTool.grabbed->id);
+		auto portalPair = e.portalPairs.get(portalGrabTool.grabbed->id);
 		if (portalPair.has_value()) {
 			auto& portal = portalPair->portals[portalGrabTool.grabbed->portalIndex];
 			grabbedRotatableSegmentUpdate(portalGrabTool.grabbed->grabbed.grabbedGizmo, portalGrabTool.grabbed->grabbed.grabOffset,
@@ -683,7 +546,7 @@ void Editor::portalGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && portalGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		auto portalPair = portalPairs.get(portalGrabTool.grabbed->id);
+		auto portalPair = e.portalPairs.get(portalGrabTool.grabbed->id);
 		if (portalPair.has_value()) {
 			auto action = new EditorActionModifyPortalPair(
 				portalGrabTool.grabbed->id,
@@ -702,7 +565,7 @@ void Editor::triggerCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		return;
 	}
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
-		auto trigger = triggers.create();
+		auto trigger = e.triggers.create();
 		trigger.entity = EditorTrigger{
 			.position = cursorPos,
 			.color = EditorTrigger::defaultColor.color,
@@ -719,7 +582,7 @@ void Editor::triggerGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cu
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !triggerGrabTool.grabbed.has_value()) {
-		for (const auto& trigger : triggers) {
+		for (const auto& trigger : e.triggers) {
 			const auto result = orbCheckGrab(trigger->position, trigger->defaultRadius,
 				cursorPos, cursorCaptured);
 
@@ -735,7 +598,7 @@ void Editor::triggerGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cu
 	}
 
 	if (Input::isMouseButtonHeld(MouseButton::LEFT) && triggerGrabTool.grabbed.has_value()) {
-		auto trigger = triggers.get(triggerGrabTool.grabbed->id);
+		auto trigger = e.triggers.get(triggerGrabTool.grabbed->id);
 		if (trigger.has_value()) {
 			grabbedOrbUpdate(triggerGrabTool.grabbed->grabOffset,
 				trigger->position,
@@ -747,7 +610,7 @@ void Editor::triggerGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cu
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && triggerGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		addModifyAction<EditorTrigger, EditorActionModifyTrigger>(*this, actions, triggers, triggerGrabTool.grabbed->id, std::move(triggerGrabTool.grabbed->grabStartState));
+		addModifyAction<EditorTrigger, EditorActionModifyTrigger>(*this, actions, e.triggers, triggerGrabTool.grabbed->id, std::move(triggerGrabTool.grabbed->grabStartState));
 		triggerGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -797,14 +660,14 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	const auto oldSelection = selectTool.selectedEntity;
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
-		for (const auto& wall : walls) {
+		for (const auto& wall : e.walls) {
 			if (eucledianDistanceToStereographicSegment(wall->endpoints[0], wall->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(wall.id);
 				goto selectedEntity;
 			}
 		}
 
-		for (const auto& mirror : mirrors) {
+		for (const auto& mirror : e.mirrors) {
 			const auto endpoints = mirror->calculateEndpoints();
 			const auto dist = eucledianDistanceToStereographicSegment(endpoints[0], endpoints[1], cursorPos);
 			if (dist < Constants::endpointGrabPointRadius) {
@@ -813,7 +676,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			}
 		}
 
-		for (const auto& laser : lasers) {
+		for (const auto& laser : e.lasers) {
 			if (distance(laser->position, cursorPos) < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(laser.id);
 				goto selectedEntity;
@@ -829,7 +692,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			return smallCircle || normalCircle;
 		};
 
-		for (const auto& target : targets) {
+		for (const auto& target : e.targets) {
 			const auto circle = target->calculateCircle();
 			if (isCursorUnderOrb(circle, target->position, cursorPos)) {
 				selectTool.selectedEntity = EditorEntityId(target.id);
@@ -837,7 +700,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			}
 		}
 
-		for (const auto& portalPair : portalPairs) {
+		for (const auto& portalPair : e.portalPairs) {
 			for (const auto& portal : portalPair->portals) {
 				const auto endpoints = portal.endpoints();
 				const auto dist = eucledianDistanceToStereographicSegment(endpoints[0], endpoints[1], cursorPos);
@@ -848,7 +711,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			}
 		}
 
-		for (const auto& trigger : triggers) {
+		for (const auto& trigger : e.triggers) {
 			const auto circle = trigger->circle();
 			if (isCursorUnderOrb(circle, trigger->position, cursorPos)) {
 				selectTool.selectedEntity = EditorEntityId(trigger.id);
@@ -856,7 +719,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			}
 		}
 
-		for (const auto& door : doors) {
+		for (const auto& door : e.doors) {
 			if (eucledianDistanceToStereographicSegment(door->endpoints[0], door->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
 				selectTool.selectedEntity = EditorEntityId(door.id);
 				goto selectedEntity;
@@ -886,7 +749,7 @@ void Editor::doorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		cursorCaptured);
 
 	if (result.has_value()) {
-		auto entity = doors.create();
+		auto entity = e.doors.create();
 		entity.entity = EditorDoor{ 
 			.endpoints = { result->endpoints[0], result->endpoints[1] },
 			.triggerIndex = 0,
@@ -902,7 +765,7 @@ void Editor::doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !doorGrabTool.grabbed.has_value()) {
-		for (const auto& door : doors) {
+		for (const auto& door : e.doors) {
 			const auto result = wallLikeEntityCheckGrab(constView(door->endpoints),
 				cursorPos, cursorCaptured);
 
@@ -915,7 +778,7 @@ void Editor::doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 	if (Input::isMouseButtonHeld(MouseButton::LEFT) && doorGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
 		const auto& id = doorGrabTool.grabbed->id;
-		auto door = doors.get(id);
+		auto door = e.doors.get(id);
 		if (door.has_value()) {
 			grabbedWallLikeEntityUpdate(*doorGrabTool.grabbed, view(door->endpoints), cursorPos, cursorExact);
 		} else {
@@ -925,7 +788,7 @@ void Editor::doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && doorGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		addModifyAction<EditorDoor, EditorActionModifyDoor>(*this, actions, doors, doorGrabTool.grabbed->id, std::move(doorGrabTool.grabbed->grabStartState));
+		addModifyAction<EditorDoor, EditorActionModifyDoor>(*this, actions, e.doors, doorGrabTool.grabbed->id, std::move(doorGrabTool.grabbed->grabStartState));
 		doorGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -934,26 +797,26 @@ void Editor::activateEntity(const EditorEntityId& id) {
 	switch (id.type) {
 		using enum EditorEntityType;
 
-	case WALL: walls.activate(id.wall()); break;
-	case LASER: lasers.activate(id.laser()); break;
-	case MIRROR: mirrors.activate(id.mirror()); break;
-	case TARGET: targets.activate(id.target()); break;
-	case PORTAL_PAIR: portalPairs.activate(id.portalPair()); break;
-	case TRIGGER: triggers.activate(id.trigger()); break;
-	case DOOR: doors.activate(id.door()); break;
+	case WALL: e.walls.activate(id.wall()); break;
+	case LASER: e.lasers.activate(id.laser()); break;
+	case MIRROR: e.mirrors.activate(id.mirror()); break;
+	case TARGET: e.targets.activate(id.target()); break;
+	case PORTAL_PAIR: e.portalPairs.activate(id.portalPair()); break;
+	case TRIGGER: e.triggers.activate(id.trigger()); break;
+	case DOOR: e.doors.activate(id.door()); break;
 	}
 }
 
 void Editor::deactivateEntity(const EditorEntityId& id) {
 	switch (id.type) {
 		using enum EditorEntityType;
-	case WALL: walls.deactivate(id.wall()); break;
-	case LASER: lasers.deactivate(id.laser()); break;
-	case MIRROR: mirrors.deactivate(id.mirror()); break;
-	case TARGET: targets.deactivate(id.target()); break;
-	case PORTAL_PAIR: portalPairs.deactivate(id.portalPair()); break;
-	case TRIGGER: triggers.deactivate(id.trigger()); break;
-	case DOOR: doors.deactivate(id.door()); break;
+	case WALL: e.walls.deactivate(id.wall()); break;
+	case LASER: e.lasers.deactivate(id.laser()); break;
+	case MIRROR: e.mirrors.deactivate(id.mirror()); break;
+	case TARGET: e.targets.deactivate(id.target()); break;
+	case PORTAL_PAIR: e.portalPairs.deactivate(id.portalPair()); break;
+	case TRIGGER: e.triggers.deactivate(id.trigger()); break;
+	case DOOR: e.doors.deactivate(id.door()); break;
 	}
 }
 
@@ -970,13 +833,13 @@ void undoModify(EntityArray<Entity, typename Entity::DefaultInitialize>& array, 
 void Editor::undoAction(const EditorAction& action) {
 	switch (action.type) {
 		using enum EditorActionType;
-	case MODIFY_WALL: undoModify(walls, static_cast<const EditorActionModifyWall&>(action)); break; 
-	case MODIFY_LASER: undoModify(lasers, static_cast<const EditorActionModifyLaser&>(action)); break;
-	case MODIFY_MIRROR: undoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
-	case MODIFY_TARGET: undoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
-	case MODIFY_PORTAL_PAIR: undoModify(portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
-	case MODIFY_TRIGGER: undoModify(triggers, static_cast<const EditorActionModifyTrigger&>(action)); break;
-	case MODIFY_DOOR: undoModify(doors, static_cast<const EditorActionModifyDoor&>(action)); break;
+	case MODIFY_WALL: undoModify(e.walls, static_cast<const EditorActionModifyWall&>(action)); break;
+	case MODIFY_LASER: undoModify(e.lasers, static_cast<const EditorActionModifyLaser&>(action)); break;
+	case MODIFY_MIRROR: undoModify(e.mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
+	case MODIFY_TARGET: undoModify(e.targets, static_cast<const EditorActionModifyTarget&>(action)); break;
+	case MODIFY_PORTAL_PAIR: undoModify(e.portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
+	case MODIFY_TRIGGER: undoModify(e.triggers, static_cast<const EditorActionModifyTrigger&>(action)); break;
+	case MODIFY_DOOR: undoModify(e.doors, static_cast<const EditorActionModifyDoor&>(action)); break;
 
 	case CREATE_ENTITY: {
 		deactivateEntity(static_cast<const EditorActionDestroyEntity&>(action).id);
@@ -1003,7 +866,7 @@ void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !wallGrabTool.grabbed.has_value()) {
-		for (const auto& wall : walls) {
+		for (const auto& wall : e.walls) {
 			const auto result = wallLikeEntityCheckGrab(constView(wall->endpoints),
 				cursorPos, cursorCaptured);
 
@@ -1016,7 +879,7 @@ void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 	if (Input::isMouseButtonHeld(MouseButton::LEFT) && wallGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
 		const auto& id = wallGrabTool.grabbed->id;
-		auto wall = walls.get(id);
+		auto wall = e.walls.get(id);
 		if (wall.has_value()) {
 			grabbedWallLikeEntityUpdate(*wallGrabTool.grabbed, view(wall->endpoints), cursorPos, cursorExact);
 		} else {
@@ -1026,7 +889,7 @@ void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && wallGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		addModifyAction<EditorWall, EditorActionModifyWall>(*this, actions, walls, wallGrabTool.grabbed->id, std::move(wallGrabTool.grabbed->grabStartState));
+		addModifyAction<EditorWall, EditorActionModifyWall>(*this, actions, e.walls, wallGrabTool.grabbed->id, std::move(wallGrabTool.grabbed->grabStartState));
 		wallGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -1039,7 +902,7 @@ void Editor::wallCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			cursorPos,
 			cursorCaptured);
 		if (result.has_value()) {
-			auto entity = walls.create();
+			auto entity = e.walls.create();
 			entity.entity = *result;
 			actions.add(*this, new EditorActionCreateEntity(EditorEntityId(entity.id)));
 		}
@@ -1048,14 +911,14 @@ void Editor::wallCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 void Editor::laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (!cursorCaptured && Input::isMouseButtonDown(MouseButton::LEFT)) {
-		const auto& e = lasers.create();
-		e.entity = EditorLaser{ 
+		const auto& ent = e.lasers.create();
+		ent.entity = EditorLaser{
 			.position = cursorPos, 
 			.angle = 0.0f, 
 			.color = laserCreateTool.laserColor,
 			.positionLocked = laserCreateTool.laserPositionLocked
 		};
-		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(e.id)));
+		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(ent.id)));
 		cursorCaptured = true;
 		return;
 	}
@@ -1067,7 +930,7 @@ void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curs
 	}
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !laserGrabTool.grabbed.has_value()) {
-		for (const auto& laser : lasers) {
+		for (const auto& laser : e.lasers) {
 			auto updateGrabbed = [&](Vec2 p, LaserGrabTool::LaserPart part) {
 				if (distance(cursorPos, p) > Constants::endpointGrabPointRadius) {
 					return;
@@ -1090,7 +953,7 @@ void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curs
 
 	if (Input::isMouseButtonHeld(MouseButton::LEFT) && laserGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		auto laser = lasers.get(laserGrabTool.grabbed->id);
+		auto laser = e.lasers.get(laserGrabTool.grabbed->id);
 		if (laser.has_value()) {
 			const auto newPosition = cursorPos + laserGrabTool.grabbed->offset * !cursorExact;
 			switch (laserGrabTool.grabbed->part) {
@@ -1110,7 +973,7 @@ void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curs
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && laserGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		auto laser = lasers.get(laserGrabTool.grabbed->id);
+		auto laser = e.lasers.get(laserGrabTool.grabbed->id);
 		if (laser.has_value()) {
 			auto action = new EditorActionModifyLaser(
 				laserGrabTool.grabbed->id,
@@ -1132,9 +995,9 @@ void Editor::mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			cursorPos,
 			cursorCaptured);
 		if (result.has_value()) {
-			auto e = mirrors.create();
-			e.entity = *result;
-			actions.add(*this, new EditorActionCreateEntity(EditorEntityId(e.id)));
+			auto ent = e.mirrors.create();
+			ent.entity = *result;
+			actions.add(*this, new EditorActionCreateEntity(EditorEntityId(ent.id)));
 		}
 	}
 }
@@ -1239,13 +1102,13 @@ void redoModify(EntityArray<Entity, typename Entity::DefaultInitialize>& array, 
 void Editor::redoAction(const EditorAction& action) {
 	switch (action.type) {
 		using enum EditorActionType;
-	case MODIFY_WALL: redoModify(walls, *static_cast<const EditorActionModifyWall*>(&action)); break; 
-	case MODIFY_LASER: redoModify(lasers, static_cast<const EditorActionModifyLaser&>(action)); break; 
-	case MODIFY_MIRROR: redoModify(mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
-	case MODIFY_TARGET: redoModify(targets, static_cast<const EditorActionModifyTarget&>(action)); break;
-	case MODIFY_PORTAL_PAIR: redoModify(portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
-	case MODIFY_TRIGGER: redoModify(triggers, static_cast<const EditorActionModifyTrigger&>(action)); break;
-	case MODIFY_DOOR: redoModify(doors, static_cast<const EditorActionModifyDoor&>(action)); break;
+	case MODIFY_WALL: redoModify(e.walls, *static_cast<const EditorActionModifyWall*>(&action)); break; 
+	case MODIFY_LASER: redoModify(e.lasers, static_cast<const EditorActionModifyLaser&>(action)); break; 
+	case MODIFY_MIRROR: redoModify(e.mirrors, static_cast<const EditorActionModifyMirror&>(action)); break;
+	case MODIFY_TARGET: redoModify(e.targets, static_cast<const EditorActionModifyTarget&>(action)); break;
+	case MODIFY_PORTAL_PAIR: redoModify(e.portalPairs, static_cast<const EditorActionModifyPortalPair&>(action)); break;
+	case MODIFY_TRIGGER: redoModify(e.triggers, static_cast<const EditorActionModifyTrigger&>(action)); break;
+	case MODIFY_DOOR: redoModify(e.doors, static_cast<const EditorActionModifyDoor&>(action)); break;
 
 	case CREATE_ENTITY: {
 		activateEntity(static_cast<const EditorActionCreateEntity&>(action).id);
@@ -1279,7 +1142,7 @@ void Editor::WallCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
 	if (!preview.has_value()) {
 		return;
 	}
-	renderer.wall(preview->endpoints[0], preview->endpoints[1], wallColor(wallType));
+	renderer.wall(preview->endpoints[0], preview->endpoints[1], GameRenderer::wallColor(wallType));
 }
 
 std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured) {
@@ -1309,7 +1172,7 @@ void Editor::MirrorCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
 		return;
 	}
 	const auto mirror = makeMirror(*center, cursorPos);
-	renderMirror(renderer, mirror);
+	renderer.mirror(mirror);
 }
 
 void Editor::MirrorCreateTool::reset() {
@@ -1364,7 +1227,7 @@ void Editor::DoorCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {
 	if (!preview.has_value()) {
 		return;
 	}
-	renderer.wall(preview->endpoints[0], preview->endpoints[1], absorbingColor);
+	renderer.wall(preview->endpoints[0], preview->endpoints[1], GameRenderer::absorbingColor);
 }
 
 std::optional<Editor::WallLikeEntity> Editor::WallLikeEntityCreateTool::update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured) {

@@ -1,0 +1,6 @@
+Configurations are arrangements of points and lines such that there are p points and l lines and each point is incident with lambda lines and each line is incident with pi points.
+I thought that it may be interesting to add some levels that involve them, but most of them are too complex.
+
+The least complicated one that isn't trival is probably the complete quadrilateral.
+https://en.wikipedia.org/wiki/Complete_quadrangle
+Using a related construction the harmonic conjugate of a point can be found.

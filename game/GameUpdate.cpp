@@ -10,87 +10,80 @@
 #include <Array2d.hpp>
 #include <engine/Math/Interpolation.hpp>
 
-void GameState::update(
-	WallArray& walls,
-	LaserArray& lasers,
-	MirrorArray& mirrors,
-	TargetArray& targets,
-	PortalPairArray& portalPairs,
-	TriggerArray& triggers,
-	DoorArray& doors) {
+void GameState::update(GameEntities& e) {
 
-	ImGui::SliderFloat("test", &eccentricity, 0.0f, 12.0f);
-	ImGui::SliderFloat2("f0", focus[0].data(), -1.0f, 1.0f);
-	ImGui::SliderFloat2("f1", focus[1].data(), -1.0f, 1.0f);
-	{
-		auto dist = [](Vec2 a, Vec2 b) {
-			const auto as = fromStereographic(a);
-			const auto bs = fromStereographic(b);
-			return std::min(
-				sphericalDistance(as, bs),
-				sphericalDistance(as, -bs));
-			};
+	//ImGui::SliderFloat("test", &eccentricity, 0.0f, 12.0f);
+	//ImGui::SliderFloat2("f0", focus[0].data(), -1.0f, 1.0f);
+	//ImGui::SliderFloat2("f1", focus[1].data(), -1.0f, 1.0f);
+	//{
+	//	auto dist = [](Vec2 a, Vec2 b) {
+	//		const auto as = fromStereographic(a);
+	//		const auto bs = fromStereographic(b);
+	//		return std::min(
+	//			sphericalDistance(as, bs),
+	//			sphericalDistance(as, -bs));
+	//		};
 
-		const auto gridSize = 200;
-		auto f = Array2d<f32>::uninitialized(gridSize, gridSize);
+	//	const auto gridSize = 200;
+	//	auto f = Array2d<f32>::uninitialized(gridSize, gridSize);
 
-		auto indexToPos = [](f32 xi, f32 yi) -> Vec2 {
-			const auto xt = xi / f32(gridSize);
-			const auto yt = yi / f32(gridSize);
-			const auto x = lerp(-1.0f, 1.0f, xt);
-			const auto y = lerp(-1.0f, 1.0f, yt);
-			return Vec2(x, y);
-		};
+	//	auto indexToPos = [](f32 xi, f32 yi) -> Vec2 {
+	//		const auto xt = xi / f32(gridSize);
+	//		const auto yt = yi / f32(gridSize);
+	//		const auto x = lerp(-1.0f, 1.0f, xt);
+	//		const auto y = lerp(-1.0f, 1.0f, yt);
+	//		return Vec2(x, y);
+	//	};
 
-		for (i32 yi = 0; yi < gridSize; yi++) {
-			for (i32 xi = 0; xi < gridSize; xi++) {
-				const auto p = indexToPos(xi, yi);
-				f(xi, yi) = dist(p, focus[0]) + dist(p, focus[1]);
-			}
-		}
-		std::vector<MarchingSquaresLine> lines;
-		marchingSquares2(lines, constView2d(f), eccentricity, true);
-		for (auto& line : lines) {
-			line.a = indexToPos(line.a.x, line.a.y);
-			line.b = indexToPos(line.b.x, line.b.y);
-		}
-		for (const auto& line : lines) {
-			const auto aOutside = line.a.lengthSq() > 1.0f;
-			const auto bOutside = line.b.lengthSq() > 1.0f;
-			if (aOutside && bOutside) {
-				continue;
-			}
-			if (aOutside != bOutside) {
-				Vec2 start = line.a;
-				Vec2 end = line.b;
-				if (aOutside && !bOutside) {
-					std::swap(start, end);
-				}
-				const auto hit = circleRaycast(start, end, Constants::boundary);
-				if (hit.has_value()) {
-					Dbg::line(start, hit->pos, 0.01f);
-				}
-			} else {
-				Dbg::line(line.a, line.b, 0.01f);
-			}
-		}
-		Dbg::disk(focus[0], 0.02f, Color3::RED);
-		Dbg::disk(focus[1], 0.02f, Color3::RED);
-		segments.clear();
-		for (const auto& line : lines) {
-			segments.push_back(Seg{ .a = line.a, .b = line.b });
-		}
-	}
+	//	for (i32 yi = 0; yi < gridSize; yi++) {
+	//		for (i32 xi = 0; xi < gridSize; xi++) {
+	//			const auto p = indexToPos(xi, yi);
+	//			f(xi, yi) = dist(p, focus[0]) + dist(p, focus[1]);
+	//		}
+	//	}
+	//	std::vector<MarchingSquaresLine> lines;
+	//	marchingSquares2(lines, constView2d(f), eccentricity, true);
+	//	for (auto& line : lines) {
+	//		line.a = indexToPos(line.a.x, line.a.y);
+	//		line.b = indexToPos(line.b.x, line.b.y);
+	//	}
+	//	for (const auto& line : lines) {
+	//		const auto aOutside = line.a.lengthSq() > 1.0f;
+	//		const auto bOutside = line.b.lengthSq() > 1.0f;
+	//		if (aOutside && bOutside) {
+	//			continue;
+	//		}
+	//		if (aOutside != bOutside) {
+	//			Vec2 start = line.a;
+	//			Vec2 end = line.b;
+	//			if (aOutside && !bOutside) {
+	//				std::swap(start, end);
+	//			}
+	//			const auto hit = circleRaycast(start, end, Constants::boundary);
+	//			if (hit.has_value()) {
+	//				Dbg::line(start, hit->pos, 0.01f);
+	//			}
+	//		} else {
+	//			Dbg::line(line.a, line.b, 0.01f);
+	//		}
+	//	}
+	//	Dbg::disk(focus[0], 0.02f, Color3::RED);
+	//	Dbg::disk(focus[1], 0.02f, Color3::RED);
+	//	segments.clear();
+	//	for (const auto& line : lines) {
+	//		segments.push_back(Seg{ .a = line.a, .b = line.b });
+	//	}
+	//}
 
-	for (auto target : targets) {
+	for (auto target : e.targets) {
 		target->activated = false;
 	}
-	for (auto trigger : triggers) {
+	for (auto trigger : e.triggers) {
 		trigger->activated = false;
 	}
 	laserSegmentsToDraw.clear();
 
-	for (const auto& laser : lasers) {
+	for (const auto& laser : e.lasers) {
 		/*renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));*/
 
@@ -137,10 +130,6 @@ void GameState::update(
 				EditorEntityId id,
 				i32 index = 0) {
 
-					if (hitOnLastIteration.has_value() && hitOnLastIteration->id == id && hitOnLastIteration->partIndex == index) {
-						return;
-					}
-
 					const auto line = stereographicLine(endpoint0, endpoint1);
 					const auto intersections = stereographicLineVsStereographicLineIntersection(line, laserLine);
 
@@ -161,7 +150,10 @@ void GameState::update(
 						const auto distance = intersection.distanceTo(laserPosition);
 						const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
 
-						if (dot(intersection - laserPosition, laserDirection) > 0.0f) {
+						const auto hitLastTime = hitOnLastIteration.has_value() && hitOnLastIteration->id == id && hitOnLastIteration->partIndex == index;
+
+						// hitLastTime should be only in the if not the else. You can hit an object from the front on one iteration and the from the wrapped around on the other.
+						if (!hitLastTime && dot(intersection - laserPosition, laserDirection) > 0.0f) {
 							if (!closest.has_value() || distance < closest->distance) {
 								closest = Hit{ intersection, distance, line, id, index };
 							}
@@ -180,12 +172,12 @@ void GameState::update(
 					}
 				};
 
-			for (const auto& wall : walls) {
+			for (const auto& wall : e.walls) {
 				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], EditorEntityId(wall.id));
 			}
 
 			// For this to work create a reflecting wall anywhere.
-			for (const auto& wall : walls) {
+			/*for (const auto& wall : walls) {
 				for (const auto& segment : segments) {
 					const auto endpoint0 = segment.a;
 					const auto endpoint1 = segment.b;
@@ -235,14 +227,14 @@ void GameState::update(
 					}
 				}
 				break;
-			}
+			}*/
 
-			for (const auto& mirror : mirrors) {
+			for (const auto& mirror : e.mirrors) {
 				const auto endpoints = mirror->calculateEndpoints();
 				processLineSegmentIntersections(endpoints[0], endpoints[1], EditorEntityId(mirror.id));
 			}
 
-			for (const auto& portalPair : portalPairs) {
+			for (const auto& portalPair : e.portalPairs) {
 				for (i32 i = 0; i < 2; i++) {
 					const auto& portal = portalPair->portals[i];
 					const auto endpoints = portal.endpoints();
@@ -250,7 +242,7 @@ void GameState::update(
 				}
 			}
 
-			for (const auto& door : doors) {
+			for (const auto& door : e.doors) {
 				const auto segments = door->segments();
 				for (const auto& segment : segments) {
 					// Should this include index? Probably not.
@@ -311,7 +303,7 @@ void GameState::update(
 				switch (hit.id.type) {
 					using enum EditorEntityType;
 				case WALL: {
-					const auto& wall = walls.get(hit.id.wall());
+					const auto& wall = e.walls.get(hit.id.wall());
 					if (!wall.has_value()) {
 						CHECK_NOT_REACHED();
 						return HitResult::END;
@@ -326,7 +318,7 @@ void GameState::update(
 				}
 
 				case MIRROR: {
-					const auto& mirror = mirrors.get(hit.id.mirror());
+					const auto& mirror = e.mirrors.get(hit.id.mirror());
 					if (!mirror.has_value()) {
 						CHECK_NOT_REACHED();
 						return HitResult::END;
@@ -346,7 +338,7 @@ void GameState::update(
 				}
 
 				case PORTAL_PAIR: {
-					const auto portalPair = portalPairs.get(hit.id.portalPair());
+					const auto portalPair = e.portalPairs.get(hit.id.portalPair());
 					if (!portalPair.has_value()) {
 						CHECK_NOT_REACHED();
 						return HitResult::END;
@@ -415,7 +407,7 @@ void GameState::update(
 				};
 
 			auto checkLaserVsTargetCollision = [&](const Segment& segment) {
-				for (auto target : targets) {
+				for (auto target : e.targets) {
 					const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], target->calculateCircle());
 					if (intersections.size() > 0) {
 						target->activated = true;
@@ -424,7 +416,7 @@ void GameState::update(
 				};
 
 			auto checkLaserVsTriggerCollision = [&](const Segment& segment) {
-				for (auto trigger : triggers) {
+				for (auto trigger : e.triggers) {
 					const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], trigger->circle());
 					if (intersections.size() > 0) {
 						trigger->activated = true;
@@ -493,8 +485,8 @@ void GameState::update(
 		}
 	}
 
-	for (auto door : doors) {
-		const auto info = triggerInfo(triggers, door->triggerIndex);
+	for (auto door : e.doors) {
+		const auto info = triggerInfo(e.triggers, door->triggerIndex);
 		const auto isOpening = info.has_value() && info->active;
 		const auto speed = 1.5f;
 		door->openingT += speed * Constants::dt * (isOpening ? 1.0f : -1.0f);

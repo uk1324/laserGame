@@ -3,11 +3,19 @@
 #include <Overloaded.hpp>
 #include <engine/Math/Constants.hpp>
 #include <game/Stereographic.hpp>
+#include <glad/glad.h>
+#include <engine/Window.hpp>
 
 GameRenderer GameRenderer::make() {
 	return GameRenderer{
 		.gfx = Gfx2d::make()
 	};
+}
+
+Vec3 GameRenderer::wallColor(EditorWallType type) {
+	return type == EditorWallType::REFLECTING
+		? reflectingColor
+		: absorbingColor;
 }
 
 void GameRenderer::multicoloredSegment(const std::array<Vec2, 2>& endpoints, f32 normalAngle, Vec3 normalColor, Vec3 backColor) {
@@ -22,6 +30,23 @@ void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color) {
 	gfx.disk(e0, grabbableCircleRadius, Color3::RED);
 	gfx.disk(e1, grabbableCircleRadius, Color3::RED);
 	stereographicSegment(e0, e1, color);
+}
+
+void GameRenderer::mirror(const EditorMirror& mirror) {
+	const auto endpoints = mirror.calculateEndpoints();
+	switch (mirror.wallType) {
+		using enum EditorMirrorWallType;
+	case ABSORBING:
+		multicoloredSegment(endpoints, mirror.normalAngle, reflectingColor, absorbingColor);
+		break;
+	case REFLECTING:
+		stereographicSegment(endpoints[0], endpoints[1], reflectingColor);
+		break;
+	}
+	for (const auto endpoint : endpoints) {
+		gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(false));
+	}
+	gfx.disk(mirror.center, grabbableCircleRadius, movablePartColor(mirror.positionLocked));
 }
 
 void GameRenderer::renderWalls() {
@@ -52,6 +77,126 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width)
 		const auto range = angleRangeBetweenPointsOnCircle(line.center, e0, e1);
 		gfx.circleArcTriangulated(line.center, line.radius, range.min, range.max, width, color, 1000);
 	}
+}
+
+void GameRenderer::renderClear() {
+	gfx.camera.aspectRatio = Window::aspectRatio();
+	gfx.camera.zoom = 0.9f;
+	glClear(GL_COLOR_BUFFER_BIT);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
+}
+
+void GameRenderer::render(GameEntities& e, const GameState& s) {
+	i32 drawnSegments = 0;
+	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
+	// srcAlpha * srcColor + 1 * dstColor
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	for (const auto& segment : s.laserSegmentsToDraw) {
+		if (segment.ignore) {
+			continue;
+		}
+		drawnSegments++;
+		/*renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color, 0.5f), 0.05f);*/
+		stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color));
+	}
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	for (const auto& laser : e.lasers) {
+		gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
+		/*renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));*/
+		const auto direction0 = Vec2::oriented(laser->angle + 3.0f / 4.0f * PI<f32>) * 0.03f;
+		const auto direction1 = Vec2::oriented(laser->angle - 3.0f / 4.0f * PI<f32>) * 0.03f;
+		const auto grabPoint = laserDirectionGrabPoint(laser.entity);
+		gfx.lineTriangulated(grabPoint, grabPoint + direction0, 0.01f, movablePartColor(false));
+		gfx.lineTriangulated(grabPoint, grabPoint + direction1, 0.01f, movablePartColor(false));
+	}
+
+	const auto activatableObjectColor = [](Vec3 baseColor, bool isActivated) {
+		return isActivated ? baseColor : baseColor / 2.0f;
+	};
+
+	//const auto darkGreen = Vec3(2, 48, 32) / 255.0f;
+	//const auto darkRed = Vec3(255, 87, 51) / 255.0f;
+	gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN / 2.0f);
+	//renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, darkGreen);
+
+	for (const auto& wall : e.walls) {
+		this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type));
+	}
+
+	for (const auto& door : e.doors) {
+		const auto info = GameState::triggerInfo(e.triggers, door->triggerIndex);
+		Vec3 color = absorbingColor;
+		if (info.has_value()) {
+			color = activatableObjectColor(info->color, info->active);
+		}
+
+		gfx.disk(door->endpoints[0], grabbableCircleRadius, Color3::RED);
+		gfx.disk(door->endpoints[1], grabbableCircleRadius, Color3::RED);
+
+		const auto segments = door->segments();
+		for (const auto& segment : segments) {
+			stereographicSegment(segment.endpoints[0], segment.endpoints[1], color);
+		}
+	}
+
+	renderWalls();
+
+	for (const auto& mirror : e.mirrors) {
+		this->mirror(mirror.entity);
+	}
+
+	gfx.drawCircles();
+	gfx.drawFilledTriangles();
+	gfx.drawDisks();
+
+	for (const auto& portalPair : e.portalPairs) {
+		for (const auto& portal : portalPair->portals) {
+			const auto endpoints = portal.endpoints();
+
+			// Instead of rendering 2 segments could render on that has 2 colors by making a custom triangulation. Then the rendering would need to swap wether the inside or outside of the circle is the side with the normal.
+			const auto portalColor = (Color3::RED + Color3::YELLOW) / 2.0f;
+			switch (portal.wallType) {
+				using enum EditorPortalWallType;
+			case PORTAL:
+				stereographicSegment(endpoints[0], endpoints[1], portalColor);
+				break;
+			case ABSORBING:
+				multicoloredSegment(endpoints, portal.normalAngle, portalColor, absorbingColor);
+				break;
+
+			case REFLECTING:
+				multicoloredSegment(endpoints, portal.normalAngle, portalColor, reflectingColor);
+				break;
+			}
+			for (const auto endpoint : endpoints) {
+				gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(portal.rotationLocked));
+			}
+			gfx.disk(portal.center, grabbableCircleRadius, movablePartColor(portal.positionLocked));
+		}
+	}
+
+	auto drawOrb = [&](Vec2 center, const Circle& circle, Vec3 color) {
+		gfx.circle(circle.center, circle.radius, 0.01f, color);
+		gfx.disk(center, 0.01f, color);
+	};
+
+	for (const auto& target : e.targets) {
+		const auto circle = target->calculateCircle();
+		drawOrb(target->position, circle, activatableObjectColor(Color3::MAGENTA, target->activated));
+	}
+
+	for (const auto& trigger : e.triggers) {
+		const auto circle = trigger->circle();
+		drawOrb(trigger->position, circle, activatableObjectColor(trigger->color, trigger->activated));
+	}
+
+	gfx.drawFilledTriangles();
+	gfx.drawCircles();
+	gfx.drawDisks();
+	gfx.drawLines();
 }
 
 Vec3 movablePartColor(bool isPositionLocked) {
