@@ -34,6 +34,7 @@ void MainLoop::update() {
 		break;
 
 	case LEVEL_SELECT:
+		levelSelect.update(renderer);
 		break;
 	}
 	ShaderManager::update();

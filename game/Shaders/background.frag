@@ -16,6 +16,9 @@ vec2 hash(vec2 p) {
     return fract(sin(p) * 18.5453);
 }
 
+// x - distance to closest
+// y - closest cell index
+// z - absolute difference of closest and second closest cell distance.
 vec3 voronoi(in vec2 x)
 {
     vec2 n = floor(x);
@@ -80,31 +83,22 @@ float octave01(vec2 p, int octaves) {
 }
 
 void main() {
-    //vec3 col;
-
-    //vec2 p = worldPosition * 0.7;
     vec2 p = worldPosition * 0.8;
+
     int octaves = 2;
     p += vec2(octave01(p + vec2(123), octaves), octave01(p, octaves));
+
     vec3 c = voronoi(p);
 
-    // colorize
     vec3 col;
-    //col = 0.5 + 0.5*cos( c.y*6.2831 + vec3(0.0,1.0,2.0) );	
-    //col = vec3(clamp(1.0 - 0.4c.x*c.x,0.0,1.0));
     float d = c.z;
-    //d *= octave01(p, 2);
 
-    //d = 1.0 - d;
     d = 1.0 / d / 50.0;
 
-    //d = 1.0;
 	col = vec3(d);
 
-    //col *= exp(4.0 * g - 1.0);
     float x = c.y;
 
-    //col *= colormap(abs(x)).xyz;
    col *= hsv2rgb(vec3(c.y, 1.0, 1.0));
 
     //col = clamp(col, 0.0, 2.0);

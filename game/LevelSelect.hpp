@@ -1,6 +1,6 @@
 #pragma once 
 
-#include <game/GameRenderer.hpp>
+#include <game/Ui.hpp>
 
 struct LevelSelect {
 	void update(GameRenderer& renderer);

@@ -56,124 +56,44 @@ void Game::update(GameRenderer& renderer) {
 	}
 	const auto levelComplete = objectsInValidState && allTargetsActivated;
 
-	auto uiCursorPos = Input::cursorPosClipSpace() / 2.0f;
+	auto uiCursorPos = Ui::cursorPosUiSpace();
 
-	auto percentToWidth = [&](float percent) {
-		return percent * renderer.gfx.camera.aspectRatio;
-	};
-
-	auto transformRelativeToAnchor = [&](Vec2 screenAnchor) -> Mat3x2 {
-		// To go from [-0.5, 0.5] to [-1, 1].
-		const auto scale = 2.0f;
-		const auto toScreenAnchor = Mat3x2::translate(screenAnchor * scale);
-		const auto screenScale = Mat3x2::scale(Vec2(1.0f / renderer.gfx.camera.aspectRatio, 1.0f)) * Mat3x2::scale(Vec2(scale));
-		return screenScale * toScreenAnchor;
-	};
-
-	struct Rect {
-		Vec2 min;
-		Vec2 size;
-	};
-
-	const auto transform = renderer.gfx.camera.clipSpaceToWorldSpace();
-	auto transformPos = [&](Vec2 v) {
-		return v * 2.0f * transform;
-	};
-
-	auto transformRect = [&](Vec2 rectPos, Vec2 rectSize) {
-		Vec2 min = transformPos(rectPos - rectSize / 2.0f);
-		Vec2 max = transformPos(rectPos + rectSize / 2.0f);
-		return Rect{ .min = min, .size = max - min };
-	};
-
-	auto addRect = [&](Vec2 rectSize, Vec2 rectPos) {
-		const auto rect = transformRect(rectPos, rectSize);
-		renderer.gfx.rect(rect.min, rect.size, 0.01f, Color3::WHITE);
-	};
-
-	auto addFilledTri = [&](Vec2 v0, Vec2 v1, Vec2 v2, Vec3 color) {
-		renderer.gfx.filledTriangle(
-			transformPos(v0),
-			transformPos(v1),
-			transformPos(v2),
-			color);
-	};
-
-	auto addFilledRect = [&](Vec2 pos, Vec2 size, Vec3 color) {
-		const auto rect = transformRect(pos, size);
-		renderer.gfx.filledRect(rect.min + rect.size / 2.0f, rect.size, color);
-	};
-
-	auto addFilledRectMinMax = [&](Vec2 min, Vec2 max, Vec3 color) {
-		const auto rect = transformRect((min + max) / 2.0f, max - min);
-		renderer.gfx.filledRect(rect.min + rect.size / 2.0f, rect.size, color);
-	};
-
-	auto addLine = [&](Vec2 a, Vec2 b, f32 width, Vec3 color) {
-		renderer.gfx.line(transformPos(a), transformPos(b), width, color);
-	};
-
-	auto xSizeToYSize = [&](f32 xSize) -> f32 {
-		return xSize * renderer.gfx.camera.aspectRatio;
-	};
-
-	auto ySizeToXSize = [&](f32 ySize) -> f32 {
-		return ySize / renderer.gfx.camera.aspectRatio;
-	};
-
-	auto equalSizeReativeToX = [&](f32 xSize) -> Vec2 {
-		return Vec2(xSize, xSizeToYSize(xSize));
-	};
-
-	auto positionRelativeToCorner = [](Vec2 corner, Vec2 size, Vec2 offset) -> Vec2 {
-		const auto direction = corner.applied([](f32 f) { return f > 0.0f ? 1.0f : -1.0f; });
-		return corner - (offset + size / 2.0f) * direction;
-	};
-
-	auto pointInRectMinMax = [](Vec2 min, Vec2 max, Vec2 p) {
-		return min.x < p.x && p.x < max.x
-			&& min.y < p.y && p.y < max.y;
-	};
-	//ImGui::InputFloat2("test", uiCursorPos.data());
 	{
+		auto& r = renderer;
+
 		f32 xSize = 0.2f;
-		f32 ySize = 0.5f * xSizeToYSize(xSize);
+		f32 ySize = 0.5f * Ui::xSizeToYSize(r, xSize);
 		Vec2 size(xSize, ySize);
 
 		const auto anchor = Vec2(0.5f, -0.5f);
 		
-		const auto pos = positionRelativeToCorner(anchor, size, equalSizeReativeToX(0.01f));
+		const auto pos = Ui::rectPositionRelativeToCorner(anchor, size, Ui::equalSizeReativeToX(r, 0.01f));
 
-		auto updateConstantSpeedT = [](f32& t, f32 timeToFinish, bool active) {
-			const auto speed = 1.0f / (timeToFinish);
-			t += speed * Constants::dt * (active ? 1.0f : -1.0f);
-			t = std::clamp(t, 0.0f, 1.0f);
-		};
-		updateConstantSpeedT(goToNextLevelButtonActiveT, 0.3f, levelComplete);
+		Ui::updateConstantSpeedT(goToNextLevelButtonActiveT, 0.3f, levelComplete);
 
-		auto hover = pointInRectMinMax(pos - size / 2.0f, pos + size / 2.0f, uiCursorPos);
-		//ImGui::Checkbox("hover", &hover);
-		updateConstantSpeedT(goToNextLevelButtonHoverT, 0.3f, levelComplete && hover);
+		auto hover = Ui::isPointInRectPosSize(pos, size, uiCursorPos);
+		// Don't do hover highlighting when the level is not complete so the player doesn't try to press a button that doesn't do anything. Could instead just not have the button there when the level is not complete.
+		Ui::updateConstantSpeedT(goToNextLevelButtonHoverT, 0.3f, levelComplete && hover);
 
 		goToNextLevelButtonActiveT = std::clamp(goToNextLevelButtonActiveT, 0.0f, 1.0f);
 
 		const auto color1 = lerp(Color3::WHITE / 15.0f, Color3::WHITE / 10.0f, goToNextLevelButtonHoverT);
 		const auto color2 = lerp(1.5f * color1, Color3::WHITE / 3.0f, goToNextLevelButtonActiveT);
-		addFilledRect(pos, size, color1);
+		Ui::rectPosSizeFilled(r, pos, size, color1);
 
 		const auto padding = size * 0.1f;
 		const auto insideSize = size - padding * 2.0f;
 		const auto min = pos - size / 2.0f + padding;
 		const auto max = pos + size / 2.0f - padding;
-		const auto offset = max.x - ySizeToXSize(insideSize.y / 2.0f * sqrt(2.0f));
-		addFilledTri(
+		const auto offset = max.x - Ui::ySizeToXSize(r, insideSize.y / 2.0f * sqrt(2.0f));
+		Ui::triFilled(r, 
 			Vec2(max.x, pos.y), 
 			Vec2(offset, max.y),
 			Vec2(offset, min.y),
 			color2);
-		addFilledRectMinMax(
-			Vec2(min.x, min.y + 0.25 * insideSize.y),
-			Vec2(offset, max.y - 0.25 * insideSize.y),
+		Ui::rectMinMaxFilled(r,
+			Vec2(min.x, min.y + 0.25f * insideSize.y),
+			Vec2(offset, max.y - 0.25f * insideSize.y),
 			color2);
 
 		{
@@ -184,7 +104,7 @@ void Game::update(GameRenderer& renderer) {
 			const auto min = Vec2(-0.5f) + of;
 			const auto max = Vec2(0.5f) + of;
 			
-			addFilledRectMinMax(min, max, Color3::WHITE / 20.0f);
+			Ui::rectMinMaxFilled(r, min, max, Color3::BLACK);
 
 			/*const auto barWidth = 0.02f;
 			addFilledRectMinMax(min, Vec2(min.x + barWidth, max.y), Color3::WHITE / 3.0f);

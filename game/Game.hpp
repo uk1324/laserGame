@@ -1,6 +1,6 @@
 #pragma once
 
-#include <game/GameRenderer.hpp>
+#include <game/Ui.hpp>
 #include <game/GrabTools.hpp>
 #include <game/GameUpdate.hpp>
 
