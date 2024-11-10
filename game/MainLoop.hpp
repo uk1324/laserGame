@@ -14,5 +14,5 @@ struct MainLoop {
 
 	enum class State {
 		GAME, EDITOR
-	} state = State::EDITOR;
+	} state = State::GAME;
 };
