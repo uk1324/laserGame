@@ -1,14 +1,25 @@
 #include "GameRenderer.hpp"
 #include <engine/Math/Color.hpp>
 #include <Overloaded.hpp>
+#include <game/Shaders/backgroundData.hpp>
 #include <engine/Math/Constants.hpp>
 #include <game/Stereographic.hpp>
 #include <glad/glad.h>
+#include <gfx/Instancing.hpp>
 #include <engine/Window.hpp>
+#include <StructUtils.hpp>
+#include <gfx/ShaderManager.hpp>
+
+#define MAKE_VAO(Type) \
+	createInstancingVao<Type##Shader>(gfx.quad2dPtVbo, gfx.quad2dPtIbo, gfx.instancesVbo)
 
 GameRenderer GameRenderer::make() {
+	auto gfx = Gfx2d::make();
+
 	return GameRenderer{
-		.gfx = Gfx2d::make()
+		.backgroundVao = MAKE_VAO(Background),
+		.backgroundShader = MAKE_GENERATED_SHADER(BACKGROUND),
+		MOVE(gfx)
 	};
 }
 
@@ -95,6 +106,10 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
 	// srcAlpha * srcColor + 1 * dstColor
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+	renderBackground();
+	gfx.diskTriangulated(Vec2(0.0f), 1.0f, Vec4(Color3::BLACK, 1.0f));
+
 	for (const auto& segment : s.laserSegmentsToDraw) {
 		if (segment.ignore) {
 			continue;
@@ -202,6 +217,22 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 	gfx.drawCircles();
 	gfx.drawDisks();
 	gfx.drawLines();
+}
+
+void GameRenderer::renderBackground() {
+	backgroundShader.use();
+	std::vector<BackgroundInstance> instances;
+	static f32 elapsed = 0.0f;
+	elapsed += Constants::dt;
+
+	BackgroundInstance instance{
+		.clipToWorld = gfx.camera.clipSpaceToWorldSpace(),
+		.cameraPosition = gfx.camera.pos,
+		.time = elapsed,
+	};
+	drawInstances(backgroundVao, gfx.instancesVbo, constView(instance), [](usize count) {
+		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, count);
+	});
 }
 
 Vec3 movablePartColor(bool isPositionLocked) {

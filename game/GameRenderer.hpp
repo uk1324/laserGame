@@ -25,6 +25,11 @@ struct GameRenderer {
 	void renderClear();
 	void render(GameEntities& e, const GameState& s, bool editor, bool validGameState);
 
+	void renderBackground();
+
+	Vao backgroundVao;
+	ShaderProgram& backgroundShader;
+
 	Gfx2d gfx;
 };
 

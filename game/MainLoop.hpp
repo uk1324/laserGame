@@ -13,6 +13,6 @@ struct MainLoop {
 	Game game;
 
 	enum class State {
-		GAME, EDITOR
+		GAME, EDITOR, LEVEL_SELECT
 	} state = State::GAME;
 };

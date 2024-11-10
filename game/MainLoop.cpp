@@ -1,5 +1,6 @@
 #include "MainLoop.hpp"
 #include <engine/Input/Input.hpp>
+#include <engine/gfx/ShaderManager.hpp>
 
 MainLoop::MainLoop()
 	: renderer(GameRenderer::make()) {
@@ -16,6 +17,9 @@ void MainLoop::update() {
 		case EDITOR:
 			state = State::GAME;
 			break;
+
+		default:
+			break;
 		}
 	}
 
@@ -28,6 +32,10 @@ void MainLoop::update() {
 	case EDITOR:
 		editor.update(renderer);
 		break;
+
+	case LEVEL_SELECT:
+		break;
 	}
+	ShaderManager::update();
 	renderer.gfx.drawDebug();
 }
