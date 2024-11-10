@@ -1,7 +1,7 @@
 #pragma once
 
 #include <game/GameRenderer.hpp>
-#include <game/EditorActions.hpp>
+#include <game/GrabTools.hpp>
 
 struct EditorGridTool {
 	EditorGridTool();
@@ -163,21 +163,22 @@ struct Editor {
 	} laserCreateTool;
 	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
-	struct LaserGrabTool {
-		enum class LaserPart {
-			ORIGIN, DIRECTION,
-		};
+	LaserGrabTool laserGrabTool;
+	//struct LaserGrabTool {
+	//	enum class LaserPart {
+	//		ORIGIN, DIRECTION,
+	//	};
 
-		struct Grabbed {
-			EditorLaserId id;
-			LaserPart part;
-			EditorLaser grabStartState;
-			Vec2 offset;
-		};
+	//	struct Grabbed {
+	//		EditorLaserId id;
+	//		LaserPart part;
+	//		EditorLaser grabStartState;
+	//		Vec2 offset;
+	//	};
 
-		std::optional<Grabbed> grabbed;
-	} laserGrabTool;
-	void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
+	//	std::optional<Grabbed> grabbed;
+	//} laserGrabTool;
+	//void laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
 
 	struct MirrorCreateTool {
 		std::optional<EditorMirror> update(bool down, bool cancelDown, Vec2 cursorPos, bool& cursorCaptured);

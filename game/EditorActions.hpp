@@ -60,7 +60,7 @@ struct EditorActionModifiySelection : EditorAction {
 struct Editor;
 
 struct EditorActions {
-	static EditorActions make();
+	static EditorActions make(Editor& editor);
 
 	List<EditorAction*> actionStack;
 	// Multiactions can contain multiple actions.
@@ -78,13 +78,20 @@ struct EditorActions {
 	void beginMultiAction();
 	void endMultiAction();
 
-	void add(Editor& editor, EditorAction* action) noexcept;
+	void add(EditorAction* action);
+	template<typename Entity, typename ModifyAction>
+	void addModifyAction(
+		EntityArray<Entity, typename Entity::DefaultInitialize>& entities,
+		EntityArrayId<Entity> id,
+		Entity&& oldState);
 
 	i64 multiActionNesting = 0;
 	bool recordingMultiAction() const;
 	i64 currentMultiActionSize = 0;
 
 	void reset();
+
+	Editor& editor;
 };
 
 template<typename T, EditorActionType TYPE>
@@ -93,3 +100,19 @@ EditorActionModify<T, TYPE>::EditorActionModify(EntityArrayId<T> id, T&& oldEnti
 	, id(id)
 	, oldEntity(std::move(oldEntity))
 	, newEntity(std::move(newEntity)) {}
+
+template<typename Entity, typename ModifyAction>
+void EditorActions::addModifyAction(
+	EntityArray<Entity, typename Entity::DefaultInitialize>& entities,
+	EntityArrayId<Entity> id,
+	Entity&& oldState) {
+
+	auto entity = entities.get(id);
+
+	if (!entity.has_value()) {
+		CHECK_NOT_REACHED();
+		return;
+	}
+	auto action = new ModifyAction(id, std::move(oldState), std::move(*entity));
+	add(action);
+}

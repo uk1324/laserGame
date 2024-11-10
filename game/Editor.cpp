@@ -13,27 +13,9 @@
 #include <Array2d.hpp>
 
 Editor::Editor()
-	: actions(EditorActions::make()) {
+	: actions(EditorActions::make(*this)) {
 
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-}
-
-template<typename Entity, typename ModifyAction>
-void addModifyAction(
-	Editor& editor, 
-	EditorActions& actions, 
-	EntityArray<Entity, typename Entity::DefaultInitialize>& entities,
-	EntityArrayId<Entity> id,
-	Entity&& oldState) {
-
-	auto entity = entities.get(id);
-
-	if (!entity.has_value()) {
-		CHECK_NOT_REACHED();
-		return;
-	}
-	auto action = new ModifyAction(id, std::move(oldState), std::move(*entity));
-	actions.add(editor, action);
 }
 
 void Editor::update(GameRenderer& renderer) {
@@ -304,7 +286,7 @@ void Editor::update(GameRenderer& renderer) {
 
 	auto grabToolsUpdate = [&] {
 		wallGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
-		laserGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
+		laserGrabTool.update(e.lasers, actions, cursorPos, cursorCaptured, cursorExact, false);
 		mirrorGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 		targetGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
 		portalGrabToolUpdate(cursorPos, cursorCaptured, cursorExact);
@@ -426,7 +408,7 @@ void Editor::mirrorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 				mirrorGrabTool.grabbed->id,
 				std::move(mirrorGrabTool.grabbed->grabStartState),
 				std::move(*mirror));
-			actions.add(*this, action);
+			actions.add(action);
 		} else {
 			CHECK_NOT_REACHED();
 		}
@@ -442,7 +424,7 @@ void Editor::targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		auto target = e.targets.create();
 		target.entity = EditorTarget{ .position = cursorPos, .radius = targetCreateTool.targetRadius };
-		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(target.id)));
+		actions.add(new EditorActionCreateEntity(EditorEntityId(target.id)));
 		cursorCaptured = true;
 	}
 }
@@ -481,7 +463,7 @@ void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && targetGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		addModifyAction<EditorTarget, EditorActionModifyTarget>(*this, actions, e.targets, targetGrabTool.grabbed->id, std::move(targetGrabTool.grabbed->grabStartState));
+		actions.addModifyAction<EditorTarget, EditorActionModifyTarget>(e.targets, targetGrabTool.grabbed->id, std::move(targetGrabTool.grabbed->grabStartState));
 		targetGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -500,7 +482,7 @@ void Editor::portalCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		portalPair.entity = EditorPortalPair{
 			.portals = { makePortal(offset), makePortal(-offset) }
 		};
-		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(portalPair.id)));
+		actions.add(new EditorActionCreateEntity(EditorEntityId(portalPair.id)));
 		cursorCaptured = true;
 	}
 }
@@ -551,7 +533,7 @@ void Editor::portalGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 				portalGrabTool.grabbed->id,
 				std::move(portalGrabTool.grabbed->grabStartState),
 				std::move(*portalPair));
-			actions.add(*this, action);
+			actions.add(action);
 		} else {
 			CHECK_NOT_REACHED();
 		}
@@ -570,7 +552,7 @@ void Editor::triggerCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			.color = EditorTrigger::defaultColor.color,
 			.index = 0,
 		};
-		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(trigger.id)));
+		actions.add(new EditorActionCreateEntity(EditorEntityId(trigger.id)));
 		cursorCaptured = true;
 	}
 }
@@ -609,7 +591,7 @@ void Editor::triggerGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cu
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && triggerGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		addModifyAction<EditorTrigger, EditorActionModifyTrigger>(*this, actions, e.triggers, triggerGrabTool.grabbed->id, std::move(triggerGrabTool.grabbed->grabStartState));
+		actions.addModifyAction<EditorTrigger, EditorActionModifyTrigger>(e.triggers, triggerGrabTool.grabbed->id, std::move(triggerGrabTool.grabbed->grabStartState));
 		triggerGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -645,8 +627,8 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		deactivateEntity(*selectTool.selectedEntity);
 		actions.beginMultiAction();
 		{
-			actions.add(*this, new EditorActionDestroyEntity(*selectTool.selectedEntity));
-			actions.add(*this, new EditorActionModifiySelection(selectTool.selectedEntity, std::nullopt));
+			actions.add(new EditorActionDestroyEntity(*selectTool.selectedEntity));
+			actions.add(new EditorActionModifiySelection(selectTool.selectedEntity, std::nullopt));
 			selectTool.selectedEntity = std::nullopt;
 		}
 		actions.endMultiAction();
@@ -726,14 +708,14 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		}
 
 	} else if (Input::isMouseButtonDown(MouseButton::RIGHT) && selectTool.selectedEntity != std::nullopt) {
-		actions.add(*this, new EditorActionModifiySelection(selectTool.selectedEntity, std::nullopt));
+		actions.add(new EditorActionModifiySelection(selectTool.selectedEntity, std::nullopt));
 		selectTool.selectedEntity = std::nullopt;
 	}
 
 	selectedEntity:;
 	if (selectTool.selectedEntity != oldSelection) {
 		cursorCaptured = true;
-		actions.add(*this, new EditorActionModifiySelection(oldSelection, selectTool.selectedEntity));
+		actions.add(new EditorActionModifiySelection(oldSelection, selectTool.selectedEntity));
 	}
 }
 
@@ -754,7 +736,7 @@ void Editor::doorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			.triggerIndex = 0,
 			.openByDefault = false
 		};
-		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(entity.id)));
+		actions.add(new EditorActionCreateEntity(EditorEntityId(entity.id)));
 	}
 }
 
@@ -787,7 +769,7 @@ void Editor::doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && doorGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		addModifyAction<EditorDoor, EditorActionModifyDoor>(*this, actions, e.doors, doorGrabTool.grabbed->id, std::move(doorGrabTool.grabbed->grabStartState));
+		actions.addModifyAction<EditorDoor, EditorActionModifyDoor>(e.doors, doorGrabTool.grabbed->id, std::move(doorGrabTool.grabbed->grabStartState));
 		doorGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -888,7 +870,7 @@ void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 
 	if (Input::isMouseButtonUp(MouseButton::LEFT) && wallGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
-		addModifyAction<EditorWall, EditorActionModifyWall>(*this, actions, e.walls, wallGrabTool.grabbed->id, std::move(wallGrabTool.grabbed->grabStartState));
+		actions.addModifyAction<EditorWall, EditorActionModifyWall>(e.walls, wallGrabTool.grabbed->id, std::move(wallGrabTool.grabbed->grabStartState));
 		wallGrabTool.grabbed = std::nullopt;
 	}
 }
@@ -903,7 +885,7 @@ void Editor::wallCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		if (result.has_value()) {
 			auto entity = e.walls.create();
 			entity.entity = *result;
-			actions.add(*this, new EditorActionCreateEntity(EditorEntityId(entity.id)));
+			actions.add(new EditorActionCreateEntity(EditorEntityId(entity.id)));
 		}
 	}
 }
@@ -917,75 +899,75 @@ void Editor::laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			.color = laserCreateTool.laserColor,
 			.positionLocked = laserCreateTool.laserPositionLocked
 		};
-		actions.add(*this, new EditorActionCreateEntity(EditorEntityId(ent.id)));
+		actions.add(new EditorActionCreateEntity(EditorEntityId(ent.id)));
 		cursorCaptured = true;
 		return;
 	}
 }
 
-void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
-	if (cursorCaptured) {
-		return;
-	}
-
-	if (Input::isMouseButtonDown(MouseButton::LEFT) && !laserGrabTool.grabbed.has_value()) {
-		for (const auto& laser : e.lasers) {
-			const auto arrowhead = laserArrowhead(laser.entity);
-			auto updateGrabbed = [&](Vec2 p, f32 distance, LaserGrabTool::LaserPart part) {
-				if (distance > Constants::endpointGrabPointRadius) {
-					return;
-				}
-				laserGrabTool.grabbed = LaserGrabTool::Grabbed{
-					.id = laser.id,
-					.part = part,
-					.grabStartState = laser.entity,
-					.offset = p - cursorPos,
-				};
-				cursorCaptured = true;
-			};
-
-			updateGrabbed(arrowhead.actualTip, arrowhead.distanceTo(cursorPos), LaserGrabTool::LaserPart::DIRECTION);
-			if (!cursorCaptured) {
-				updateGrabbed(laser->position, distance(laser->position, cursorPos), LaserGrabTool::LaserPart::ORIGIN);
-			}
-		}
-	}
-
-	if (Input::isMouseButtonHeld(MouseButton::LEFT) && laserGrabTool.grabbed.has_value()) {
-		cursorCaptured = true;
-		auto laser = e.lasers.get(laserGrabTool.grabbed->id);
-		if (laser.has_value()) {
-			const auto newPosition = cursorPos + laserGrabTool.grabbed->offset * !cursorExact;
-			switch (laserGrabTool.grabbed->part) {
-				using enum LaserGrabTool::LaserPart;
-
-			case ORIGIN:
-				laser->position = newPosition;
-				break;
-			case DIRECTION:
-				laser->angle = (newPosition - laser->position).angle();
-				break;
-			}
-		} else {
-			CHECK_NOT_REACHED();
-		}
-	}
-
-	if (Input::isMouseButtonUp(MouseButton::LEFT) && laserGrabTool.grabbed.has_value()) {
-		cursorCaptured = true;
-		auto laser = e.lasers.get(laserGrabTool.grabbed->id);
-		if (laser.has_value()) {
-			auto action = new EditorActionModifyLaser(
-				laserGrabTool.grabbed->id,
-				std::move(laserGrabTool.grabbed->grabStartState),
-				std::move(*laser));
-			actions.add(*this, action);
-		} else {
-			CHECK_NOT_REACHED();
-		}
-		laserGrabTool.grabbed = std::nullopt;
-	}
-}
+//void Editor::laserGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
+//	if (cursorCaptured) {
+//		return;
+//	}
+//
+//	if (Input::isMouseButtonDown(MouseButton::LEFT) && !laserGrabTool.grabbed.has_value()) {
+//		for (const auto& laser : e.lasers) {
+//			const auto arrowhead = laserArrowhead(laser.entity);
+//			auto updateGrabbed = [&](Vec2 p, f32 distance, LaserGrabTool::LaserPart part) {
+//				if (distance > Constants::endpointGrabPointRadius) {
+//					return;
+//				}
+//				laserGrabTool.grabbed = LaserGrabTool::Grabbed{
+//					.id = laser.id,
+//					.part = part,
+//					.grabStartState = laser.entity,
+//					.offset = p - cursorPos,
+//				};
+//				cursorCaptured = true;
+//			};
+//
+//			updateGrabbed(arrowhead.actualTip, arrowhead.distanceTo(cursorPos), LaserGrabTool::LaserPart::DIRECTION);
+//			if (!cursorCaptured) {
+//				updateGrabbed(laser->position, distance(laser->position, cursorPos), LaserGrabTool::LaserPart::ORIGIN);
+//			}
+//		}
+//	}
+//
+//	if (Input::isMouseButtonHeld(MouseButton::LEFT) && laserGrabTool.grabbed.has_value()) {
+//		cursorCaptured = true;
+//		auto laser = e.lasers.get(laserGrabTool.grabbed->id);
+//		if (laser.has_value()) {
+//			const auto newPosition = cursorPos + laserGrabTool.grabbed->offset * !cursorExact;
+//			switch (laserGrabTool.grabbed->part) {
+//				using enum LaserGrabTool::LaserPart;
+//
+//			case ORIGIN:
+//				laser->position = newPosition;
+//				break;
+//			case DIRECTION:
+//				laser->angle = (newPosition - laser->position).angle();
+//				break;
+//			}
+//		} else {
+//			CHECK_NOT_REACHED();
+//		}
+//	}
+//
+//	if (Input::isMouseButtonUp(MouseButton::LEFT) && laserGrabTool.grabbed.has_value()) {
+//		cursorCaptured = true;
+//		auto laser = e.lasers.get(laserGrabTool.grabbed->id);
+//		if (laser.has_value()) {
+//			auto action = new EditorActionModifyLaser(
+//				laserGrabTool.grabbed->id,
+//				std::move(laserGrabTool.grabbed->grabStartState),
+//				std::move(*laser));
+//			actions.add(*this, action);
+//		} else {
+//			CHECK_NOT_REACHED();
+//		}
+//		laserGrabTool.grabbed = std::nullopt;
+//	}
+//}
 
 void Editor::mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (!cursorCaptured) {
@@ -997,7 +979,7 @@ void Editor::mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		if (result.has_value()) {
 			auto ent = e.mirrors.create();
 			ent.entity = *result;
-			actions.add(*this, new EditorActionCreateEntity(EditorEntityId(ent.id)));
+			actions.add(new EditorActionCreateEntity(EditorEntityId(ent.id)));
 		}
 	}
 }

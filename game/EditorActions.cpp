@@ -2,10 +2,11 @@
 #include <game/Editor.hpp>
 #include "EditorActions.hpp"
 
-EditorActions EditorActions::make() {
+EditorActions EditorActions::make(Editor& editor) {
     return EditorActions{
         .actionStack = List<EditorAction*>::empty(),
-        .actions = List<Action>::empty()
+        .actions = List<Action>::empty(),
+        .editor = editor
     };
 }
 
@@ -39,7 +40,7 @@ void EditorActions::endMultiAction() {
     }
 }
 
-void EditorActions::add(Editor& editor, EditorAction* action) noexcept {
+void EditorActions::add(EditorAction* action) {
     if (lastDoneAction != actions.size() - 1) {
         const auto toFree = actions.size() - 1 - lastDoneAction;
         for (i64 i = 0; i < toFree; i++) {
