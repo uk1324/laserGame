@@ -9,6 +9,7 @@ struct Game {
 	void update(GameRenderer& renderer);
 
 	void reset();
+	bool areObjectsInValidState();
 	bool tryLoadLevel(std::string_view path);
 
 	LaserGrabTool laserGrabTool;

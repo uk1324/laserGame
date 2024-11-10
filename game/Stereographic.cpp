@@ -393,6 +393,25 @@ StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const Stereographic
 	return result;
 }
 
+StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const StereographicSegment& a, const StereographicSegment& b) {
+	const auto intersections = stereographicLineVsStereographicLineIntersection(a.line, b.line);
+
+	auto intersectionsOnSegment = [](Vec2 e0, Vec2 e1, Vec2 i) {
+		const auto dir = e1 - e0;
+		const auto along = dot(i, dir);
+		return along > dot(e0, dir) && along < dot(e1, dir);
+	};
+
+	StaticList<Vec2, 2> result;
+	for (const auto& intersection : intersections) {
+		if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection) &&
+			intersectionsOnSegment(b.endpoints[0], b.endpoints[1], intersection)) {
+			result.add(intersection);
+		}
+	}
+	return result;
+}
+
 StereographicLine::StereographicLine(const StereographicLine& other)
 	: type(other.type) {
 	switch (type) {
@@ -453,3 +472,7 @@ bool AngleRange::isInRange(f32 angle) {
 		return angle >= mn && angle <= mx;
 	}
 }
+
+StereographicSegment::StereographicSegment(Vec2 e0, Vec2 e1)
+	: line(stereographicLine(e0, e1))
+	, endpoints{ e0, e1 } {}

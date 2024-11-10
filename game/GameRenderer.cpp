@@ -90,7 +90,7 @@ void GameRenderer::renderClear() {
 	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
 }
 
-void GameRenderer::render(GameEntities& e, const GameState& s, bool editor) {
+void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool validGameState) {
 	i32 drawnSegments = 0;
 	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
 	// srcAlpha * srcColor + 1 * dstColor
@@ -119,8 +119,11 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor) {
 
 	//const auto darkGreen = Vec3(2, 48, 32) / 255.0f;
 	//const auto darkRed = Vec3(255, 87, 51) / 255.0f;
-	gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN / 2.0f);
-	//renderer.gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, darkGreen);
+	if (validGameState) {
+		gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN / 2.0f);
+	} else {
+		gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::RED / 2.0f);
+	}
 
 	for (const auto& wall : e.walls) {
 		this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);

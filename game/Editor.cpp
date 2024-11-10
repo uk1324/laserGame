@@ -303,7 +303,7 @@ void Editor::update(GameRenderer& renderer) {
 		updateSelectedTool();
 	}
 
-	s.update(e);
+	s.update(e, true);
 
 	renderer.renderClear();
 
@@ -323,7 +323,7 @@ void Editor::update(GameRenderer& renderer) {
 	case DOOR: doorCreateTool.render(renderer, cursorPos); break;
 	}
 
-	renderer.render(e, s, true);
+	renderer.render(e, s, true, true);
 
 	if (snappedCursor) {
 		renderer.gfx.disk(cursorPos, 0.01f, Color3::WHITE);

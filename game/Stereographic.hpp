@@ -25,6 +25,13 @@ struct StereographicLine {
 	};
 };
 
+struct StereographicSegment {
+	StereographicSegment(Vec2 e0, Vec2 e1);
+
+	StereographicLine line;
+	Vec2 endpoints[2];
+};
+
 struct RaycastHit {
 	Vec2 pos;
 	f32 t;
@@ -86,3 +93,4 @@ StaticList<Vec2, 2> lineVsCircleIntersection(Vec2 linePoint, Vec2 lineDirection,
 StaticList<Vec2, 2> stereographicLineVsCircleIntersection(const StereographicLine& l, const Circle& c);
 StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const StereographicLine& a, const StereographicLine& b);
 StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const StereographicLine& line, Vec2 lineEndpoint0, Vec2 lineEndpoint1, const Circle& circle);
+StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const StereographicSegment& a, const StereographicSegment& b);

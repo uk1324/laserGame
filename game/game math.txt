@@ -103,3 +103,13 @@ One option would be to introuce actual time. Then doors wouldn't open instantly.
 Maybe make doors that open from different sides. LEFT, RIGHT, CENTER,
 
 Could have a randomized title screen. Could diplay things like the vonoroi diagram, Boy's surface, Roman surface. Could have a menu item that allows to view all the alternative screens with explanations.
+
+The way checking if objects are in valid state is implemented could probably be abused. For example you could pause doors by putting an object in an invalid position, then move some other object.
+Could maybe lock all the objects except the one that is the invalid state. I am scared that that might cause softlocks.
+This kind of reminds me of the portal level where you could unlock the door by moving the laser left to right fast enough and moving back to go though the door.
+https://www.youtube.com/watch?v=onQxXNqOglA
+
+
+
+
+https://www.geogebra.org/m/j4yqa9jd

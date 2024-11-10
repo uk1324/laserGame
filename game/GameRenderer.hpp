@@ -23,7 +23,7 @@ struct GameRenderer {
 	void stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width = Constants::wallWidth);
 
 	void renderClear();
-	void render(GameEntities& e, const GameState& s, bool editor);
+	void render(GameEntities& e, const GameState& s, bool editor, bool validGameState);
 
 	Gfx2d gfx;
 };

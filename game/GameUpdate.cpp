@@ -10,7 +10,7 @@
 #include <Array2d.hpp>
 #include <engine/Math/Interpolation.hpp>
 
-void GameState::update(GameEntities& e) {
+void GameState::update(GameEntities& e, bool objectsInValidState) {
 
 	//ImGui::SliderFloat("test", &eccentricity, 0.0f, 12.0f);
 	//ImGui::SliderFloat2("f0", focus[0].data(), -1.0f, 1.0f);
@@ -413,7 +413,7 @@ void GameState::update(GameEntities& e) {
 						target->activated = true;
 					}
 				}
-				};
+			};
 
 			auto checkLaserVsTriggerCollision = [&](const Segment& segment) {
 				for (auto trigger : e.triggers) {
@@ -422,7 +422,7 @@ void GameState::update(GameEntities& e) {
 						trigger->activated = true;
 					}
 				}
-				};
+			};
 
 			// Non interfering means that they don't change the direction and position of the laser.
 			auto checkNonInterferingLaserCollisions = [&](const Segment& segment) {
@@ -485,12 +485,14 @@ void GameState::update(GameEntities& e) {
 		}
 	}
 
-	for (auto door : e.doors) {
-		const auto info = triggerInfo(e.triggers, door->triggerIndex);
-		const auto isOpening = info.has_value() && info->active;
-		const auto speed = 1.5f;
-		door->openingT += speed * Constants::dt * (isOpening ? 1.0f : -1.0f);
-		door->openingT = std::clamp(door->openingT, 0.0f, 1.0f);
+	if (objectsInValidState) {
+		for (auto door : e.doors) {
+			const auto info = triggerInfo(e.triggers, door->triggerIndex);
+			const auto isOpening = info.has_value() && info->active;
+			const auto speed = 1.5f;
+			door->openingT += speed * Constants::dt * (isOpening ? 1.0f : -1.0f);
+			door->openingT = std::clamp(door->openingT, 0.0f, 1.0f);
+		}
 	}
 }
 
