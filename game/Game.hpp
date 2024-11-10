@@ -7,6 +7,4 @@ struct Game {
 	void update(GameRenderer& renderer);
 
 	void loadLevel(std::string_view path);
-
-	std::vector<Wall> walls;
 };

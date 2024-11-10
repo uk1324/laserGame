@@ -25,6 +25,12 @@ struct StereographicLine {
 	};
 };
 
+struct RaycastHit {
+	Vec2 pos;
+	f32 t;
+};
+std::optional<RaycastHit> circleRaycast(Vec2 rayStart, Vec2 rayEnd, const Circle& circle);
+
 // The 3d coordinate system is the set of points satisfying x^2 + y^2 + z^2 = 1, z <= 0, hemisphere.
 // The 2d coordinate system is the set of points satisfying x^2 + y^2 <= 1, circle
 

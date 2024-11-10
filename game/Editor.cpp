@@ -1,6 +1,7 @@
 #include "Editor.hpp"
 #include <engine/Math/Color.hpp>
 #include <game/FileSelectWidget.hpp>
+#include <engine/Math/Interpolation.hpp>
 #include <engine/Window.hpp>
 #include <engine/Math/Constants.hpp>
 #include <engine/Input/Input.hpp>
@@ -11,6 +12,7 @@
 #include <engine/Math/Quat.hpp>
 #include <gfx2d/DbgGfx2d.hpp>
 #include <game/Stereographic.hpp>
+#include <Array2d.hpp>
 
 Editor::Editor()
 	: actions(EditorActions::make()) {

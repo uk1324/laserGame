@@ -6,6 +6,32 @@
 // The 3d coordinate system is the set of points satisfying x^2 + y^2 + z^2 = 1, z <= 0, hemisphere.
 // The 2d coordinate system is the set of points satisfying x^2 + y^2 <= 1, circle
 
+std::optional<RaycastHit> circleRaycast(Vec2 rayStart, Vec2 rayEnd, const Circle& circle) {
+	// TODO: This could probably be made faster, because by just checking if both points are inside or outside circle.
+	const auto rayDirection = rayEnd - rayStart;
+	const auto
+		a = dot(rayDirection, rayDirection),
+		b = dot(rayStart, rayDirection) * 2.0f,
+		c = dot(rayStart, rayStart) - circle.radius * circle.radius;
+	const auto discriminant = b * b - 4.0f * a * c;
+	if (discriminant < 0.0f)
+		return std::nullopt;
+
+	const auto sqrtDiscriminant = sqrt(discriminant);
+	const auto
+		t0 = (-b + sqrtDiscriminant) / a / 2.0f,
+		t1 = (-b - sqrtDiscriminant) / a / 2.0f;
+
+	const auto t = t0 < t1 ? t0 : t1;
+	if (t < 0.0f || t > 1.0f) {
+		return std::nullopt;
+	}
+	return RaycastHit{
+		.pos = rayStart + t * rayDirection,
+		.t = t,
+	};
+}
+
 // https://en.wikipedia.org/wiki/Stereographic_projection#First_formulation
 Vec2 toStereographic(Vec3 p) {
 	const auto d = 1.0f - p.z;
