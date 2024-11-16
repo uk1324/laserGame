@@ -1,7 +1,11 @@
 #include <game/LevelSelect.hpp>
+#include <engine/Input/Input.hpp>
 
-void LevelSelect::update(GameRenderer& renderer) {
+LevelSelect::Result LevelSelect::update(GameRenderer& renderer) {
+	Result result = ResultNone();
 	auto& r = renderer;
+
+	const auto cursorPos = Ui::cursorPosUiSpace();
 
 	const auto boxHeight = 0.7f;
 	const auto squareCountY = 4;
@@ -19,8 +23,14 @@ void LevelSelect::update(GameRenderer& renderer) {
 		for (i32 xi = 0; xi < squareCountX; xi++) {
 			Vec2 squarePos = Vec2(box.min.x, box.max.y) + Vec2(xi + 0.5f, -yi - 0.5f) * squareSize;
 			Ui::rectPosSize(r, squarePos, squareSize * (1.0f - squarePaddingScale), 0.01f, Color3::GREEN);
+
+			if (Ui::isPointInRectPosSize(squarePos, squareSize, cursorPos) &&
+				Input::isMouseButtonDown(MouseButton::LEFT)) {
+				result = ResultGoToLevel();
+			}
 		}
 	}
 
 	renderer.gfx.drawLines();
+	return result;
 }

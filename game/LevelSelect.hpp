@@ -1,7 +1,14 @@
 #pragma once 
 
 #include <game/Ui.hpp>
+#include <variant>
 
 struct LevelSelect {
-	void update(GameRenderer& renderer);
+	struct ResultGoToLevel {
+		//i32 index;
+	};
+	struct ResultNone {};
+	using Result = std::variant<ResultNone, ResultGoToLevel>;
+
+	Result update(GameRenderer& renderer);
 };

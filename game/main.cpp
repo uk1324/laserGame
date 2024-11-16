@@ -1,19 +1,13 @@
 #include <engine/Engine.hpp>
 #include <engine/EngineUpdateLoop.hpp>
 #include <game/MainLoop.hpp>
-
-#ifdef FINAL_RELEASE
-#define FONT "assets/fonts/RobotoMono-Regular.ttf"
-#else 
-#define FONT "engine/assets/fonts/RobotoMono-Regular.ttf"
-#endif
-
+#include <game/Paths.hpp>
 
 int main() {
  	Engine::initAll(Window::Settings{
 		.maximized = true,
 		.multisamplingSamplesPerPixel = 16
-	}, FONT);
+	}, FONT_PATH);
 
 	EngineUpdateLoop updateLoop(60.0f);
 	MainLoop mainLoop;

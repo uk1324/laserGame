@@ -1,0 +1,9 @@
+struct [[Json]] SettingsAudio {
+	float masterVolume;
+	float soundEffectVolume;
+	float musicVolume;
+}
+
+struct [[Json]] Settings {
+	SettingsAudio audio;
+}

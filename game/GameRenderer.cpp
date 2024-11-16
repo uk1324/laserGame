@@ -9,6 +9,7 @@
 #include <engine/Window.hpp>
 #include <StructUtils.hpp>
 #include <gfx/ShaderManager.hpp>
+#include <game/Paths.hpp>
 
 #define MAKE_VAO(Type) \
 	createInstancingVao<Type##Shader>(gfx.quad2dPtVbo, gfx.quad2dPtIbo, gfx.instancesVbo)
@@ -19,7 +20,8 @@ GameRenderer GameRenderer::make() {
 	return GameRenderer{
 		.backgroundVao = MAKE_VAO(Background),
 		.backgroundShader = MAKE_GENERATED_SHADER(BACKGROUND),
-		MOVE(gfx)
+		.font = FontRenderer::loadFont("engine/assets/fonts/", "RobotoMono-Regular"),
+		MOVE(gfx),
 	};
 }
 
@@ -93,12 +95,7 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width)
 }
 
 void GameRenderer::renderClear() {
-	gfx.camera.aspectRatio = Window::aspectRatio();
 	gfx.camera.zoom = 0.9f;
-	glClear(GL_COLOR_BUFFER_BIT);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
 
 	renderBackground();
 	gfx.diskTriangulated(Vec2(0.0f), 1.0f, Vec4(Color3::BLACK, 1.0f));

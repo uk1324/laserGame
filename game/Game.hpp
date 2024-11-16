@@ -5,12 +5,20 @@
 #include <game/GameUpdate.hpp>
 
 struct Game {
+	struct ResultNone {};
+	struct ResultGoToLevel{
+	
+	};
+
+	using Result = std::variant<ResultNone, ResultGoToLevel>;
+
 	Game();
-	void update(GameRenderer& renderer);
+	Result update(GameRenderer& renderer);
 
 	void reset();
 	bool areObjectsInValidState();
 	bool tryLoadLevel(std::string_view path);
+
 
 	LaserGrabTool laserGrabTool;
 	MirrorGrabTool mirrorGrabTool;
@@ -21,6 +29,4 @@ struct Game {
 
 	f32 goToNextLevelButtonActiveT = 0.0f;
 	f32 goToNextLevelButtonHoverT = 0.0f;
-
-	//Font font;
 };

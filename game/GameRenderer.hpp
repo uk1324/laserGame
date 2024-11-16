@@ -30,6 +30,8 @@ struct GameRenderer {
 	Vao backgroundVao;
 	ShaderProgram& backgroundShader;
 
+	Font font;
+
 	Gfx2d gfx;
 };
 

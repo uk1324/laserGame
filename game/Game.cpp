@@ -4,9 +4,7 @@
 #include <imgui/imgui.h>
 #include <engine/Input/Input.hpp>
 
-Game::Game() 
-	//: font(FontRenderer::loadFont("engine/assets/fonts/", "RobotoMono-Regular")) 
-{
+Game::Game() {
 	tryLoadLevel("./generated/test");
 }
 
@@ -19,7 +17,9 @@ Vec2 snapPositionsOutsideBoundary(Vec2 v) {
 	return v;
 }
 
-void Game::update(GameRenderer& renderer) {
+Game::Result Game::update(GameRenderer& renderer) {
+	Result result = ResultNone();
+
 	bool cursorCaptured = false;
 
 	auto cursorPos = Input::cursorPosClipSpace() * renderer.gfx.camera.clipSpaceToWorldSpace();
@@ -45,10 +45,6 @@ void Game::update(GameRenderer& renderer) {
 	const auto objectsInValidState = areObjectsInValidState();
 	s.update(e, objectsInValidState);
 	
-	renderer.renderClear();
-	renderer.render(e, s, false, objectsInValidState);
-
-
 	bool allTargetsActivated = true;
 	for (const auto& target : e.targets) {
 		if (!target->activated) {
@@ -57,70 +53,65 @@ void Game::update(GameRenderer& renderer) {
 	}
 	const auto levelComplete = objectsInValidState && allTargetsActivated;
 
+	renderer.renderClear();
+	renderer.render(e, s, false, objectsInValidState);
+
 	auto uiCursorPos = Ui::cursorPosUiSpace();
 
-	//{
-	//	auto& r = renderer;
+	{
+		auto& r = renderer;
 
-	//	f32 xSize = 0.2f;
-	//	f32 ySize = 0.5f * Ui::xSizeToYSize(r, xSize);
-	//	Vec2 size(xSize, ySize);
+		f32 xSize = 0.2f;
+		f32 ySize = 0.5f * Ui::xSizeToYSize(r, xSize);
+		Vec2 size(xSize, ySize);
 
-	//	const auto anchor = Vec2(0.5f, -0.5f);
-	//	
-	//	const auto pos = Ui::rectPositionRelativeToCorner(anchor, size, Ui::equalSizeReativeToX(r, 0.01f));
+		const auto anchor = Vec2(0.5f, -0.5f);
+		
+		const auto pos = Ui::rectPositionRelativeToCorner(anchor, size, Ui::equalSizeReativeToX(r, 0.01f));
 
-	//	Ui::updateConstantSpeedT(goToNextLevelButtonActiveT, 0.3f, levelComplete);
+		Ui::updateConstantSpeedT(goToNextLevelButtonActiveT, 0.3f, levelComplete);
 
-	//	auto hover = Ui::isPointInRectPosSize(pos, size, uiCursorPos);
-	//	// Don't do hover highlighting when the level is not complete so the player doesn't try to press a button that doesn't do anything. Could instead just not have the button there when the level is not complete.
-	//	Ui::updateConstantSpeedT(goToNextLevelButtonHoverT, 0.3f, levelComplete && hover);
+		auto hover = Ui::isPointInRectPosSize(pos, size, uiCursorPos);
+		// Don't do hover highlighting when the level is not complete so the player doesn't try to press a button that doesn't do anything. Could instead just not have the button there when the level is not complete.
+		Ui::updateConstantSpeedT(goToNextLevelButtonHoverT, 0.3f, levelComplete && hover);
 
-	//	goToNextLevelButtonActiveT = std::clamp(goToNextLevelButtonActiveT, 0.0f, 1.0f);
+		goToNextLevelButtonActiveT = std::clamp(goToNextLevelButtonActiveT, 0.0f, 1.0f);
 
-	//	const auto color1 = lerp(Color3::WHITE / 15.0f, Color3::WHITE / 10.0f, goToNextLevelButtonHoverT);
-	//	const auto color2 = lerp(1.5f * color1, Color3::WHITE / 3.0f, goToNextLevelButtonActiveT);
-	//	Ui::rectPosSizeFilled(r, pos, size, color1);
+		const auto color1 = lerp(Color3::WHITE / 15.0f, Color3::WHITE / 10.0f, goToNextLevelButtonHoverT);
+		const auto color2 = lerp(1.5f * color1, Color3::WHITE / 3.0f, goToNextLevelButtonActiveT);
+		Ui::rectPosSizeFilled(r, pos, size, Vec4(color1, goToNextLevelButtonActiveT));
 
-	//	const auto padding = size * 0.1f;
-	//	const auto insideSize = size - padding * 2.0f;
-	//	const auto min = pos - size / 2.0f + padding;
-	//	const auto max = pos + size / 2.0f - padding;
-	//	const auto offset = max.x - Ui::ySizeToXSize(r, insideSize.y / 2.0f * sqrt(2.0f));
-	//	Ui::triFilled(r, 
-	//		Vec2(max.x, pos.y), 
-	//		Vec2(offset, max.y),
-	//		Vec2(offset, min.y),
-	//		color2);
-	//	Ui::rectMinMaxFilled(r,
-	//		Vec2(min.x, min.y + 0.25f * insideSize.y),
-	//		Vec2(offset, max.y - 0.25f * insideSize.y),
-	//		color2);
+		if (levelComplete && hover && Input::isMouseButtonDown(MouseButton::LEFT)) {
+			result = ResultGoToLevel{};
+		}
 
-	//	{
-	//		static f32 f = 0.0f;
-	//		ImGui::SliderFloat("f", &f, 0.0f, 1.0f);
-	//		const auto of = Vec2(lerp(-1.0f, 1.0f, f), 0.0f);
-
-	//		const auto min = Vec2(-0.5f) + of;
-	//		const auto max = Vec2(0.5f) + of;
-	//		
-	//		Ui::rectMinMaxFilled(r, min, max, Color3::BLACK);
-
-	//		/*const auto barWidth = 0.02f;
-	//		addFilledRectMinMax(min, Vec2(min.x + barWidth, max.y), Color3::WHITE / 3.0f);
-	//		addFilledRectMinMax(Vec2(max.x - barWidth, min.y), max, Color3::WHITE / 3.0f);*/
-	//	}
-	//	
-	//}
+		const auto padding = size * 0.1f;
+		const auto insideSize = size - padding * 2.0f;
+		const auto min = pos - size / 2.0f + padding;
+		const auto max = pos + size / 2.0f - padding;
+		const auto offset = max.x - Ui::ySizeToXSize(r, insideSize.y / 2.0f * sqrt(2.0f));
+		const auto color2a = Vec4(color2, goToNextLevelButtonActiveT);
+		Ui::triFilled(r, 
+			Vec2(max.x, pos.y), 
+			Vec2(offset, max.y),
+			Vec2(offset, min.y),
+			color2a);
+		Ui::rectMinMaxFilled(r,
+			Vec2(min.x, min.y + 0.25f * insideSize.y),
+			Vec2(offset, max.y - 0.25f * insideSize.y),
+			color2a);
+	}
 
 	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawLines();
 
 	//renderer.gfx.fontRenderer.render(font, renderer.gfx.instancesVbo);
+
+	return result;
 }
 
 void Game::reset() {
+	goToNextLevelButtonActiveT = 0.0f;
 	e.reset();
 }
 
