@@ -5,7 +5,8 @@
 #include <engine/Input/Input.hpp>
 
 Game::Game() 
-	: font(FontRenderer::loadFont("engine/assets/fonts/", "RobotoMono-Regular")) {
+	//: font(FontRenderer::loadFont("engine/assets/fonts/", "RobotoMono-Regular")) 
+{
 	tryLoadLevel("./generated/test");
 }
 
@@ -116,7 +117,7 @@ void Game::update(GameRenderer& renderer) {
 	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawLines();
 
-	renderer.gfx.fontRenderer.render(font, renderer.gfx.instancesVbo);
+	//renderer.gfx.fontRenderer.render(font, renderer.gfx.instancesVbo);
 }
 
 void Game::reset() {

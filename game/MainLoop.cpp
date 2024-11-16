@@ -7,7 +7,7 @@ MainLoop::MainLoop()
 }
 
 void MainLoop::update() {
-	if (Input::isKeyDown(KeyCode::TAB)) {
+	/*if (Input::isKeyDown(KeyCode::TAB)) {
 		switch (state) {
 			using enum State;
 		case GAME:
@@ -21,7 +21,7 @@ void MainLoop::update() {
 		default:
 			break;
 		}
-	}
+	}*/
 
 	switch (state) {
 		using enum State;

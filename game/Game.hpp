@@ -22,5 +22,5 @@ struct Game {
 	f32 goToNextLevelButtonActiveT = 0.0f;
 	f32 goToNextLevelButtonHoverT = 0.0f;
 
-	Font font;
+	//Font font;
 };

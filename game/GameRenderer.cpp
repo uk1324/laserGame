@@ -99,6 +99,10 @@ void GameRenderer::renderClear() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
+
+	renderBackground();
+	gfx.diskTriangulated(Vec2(0.0f), 1.0f, Vec4(Color3::BLACK, 1.0f));
+	gfx.drawFilledTriangles();
 }
 
 void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool validGameState) {
@@ -106,9 +110,6 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
 	// srcAlpha * srcColor + 1 * dstColor
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-
-	renderBackground();
-	gfx.diskTriangulated(Vec2(0.0f), 1.0f, Vec4(Color3::BLACK, 1.0f));
 
 	for (const auto& segment : s.laserSegmentsToDraw) {
 		if (segment.ignore) {

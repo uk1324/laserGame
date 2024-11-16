@@ -130,6 +130,11 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				EditorEntityId id,
 				i32 index = 0) {
 
+					if (distance(endpoint0, endpoint1) < 0.001f) {
+						// bug with doors creating steregraphic lines with infinite position and radius, when opening.
+						return;
+					}
+
 					const auto line = stereographicLine(endpoint0, endpoint1);
 					const auto intersections = stereographicLineVsStereographicLineIntersection(line, laserLine);
 
@@ -289,7 +294,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 
 				auto hitOnNormalSide = [&normalAtHitPoint](f32 hitObjectNormalAngle) {
 					return dot(Vec2::oriented(hitObjectNormalAngle), normalAtHitPoint) > 0.0f;
-					};
+				};
 
 				auto doReflection = [&] {
 					laserDirection = laserTangentAtHitPoint.reflectedAroundNormal(normalAtHitPoint);
