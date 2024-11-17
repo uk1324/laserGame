@@ -122,9 +122,11 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				i32 index;
 			};
 			std::optional<Hit> closest;
+			std::optional<f32> secondClosestDistance;
 			std::optional<Hit> closestToWrappedAround;
+			std::optional<f32> secondClosestToWrappedAroundDistance;
 
-			auto processLineSegmentIntersections = [&laserLine, &laserPosition, &boundaryIntersectionWrappedAround, &laserDirection, &closest, &closestToWrappedAround, &hitOnLastIteration](
+			auto processLineSegmentIntersections = [&laserLine, &laserPosition, &boundaryIntersectionWrappedAround, &laserDirection, &closest, &closestToWrappedAround, &hitOnLastIteration, &secondClosestDistance, &secondClosestToWrappedAroundDistance](
 				Vec2 endpoint0,
 				Vec2 endpoint1,
 				EditorEntityId id,
@@ -139,7 +141,8 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 					const auto intersections = stereographicLineVsStereographicLineIntersection(line, laserLine);
 
 					for (const auto& intersection : intersections) {
-						if (const auto outsideBoundary = intersection.length() > 1.0f) {
+						// The epsilon added, because there was a floating precision bug that caused a laser to go through a wall
+						if (const auto outsideBoundary = intersection.length() > 1.0001f) {
 							continue;
 						}
 
@@ -160,11 +163,20 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 						// hitLastTime should be only in the if not the else. You can hit an object from the front on one iteration and the from the wrapped around on the other.
 						if (!hitLastTime && dot(intersection - laserPosition, laserDirection) > 0.0f) {
 							if (!closest.has_value() || distance < closest->distance) {
+								if (closest.has_value()) {
+									secondClosestDistance = closest->distance;
+								}
 								closest = Hit{ intersection, distance, line, id, index };
+							} else if (!secondClosestDistance.has_value()) {
+								secondClosestToWrappedAroundDistance = distance;
 							}
 						} else {
 							if (!closestToWrappedAround.has_value()
 								|| distanceToWrappedAround < closestToWrappedAround->distance) {
+
+								if (closestToWrappedAround.has_value()) {
+									secondClosestToWrappedAroundDistance = closestToWrappedAround->distance;
+								}
 								closestToWrappedAround = Hit{
 									intersection,
 									distanceToWrappedAround,
@@ -172,6 +184,8 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 									id,
 									index
 								};
+							} else if (!secondClosestToWrappedAroundDistance.has_value()) {
+								secondClosestToWrappedAroundDistance = distanceToWrappedAround;
 							}
 						}
 					}
@@ -303,7 +317,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 					//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
 					//renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
 					//renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
-					};
+				};
 
 				switch (hit.id.type) {
 					using enum EditorEntityType;
@@ -433,18 +447,29 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 			auto checkNonInterferingLaserCollisions = [&](const Segment& segment) {
 				checkLaserVsTargetCollision(segment);
 				checkLaserVsTriggerCollision(segment);
-				};
+			};
 
 			auto processLaserSegment = [&](const Segment& segment) {
 				checkNonInterferingLaserCollisions(segment);
 				laserSegmentsToDraw.push_back(segment);
 			};
 
+			// Double intersections can cause bugs. 
+			// If you have a corner then there is no real way to define a reflection and it probably doesn't really matter if a laser end there.
+			// A bigger issue is configurations like crosses made out of mirrors. Then If you point right at the intersection of 2 lines then if you process only one line intersection the laser will reflect and go through the other. One option would be to process the 2 reflections sequentially, but it probably doesn't matter much. Technically only one of the walls needs to be a mirror.
+			auto doubleIntersectionCheck = [](const Hit& hit, std::optional<f32> secondClosestDistance) {
+				if (!secondClosestDistance.has_value()) {
+					return false;
+				}
+				return std::abs(hit.distance - *secondClosestDistance) < 0.001f;
+			};
+
 			if (closest.has_value()) {
 				const auto s = Segment{ laserPosition, closest->point, laser->color };
 				processLaserSegment(s);
 				const auto result = processHit(*closest);
-				if (result == HitResult::END) {
+				if (result == HitResult::END 
+					|| doubleIntersectionCheck(*closest, secondClosestDistance)) {
 					break;
 				}
 			} else if (closestToWrappedAround.has_value()) {
@@ -454,7 +479,8 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				processLaserSegment(s1);
 
 				const auto result = processHit(*closestToWrappedAround);
-				if (result == HitResult::END) {
+				if (result == HitResult::END 
+					|| doubleIntersectionCheck(*closestToWrappedAround, secondClosestToWrappedAroundDistance)) {
 					break;
 				}
 			} else {
@@ -505,10 +531,12 @@ std::optional<GameState::TriggerInfo> GameState::triggerInfo(TriggerArray& trigg
 	std::optional<TriggerInfo> result;
 	for (const auto& trigger : triggers) {
 		// If any trigger is activated the return that activated.
-		if (trigger->index == triggerIndex && trigger->activated) {
-			return TriggerInfo{ .color = trigger->color, .active = trigger->activated };
-		} else if (!result.has_value()) {
-			result = TriggerInfo{ .color = trigger->color, .active = trigger->activated };
+		if (trigger->index == triggerIndex) {
+			if (trigger->activated) {
+				return TriggerInfo{ .color = trigger->color, .active = trigger->activated };
+			} else if (!result.has_value()) {
+				result = TriggerInfo{ .color = trigger->color, .active = trigger->activated };
+			}
 		}
 	}
 	return result;

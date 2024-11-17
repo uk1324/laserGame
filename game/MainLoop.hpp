@@ -26,7 +26,7 @@ struct MainLoop {
 		TRANSITION_FROM_LEVEL_SELECT_TO_LEVEL,
 		TRANSITION_FROM_LEVEL_TO_LEVEL,
 		STATELESS_TRANSITION,
-	} state = State::MAIN_MENU;
+	} state = State::EDITOR;
 
 	void stateUpdate(State state);
 

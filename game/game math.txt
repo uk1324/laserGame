@@ -113,3 +113,8 @@ https://www.youtube.com/watch?v=onQxXNqOglA
 
 
 https://www.geogebra.org/m/j4yqa9jd
+
+
+
+Games like portal constrain the configuration for example only allowing to put portals on certain walls. Could have areas that the player can't place objects on or maybe just can't place certain objects (for example of the wrong color). 
+Not sure what would be the best way to display this. Could for example have cells for the tiling colored a certain color. Could have a boundary on each cells colored individually or just remove the boundaries of neighbouring  cells (this would also show that antipodal sides are connected) using algebraic topology.

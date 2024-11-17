@@ -20,7 +20,7 @@ GameRenderer GameRenderer::make() {
 	return GameRenderer{
 		.backgroundVao = MAKE_VAO(Background),
 		.backgroundShader = MAKE_GENERATED_SHADER(BACKGROUND),
-		.font = FontRenderer::loadFont("engine/assets/fonts/", "RobotoMono-Regular"),
+		.font = FontRenderer::loadFont(FONT_FOLDER, "RobotoMono-Regular"),
 		MOVE(gfx),
 	};
 }
