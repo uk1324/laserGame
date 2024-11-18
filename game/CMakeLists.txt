@@ -15,6 +15,12 @@ configure_file(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../engine/dependencies/freetype.dll" 
 	"${CMAKE_CURRENT_SOURCE_DIR}/../freetype.dll" 
 	COPYONLY)
+
+add_custom_command(TARGET game POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"${CMAKE_BINARY_DIR}/engine/dependencies/openal-soft/OpenAL32.dll"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../OpenAL32.dll") 
+
 if (WIN32)
 	target_link_libraries(game PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../engine/dependencies/freetype.lib")
 else()

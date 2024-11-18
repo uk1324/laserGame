@@ -8,6 +8,7 @@ cached/
 *Data.glsl
 settings.json
 freetype.dll
+*.dll
 
 # https://github.com/github/gitignore/blob/main/CMake.gitignore
 CMakeLists.txt.user

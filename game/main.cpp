@@ -2,12 +2,14 @@
 #include <engine/EngineUpdateLoop.hpp>
 #include <game/MainLoop.hpp>
 #include <game/Paths.hpp>
+#include <engine/Audio/Audio.hpp>
 
 int main() {
  	Engine::initAll(Window::Settings{
 		.maximized = true,
 		.multisamplingSamplesPerPixel = 16
 	}, FONT_PATH);
+	Audio::init();
 
 	EngineUpdateLoop updateLoop(60.0f);
 	MainLoop mainLoop;
@@ -16,6 +18,7 @@ int main() {
 		mainLoop.update();
 	}
 
+	Audio::deinit();
 	Engine::terminateAll();
 }
 
