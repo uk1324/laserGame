@@ -97,6 +97,10 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 		std::optional<EditorEntity> hitOnLastIteration;
 		for (i64 iteration = 0; iteration < maxReflections; iteration++) {
 			const auto laserLine = stereographicLineThroughPointWithTangent(laserPosition, laserDirection.angle());
+			//ImGui::Text("%g", laserDirection.angle() / TAU<f32>);
+			//if (laserLine.type == StereographicLine::Type::CIRCLE) {
+			//	ImGui::Text("%g", (laser->position - laserLine.circle.center).rotBy90deg().angle() / TAU<f32>);
+			//}
 
 			const auto boundaryIntersections = stereographicLineVsCircleIntersection(laserLine, Constants::boundary);
 

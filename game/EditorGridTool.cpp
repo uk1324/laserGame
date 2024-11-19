@@ -227,7 +227,7 @@ void EditorGridTool::render(GameRenderer& renderer) {
 		return;
 	}
 
-	const auto gridColor = Color3::WHITE / 15.0f;
+	const auto gridColor = Color3::WHITE / 7.0f;
 
 	auto drawShapeGrid = [&renderer, &gridColor](const std::vector<Vec3>& originalVertices,
 		const std::vector<EllipticSegment>& originalSegments,
