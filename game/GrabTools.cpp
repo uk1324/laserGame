@@ -4,6 +4,28 @@
 #include <engine/Math/Constants.hpp>
 #include <array>
 
+static Vec2 normalAtEndpoint0(Vec2 endpoint0, Vec2 endpoint1) {
+	const auto line = stereographicLine(endpoint0, endpoint1);
+
+	const auto correctNormalDirection = (endpoint1 - endpoint0).rotBy90deg();
+	Vec2 normal(0.0f);
+	switch (line.type) {
+		using enum StereographicLine::Type;
+	case CIRCLE:
+		normal = endpoint0 - line.circle.center;
+		break;
+	case LINE:
+		normal = line.lineNormal;
+		break;
+	}
+
+	// This is done, because stereographicLine changes the center position when the line transitions from CIRCLE to LINE to CIRCLE. This also causes the normal (center - line.circle.center) to change direction, which is visible, for example when using portals.
+	if (dot(normal, correctNormalDirection) < 0.0f) {
+		normal = -normal;
+	}
+	return normal;
+}
+
 std::optional<GrabbedRotatableSegment> rotatableSegmentCheckGrab(Vec2 center, f32 normalAngle, f32 length,
 	Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
 
@@ -46,23 +68,7 @@ void grabbedRotatableSegmentUpdate(RotatableSegmentGizmoType type, Vec2 grabOffs
 
 	case ROTATION_0:
 	case ROTATION_1: {
-		const auto line = stereographicLine(newPosition, center);
-
-		const auto normalWithCorrectDirection = (newPosition - center).rotBy90deg();
-		Vec2 normal(0.0f);
-		switch (line.type) {
-			using enum StereographicLine::Type;
-		case CIRCLE:
-			normal = center - line.circle.center;
-			break;
-		case LINE:
-			normal = line.lineNormal;
-		}
-
-		// This is done, because stereographicLine changes the center position when the line transitions from CIRCLE to LINE to CIRCLE. This also causes the normal (center - line.circle.center) to change direction, which is visible, for example when using portals.
-		if (dot(normal, normalWithCorrectDirection) < 0.0f) {
-			normal = -normal;
-		}
+		auto normal = normalAtEndpoint0(center, newPosition);
 
 		if (type == ROTATION_1) {
 			normal = -normal;
@@ -119,45 +125,8 @@ void LaserGrabTool::update(LaserArray& lasers, std::optional<EditorActions&> act
 				laser->position = newPosition;
 				break;
 			case DIRECTION: {
-				const auto line = stereographicLine(newPosition, laser->position);
-
-				const auto normalWithCorrectDirection = (newPosition - laser->position).rotBy90deg();
-				Vec2 normal(0.0f);
-				switch (line.type) {
-					using enum StereographicLine::Type;
-				case CIRCLE:
-					normal = laser->position - line.circle.center;
-					break;
-				case LINE:
-					normal = line.lineNormal;
-					break;
-				}
-
-				// This is done, because stereographicLine changes the center position when the line transitions from CIRCLE to LINE to CIRCLE. This also causes the normal (center - line.circle.center) to change direction, which is visible, for example when using portals.
-				if (dot(normal, normalWithCorrectDirection) < 0.0f) {
-					normal = -normal;
-				}
-
-				laser->angle = normal.angle() + PI<f32> / 2.0f;
+				laser->angle = normalAtEndpoint0(laser->position, newPosition).angle() + PI<f32> / 2.0f;
 				break;
-				//const auto line = stereographicLine(newPosition, laser->position);
-				//f32 normalAngle = 0.0f;
-				//switch (line.type) {
-				//	using enum StereographicLine::Type;
-
-				//case LINE:
-				//	normalAngle = line.lineNormal.angle();	
-				//	break;
-
-				//case CIRCLE:
-				//	normalAngle = (laser->position - line.circle.center).rotBy90deg().angle();
-				//	break;
-
-				//}
-
-				//laser->angle = tangentAngle;
-				////laser->angle = (newPosition - laser->position).angle();
-				//break;
 			}
 
 			}
