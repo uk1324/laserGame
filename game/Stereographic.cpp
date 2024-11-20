@@ -128,7 +128,8 @@ Circle stereographicLineOld(Vec2 p0, Vec2 p1) {
 StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
 	const auto line = Line(p0, p1);
 	/*const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.0001f;*/
-	const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.001f;
+	/*const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.001f;*/
+	const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.005f;
 	if (goesThroughOrigin) {
 		return StereographicLine(line.n);
 	}
