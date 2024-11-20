@@ -61,3 +61,9 @@ struct [[Json]] LevelDoor {
 	i32 triggerIndex;
 	bool openByDefault = `false`;
 }
+
+struct [[Json]] LevelLockedCells {
+	i32 ringCount;
+	i32 segmentCount;
+	vector<i32> cells;
+}

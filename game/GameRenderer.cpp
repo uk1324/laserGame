@@ -94,6 +94,11 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width)
 	}
 }
 
+void GameRenderer::lockedCell(const LockedCells& cells, i32 index, Vec4 color) {
+	const auto c = cells.cellBounds(index);
+	gfx.circleArcTriangulated(Vec2(0.0f), c.maxR - (c.maxR - c.minR) / 2.0f, c.minA, c.maxA, c.maxR - c.minR, color);
+}
+
 void GameRenderer::renderClear() {
 	gfx.camera.zoom = 0.9f;
 
@@ -103,11 +108,16 @@ void GameRenderer::renderClear() {
 }
 
 void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool validGameState) {
-	i32 drawnSegments = 0;
+
+	// If you triangulate things consistently that is if things share a side then they are made of triangles that share sides then you don't have to worry about gaps. When triangulating circular arc you just need to make sure that the number of discretization points is dependent only on the arc could make it constant or dependent on length for example.
+	for (const auto& cell : e.lockedCells.cells) {
+		lockedCell(e.lockedCells, cell, GameRenderer::lockedCellColor);
+	}
+
 	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
 	// srcAlpha * srcColor + 1 * dstColor
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-
+	i32 drawnSegments = 0;
 	for (const auto& segment : s.laserSegmentsToDraw) {
 		if (segment.ignore) {
 			continue;

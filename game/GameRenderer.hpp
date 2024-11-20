@@ -21,6 +21,9 @@ struct GameRenderer {
 	void stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color);
 	void stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color);
 	void stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width = Constants::wallWidth);
+	void lockedCell(const LockedCells& cells, i32 index, Vec4 color);
+
+	static constexpr Vec4 lockedCellColor = Vec4(Color3::WHITE / 2.0f, 0.5f);
 
 	void renderClear();
 	void render(GameEntities& e, const GameState& s, bool editor, bool validGameState);

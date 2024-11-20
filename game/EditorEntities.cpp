@@ -396,3 +396,29 @@ f32 LaserArrowhead::distanceTo(Vec2 v) const {
 		LineSegment(tip, ears[0]).distance(v), 
 		LineSegment(tip, ears[1]).distance(v));
 }
+
+std::optional<i32> LockedCells::getIndex(Vec2 pos) const {
+	const auto a = angleToRangeZeroTau(pos.angle());
+	const auto r = pos.length();
+	const auto ai = i32(floor(a / TAU<f32> * segmentCount));
+	const auto ri = i32(floor(r * ringCount));
+	if (ri >= ringCount) {
+		return std::nullopt;
+	}
+	return ai * ringCount + ri;
+}
+
+LockedCells::CellBounds LockedCells::cellBounds(i32 index) const {
+	const auto ai = index / ringCount;
+	const auto ri = index % ringCount;
+	const auto startR = f32(ri) / f32(ringCount);
+	const auto endR = f32(ri + 1) / f32(ringCount);
+	const auto startA = (f32(ai) / f32(segmentCount)) * TAU<f32>;
+	const auto endA = (f32(ai + 1) / f32(segmentCount)) * TAU<f32>;
+	return CellBounds{
+		.minA = startA,
+		.maxA = endA,
+		.minR = startR,
+		.maxR = endR
+	};
+}

@@ -97,3 +97,8 @@ EditorActionModifiySelection::EditorActionModifiySelection(std::optional<EditorE
     : EditorAction(EditorActionType::MODIFY_SELECTION)
     , oldSelection(oldSelection)
     , newSelection(newSelection) {}
+
+EditorActionModifyLockedCells::EditorActionModifyLockedCells(bool added, i32 index) 
+    : EditorAction(EditorActionType::MODIFY_LOCKED_CELLS) 
+    , added(added)
+    , index(index) {}

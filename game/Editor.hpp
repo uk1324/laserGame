@@ -105,6 +105,7 @@ struct Editor {
 		PORTAL_PAIR,
 		TRIGGER,
 		DOOR,
+		MODIFY_LOCKED_CELLS
 	};
 
 	struct WallLikeEntity {
@@ -237,6 +238,9 @@ struct Editor {
 		std::optional<Grabbed> grabbed;
 	} doorGrabTool;
 	void doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cursorExact);
+
+	void modifyLockedCellsUpdate(Vec2 cursorPos, bool& cursorCaptured);
+	void modifyLockedCellsToolRender(GameRenderer& renderer, Vec2 cursorPos, bool& cursorCaptured);
 
 	void activateEntity(const EditorEntityId& id);
 	void deactivateEntity(const EditorEntityId& id);

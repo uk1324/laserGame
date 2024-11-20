@@ -223,6 +223,23 @@ struct EditorEntityId {
 	bool operator==(const EditorEntityId&) const = default;
 };
 
+struct LockedCells {
+	std::vector<i32> cells;
+	i32 segmentCount = 5;
+	i32 ringCount = 5;
+	
+	struct CellBounds {
+		f32 minA;
+		f32 maxA;
+		f32 minR;
+		f32 maxR;
+	};
+
+	std::optional<i32> getIndex(Vec2 pos) const;
+	CellBounds cellBounds(i32 index) const;
+};
+
+// I decided put here all the things that relate to the level and put things that change every frame or are related to the update in game state.
 struct GameEntities {
 	WallArray walls;
 	LaserArray lasers;
@@ -231,6 +248,7 @@ struct GameEntities {
 	PortalPairArray portalPairs;
 	TriggerArray triggers;
 	DoorArray doors;
+	LockedCells lockedCells;
 
 	void reset();
 };

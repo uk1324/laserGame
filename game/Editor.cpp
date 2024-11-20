@@ -10,6 +10,7 @@
 #include <gfx2d/DbgGfx2d.hpp>
 #include <game/Stereographic.hpp>
 #include <game/GameSerialization.hpp>
+#include <game/VectorSet.hpp>
 #include <Array2d.hpp>
 
 Editor::Editor()
@@ -112,7 +113,18 @@ void Editor::update(GameRenderer& renderer) {
 	{
 		ImGui::Begin(sideBarWindowName);
 
-		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), "none\0select\0create wall\0create laser\0create mirror\0create target\0create portals\0create trigger\0create door\0");
+		ImGui::Combo("tool", reinterpret_cast<int*>(&selectedTool), 
+			"none\0"
+			"select\0"
+			"create wall\0"
+			"create laser\0"
+			"create mirror\0"
+			"create target\0"
+			"create portals\0"
+			"create trigger\0"
+			"create door\0"
+			"modify locked cells\0"
+		);
 
 		ImGui::SeparatorText("tool settings");
 		switch (selectedTool) {
@@ -231,6 +243,22 @@ void Editor::update(GameRenderer& renderer) {
 			editorTargetRadiusInput(targetCreateTool.targetRadius);
 			break;
 
+		case MODIFY_LOCKED_CELLS: {
+			bool modified = false;
+			ImGui::TextDisabled("(?)");
+			ImGui::SetItemTooltip("Add cells with left click remove cells with right click.");
+
+			ImGui::TextDisabled("(!)");
+			ImGui::SetItemTooltip("Modifying the values below resets the locked cells.");
+
+			modified |= ImGui::InputInt("segment count", &e.lockedCells.segmentCount);
+			modified |= ImGui::InputInt("ring count", &e.lockedCells.ringCount);
+			if (modified) {
+				e.lockedCells.cells.clear();
+			}
+			break;
+		}
+			
 		case NONE:
 			break;
 		default:
@@ -281,6 +309,7 @@ void Editor::update(GameRenderer& renderer) {
 		case PORTAL_PAIR: portalCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case TRIGGER: triggerCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case DOOR: doorCreateToolUpdate(cursorPos, cursorCaptured); break;
+		case MODIFY_LOCKED_CELLS: modifyLockedCellsUpdate(cursorPos, cursorCaptured); break;
 		}
 	};
 
@@ -321,6 +350,7 @@ void Editor::update(GameRenderer& renderer) {
 	case PORTAL_PAIR: break;
 	case TRIGGER: break;
 	case DOOR: doorCreateTool.render(renderer, cursorPos); break;
+	case MODIFY_LOCKED_CELLS: modifyLockedCellsToolRender(renderer, cursorPos, cursorCaptured);
 	}
 
 	renderer.render(e, s, true, true);
@@ -673,6 +703,46 @@ void Editor::doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 	}
 }
 
+void Editor::modifyLockedCellsUpdate(Vec2 cursorPos, bool& cursorCaptured) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	const auto index = e.lockedCells.getIndex(cursorPos);
+
+	if (!index.has_value()) {
+		return;
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
+		const auto notDuplicate = addWithoutDuplicating(e.lockedCells.cells, *index);
+		if (notDuplicate) {
+			actions.add(new EditorActionModifyLockedCells(true, *index));
+		}
+	}
+
+	if (Input::isMouseButtonDown(MouseButton::RIGHT)) {
+		const auto removed = tryRemove(e.lockedCells.cells, *index);
+		if (removed) {
+			actions.add(new EditorActionModifyLockedCells(false, *index));
+		}
+	}
+}
+
+void Editor::modifyLockedCellsToolRender(GameRenderer& renderer, Vec2 cursorPos, bool& cursorCaptured) {
+	if (cursorCaptured) {
+		return;
+	}
+
+	const auto cellIndex = e.lockedCells.getIndex(cursorPos);
+	if (!cellIndex.has_value()) {
+		return;
+	}
+	Vec4 color = GameRenderer::lockedCellColor;
+	color.w /= 2.0f;
+	renderer.lockedCell(e.lockedCells, *cellIndex, color);
+}
+
 void Editor::activateEntity(const EditorEntityId& id) {
 	switch (id.type) {
 		using enum EditorEntityType;
@@ -734,6 +804,16 @@ void Editor::undoAction(const EditorAction& action) {
 	case MODIFY_SELECTION: {
 		const auto& a = static_cast<const EditorActionModifiySelection&>(action);
 		selectTool.selectedEntity = a.oldSelection;
+		break;
+	}
+
+	case MODIFY_LOCKED_CELLS: {
+		const auto& a = static_cast<const EditorActionModifyLockedCells&>(action);
+		if (a.added) {
+			tryRemove(e.lockedCells.cells, a.index);
+		} else {
+			addWithoutDuplicating(e.lockedCells.cells, a.index);
+		}
 		break;
 	}
 
@@ -869,6 +949,16 @@ void Editor::redoAction(const EditorAction& action) {
 	case MODIFY_SELECTION: {
 		const auto& a = static_cast<const EditorActionModifiySelection&>(action);
 		selectTool.selectedEntity = a.newSelection;
+		break;
+	}
+
+	case MODIFY_LOCKED_CELLS: {
+		const auto& a = static_cast<const EditorActionModifyLockedCells&>(action);
+		if (a.added) {
+			addWithoutDuplicating(e.lockedCells.cells, a.index);
+		} else {
+			tryRemove(e.lockedCells.cells, a.index);
+		}
 		break;
 	}
 

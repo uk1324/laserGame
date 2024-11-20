@@ -15,6 +15,7 @@ enum class EditorActionType {
 	CREATE_ENTITY,
 	DESTROY_ENTITY,
 	MODIFY_SELECTION,
+	MODIFY_LOCKED_CELLS
 };
 
 struct EditorAction {
@@ -55,6 +56,14 @@ struct EditorActionModifiySelection : EditorAction {
 
 	std::optional<EditorEntityId> oldSelection;
 	std::optional<EditorEntityId> newSelection;
+};
+
+struct EditorActionModifyLockedCells : EditorAction {
+	// added or removed
+	EditorActionModifyLockedCells(bool added, i32 index);
+
+	bool added;
+	i32 index;
 };
 
 struct Editor;
