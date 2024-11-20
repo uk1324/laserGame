@@ -252,7 +252,9 @@ void Editor::update(GameRenderer& renderer) {
 			ImGui::SetItemTooltip("Modifying the values below resets the locked cells.");
 
 			modified |= ImGui::InputInt("segment count", &e.lockedCells.segmentCount);
+			e.lockedCells.segmentCount = std::max(e.lockedCells.segmentCount, 0);
 			modified |= ImGui::InputInt("ring count", &e.lockedCells.ringCount);
+			e.lockedCells.ringCount = std::max(e.lockedCells.ringCount, 0);
 			if (modified) {
 				e.lockedCells.cells.clear();
 			}
@@ -736,6 +738,9 @@ void Editor::modifyLockedCellsToolRender(GameRenderer& renderer, Vec2 cursorPos,
 
 	const auto cellIndex = e.lockedCells.getIndex(cursorPos);
 	if (!cellIndex.has_value()) {
+		return;
+	}
+	if (std::ranges::contains(e.lockedCells.cells, cellIndex)) {
 		return;
 	}
 	Vec4 color = GameRenderer::lockedCellColor;

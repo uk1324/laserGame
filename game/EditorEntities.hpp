@@ -233,6 +233,8 @@ struct LockedCells {
 		f32 maxA;
 		f32 minR;
 		f32 maxR;
+
+		bool containsPoint(Vec2 v) const;
 	};
 
 	std::optional<i32> getIndex(Vec2 pos) const;

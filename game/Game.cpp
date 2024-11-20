@@ -160,6 +160,52 @@ bool Game::areObjectsInValidState() {
 		}
 	}
 
+	for (const auto& cell : e.lockedCells.cells) {
+		const auto cellBounds = e.lockedCells.cellBounds(cell);
+
+		for (const auto& laser : e.lasers) {
+			if (cellBounds.containsPoint(laser->position)) {
+				return false;
+			}
+		}
+
+		for (const auto& object : movableObjects) {
+			for (const auto& endpoint : object.endpoints) {
+				if (cellBounds.containsPoint(endpoint)) {
+					return false;
+				}
+			}
+			auto stereographicSegmentVsCircleArcCollision = [&](f32 r) {
+				const auto intersections = stereographicSegmentVsCircleIntersection(object.line, object.endpoints[0], object.endpoints[1], Circle(Vec2(0.0f), r));
+				for (const auto& intersection : intersections) {
+					const auto a = angleToRangeZeroTau(intersection.angle());
+					if (a >= cellBounds.minA && a >= cellBounds.maxA) {
+						return true;
+					}
+				}
+				return false;
+			};
+
+			if (stereographicSegmentVsCircleArcCollision(cellBounds.minR)) {
+				return false;
+			}
+			if (stereographicSegmentVsCircleArcCollision(cellBounds.maxR)) {
+				return false;
+			}
+			const auto v00 = Vec2::fromPolar(cellBounds.minA, cellBounds.minR);
+			const auto v10 = Vec2::fromPolar(cellBounds.minA, cellBounds.maxR);
+			if (stereographicSegmentVsSegmentCollision(object, v00, v10)) {
+				return false;
+			}
+			const auto v01 = Vec2::fromPolar(cellBounds.maxA, cellBounds.minR);
+			const auto v11 = Vec2::fromPolar(cellBounds.maxA, cellBounds.maxR);
+			if (stereographicSegmentVsSegmentCollision(object, v11, v01)) {
+				return false;
+			}
+		}
+
+	}
+
 	return true;
 }
 

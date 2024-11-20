@@ -422,3 +422,9 @@ LockedCells::CellBounds LockedCells::cellBounds(i32 index) const {
 		.maxR = endR
 	};
 }
+
+bool LockedCells::CellBounds::containsPoint(Vec2 v) const {
+	const auto a = angleToRangeZeroTau(v.angle());
+	const auto r = v.length();
+	return a >= minA && a <= maxA && r >= minR && r <= maxR;
+}

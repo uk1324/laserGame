@@ -94,3 +94,4 @@ StaticList<Vec2, 2> stereographicLineVsCircleIntersection(const StereographicLin
 StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const StereographicLine& a, const StereographicLine& b);
 StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const StereographicLine& line, Vec2 lineEndpoint0, Vec2 lineEndpoint1, const Circle& circle);
 StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const StereographicSegment& a, const StereographicSegment& b);
+bool stereographicSegmentVsSegmentCollision(const StereographicSegment& a, Vec2 endpoint0, Vec2 endpoint1);

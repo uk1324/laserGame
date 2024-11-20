@@ -393,14 +393,14 @@ StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const Stereographic
 	return result;
 }
 
+bool intersectionsOnSegment(Vec2 e0, Vec2 e1, Vec2 i) {
+	const auto dir = e1 - e0;
+	const auto along = dot(i, dir);
+	return along > dot(e0, dir) && along < dot(e1, dir);
+}
+
 StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const StereographicSegment& a, const StereographicSegment& b) {
 	const auto intersections = stereographicLineVsStereographicLineIntersection(a.line, b.line);
-
-	auto intersectionsOnSegment = [](Vec2 e0, Vec2 e1, Vec2 i) {
-		const auto dir = e1 - e0;
-		const auto along = dot(i, dir);
-		return along > dot(e0, dir) && along < dot(e1, dir);
-	};
 
 	StaticList<Vec2, 2> result;
 	for (const auto& intersection : intersections) {
@@ -410,6 +410,28 @@ StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const
 		}
 	}
 	return result;
+}
+
+bool stereographicSegmentVsSegmentCollision(const StereographicSegment& a, Vec2 endpoint0, Vec2 endpoint1) {
+	switch (a.line.type) {
+		using enum StereographicLine::Type;
+	case CIRCLE: {
+		const auto intersections = lineVsCircleIntersection(endpoint0, endpoint1 - endpoint0, a.line.circle);
+		for (const auto& intersection : intersections) {
+			if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection) &&
+				intersectionsOnSegment(endpoint0, endpoint1, intersection)) {
+				return true;
+			}
+		}
+		break;
+	}
+
+	case LINE: {
+		return LineSegment(endpoint0, endpoint1).intersection(LineSegment(a.endpoints[0], a.endpoints[1])).has_value();
+	}
+
+	}
+	return false;
 }
 
 StereographicLine::StereographicLine(const StereographicLine& other)
