@@ -19,7 +19,6 @@ struct Game {
 	bool areObjectsInValidState();
 	bool tryLoadLevel(std::string_view path);
 
-
 	LaserGrabTool laserGrabTool;
 	MirrorGrabTool mirrorGrabTool;
 	PortalGrabTool portalGrabTool;

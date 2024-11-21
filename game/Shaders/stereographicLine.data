@@ -1,0 +1,18 @@
+import "../../engine/gfx2d/Vertex2dPt.data";
+
+shader StereographicLine {
+	vertexStruct = Vertex2dPt;
+	vertInstance = {
+		Mat3x2 transform;
+	};
+	fragInstance = {
+		Vec2 endpoint0;
+		Vec2 endpoint1;
+	};
+	vertOut = {
+		vec2 worldPosition;
+	};
+	vertUniforms = {
+		Mat3x2 clipToWorld;
+	};
+}

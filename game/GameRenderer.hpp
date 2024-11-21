@@ -33,6 +33,9 @@ struct GameRenderer {
 	Vao backgroundVao;
 	ShaderProgram& backgroundShader;
 
+	Vao stereographicLineVao;
+	ShaderProgram& stereographicLineShader;
+
 	Font font;
 
 	Gfx2d gfx;

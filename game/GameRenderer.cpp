@@ -2,6 +2,7 @@
 #include <engine/Math/Color.hpp>
 #include <Overloaded.hpp>
 #include <game/Shaders/backgroundData.hpp>
+#include <game/Shaders/stereographicLineData.hpp>
 #include <engine/Math/Constants.hpp>
 #include <game/Stereographic.hpp>
 #include <glad/glad.h>
@@ -9,6 +10,7 @@
 #include <engine/Window.hpp>
 #include <StructUtils.hpp>
 #include <gfx/ShaderManager.hpp>
+#include <gfx2d/Quad2dPt.hpp>
 #include <game/Paths.hpp>
 
 #define MAKE_VAO(Type) \
@@ -20,6 +22,8 @@ GameRenderer GameRenderer::make() {
 	return GameRenderer{
 		.backgroundVao = MAKE_VAO(Background),
 		.backgroundShader = MAKE_GENERATED_SHADER(BACKGROUND),
+		.stereographicLineVao = MAKE_VAO(StereographicLine),
+		.stereographicLineShader = MAKE_GENERATED_SHADER(STEREOGRAPHIC_LINE),
 		.font = FontRenderer::loadFont(FONT_FOLDER, "RobotoMono-Regular"),
 		MOVE(gfx),
 	};
@@ -128,6 +132,28 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 	}
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	stereographicLineShader.use();
+	std::vector<StereographicLineInstance> instances;
+	StereographicLineVertUniforms uniforms{
+		.clipToWorld = gfx.camera.clipSpaceToWorldSpace()
+	};
+	shaderSetUniforms(stereographicLineShader, uniforms);
+	for (const auto& wall : e.walls) {
+		const auto line = stereographicLine(wall->endpoints[0], wall->endpoints[1]);
+		const auto center = (wall->endpoints[0] + wall->endpoints[1]) / 2.0f;
+		const auto angle = (wall->endpoints[1] - wall->endpoints[0]).angle();
+		const auto size = Vec2((wall->endpoints[1] - wall->endpoints[0]).length(), 0.1f);
+		StereographicLineInstance instance{
+			/*.transform = gfx.camera.makeTransform(center, angle, size),*/
+			.transform = Mat3x2::identity,
+			.endpoint0 = wall->endpoints[0],
+			.endpoint1 = wall->endpoints[1]
+		};
+		
+		instances.push_back(instance);
+	}
+	drawInstances(stereographicLineVao, gfx.instancesVbo, constView(instances), quad2dPtDrawInstances);
+
 	for (const auto& laser : e.lasers) {
 		gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
 		const auto arrowhead = laserArrowhead(laser.entity);
@@ -148,9 +174,9 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 		gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::RED / 2.0f);
 	}
 
-	for (const auto& wall : e.walls) {
-		this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
-	}
+	//for (const auto& wall : e.walls) {
+	//	this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
+	//}
 
 	for (const auto& door : e.doors) {
 		const auto info = GameState::triggerInfo(e.triggers, door->triggerIndex);
@@ -229,7 +255,6 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 
 void GameRenderer::renderBackground() {
 	backgroundShader.use();
-	std::vector<BackgroundInstance> instances;
 	static f32 elapsed = 0.0f;
 	elapsed += Constants::dt;
 
@@ -238,9 +263,7 @@ void GameRenderer::renderBackground() {
 		.cameraPosition = gfx.camera.pos,
 		.time = elapsed,
 	};
-	drawInstances(backgroundVao, gfx.instancesVbo, constView(instance), [](usize count) {
-		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, count);
-	});
+	drawInstances(backgroundVao, gfx.instancesVbo, constView(instance), quad2dPtDrawInstances);
 }
 
 Vec3 movablePartColor(bool isPositionLocked) {
