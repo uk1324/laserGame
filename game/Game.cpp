@@ -211,5 +211,10 @@ bool Game::areObjectsInValidState() {
 
 bool Game::tryLoadLevel(std::string_view path) {
 	reset();
-	return tryLoadGameLevel(e, path);
+	return tryLoadGameLevelFromFile(e, path);
+}
+
+bool Game::tryLoadLevelFromJson(const Json::Value& json) {
+	reset();
+	return tryLoadGameLevelFromJson(e, json);
 }

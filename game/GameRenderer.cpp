@@ -157,6 +157,7 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 		const auto angle = (endpoint1 - endpoint0).angle();
 		const auto size = Vec2((endpoint1 - endpoint0).length() + additionalWidth, rectangleWidth + additionalWidth);
 		StereographicLineInstance instance{
+			// The rectangle isn't the most optimal shape, could divide the shape into multiple parts to optimize further. When both ends are on the boundary the line coves quite a bit of the screen. Could make the rect calculation for parts of the curve and then rendering with the same endpoints specified.
 			.transform = gfx.camera.makeTransform(center, angle, size / 2.0f),
 			//.transform = Mat3x2::identity, // Makes it fullscreen
 			.color = color,

@@ -393,12 +393,12 @@ void Editor::reset() {
 }
 
 bool Editor::trySaveLevel(std::string_view path) {
-	return trySaveGameLevel(e, path);
+	return trySaveGameLevelToFile(e, path);
 }
 
 bool Editor::tryLoadLevel(std::string_view path) {
 	reset();
-	return tryLoadGameLevel(e, path);
+	return tryLoadGameLevelFromFile(e, path);
 }
 
 void Editor::targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {

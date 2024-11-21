@@ -39,23 +39,28 @@ MainLoop::MainLoop()
 	mainMenu.setSoundSettings(settingsManager.settings.audio);
 	//settingsManager.
 }
+#include <game/GameSerialization.hpp>
 
 void MainLoop::update() {
-	/*if (Input::isKeyDown(KeyCode::TAB)) {
+	if (Input::isKeyDown(KeyCode::TAB)) {
 		switch (state) {
 			using enum State;
 		case GAME:
 			state = State::EDITOR;
 			break;
 
-		case EDITOR:
+		case EDITOR: {
 			state = State::GAME;
+			const auto level = saveGameLevelToJson(editor.e);
+			game.tryLoadLevelFromJson(level);
 			break;
+		}
+			
 
 		default:
 			break;
 		}
-	}*/
+	}
 
 	renderer.gfx.camera.aspectRatio = Window::aspectRatio();
 	glClear(GL_COLOR_BUFFER_BIT);

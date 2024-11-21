@@ -13,7 +13,7 @@ Json::Value::ArrayType& makeArrayAt(Json::Value& v, std::string_view at) {
 	return (v[std::string(at)] = Json::Value::emptyArray()).array();
 }
 
-bool trySaveGameLevel(GameEntities& e, std::string_view path) {
+Json::Value saveGameLevelToJson(GameEntities& e) {
 	auto level = Json::Value::emptyObject();
 
 	{
@@ -152,7 +152,11 @@ bool trySaveGameLevel(GameEntities& e, std::string_view path) {
 		level[levelLockedCellsName] = toJson(levelLockedCells);
 
 	}
+	return level;
+}
 
+bool trySaveGameLevelToFile(GameEntities& e, std::string_view path) {
+	const auto level = saveGameLevelToJson(e);
 	std::ofstream file(path.data());
 	Json::print(file, level);
 
@@ -161,6 +165,7 @@ bool trySaveGameLevel(GameEntities& e, std::string_view path) {
 	}
 	return true;
 }
+
 
 std::optional<const Json::Value::ArrayType&> tryArrayAt(const Json::Value& v, std::string_view name) {
 	const auto nameStr = std::string(name);
@@ -174,12 +179,7 @@ std::optional<const Json::Value::ArrayType&> tryArrayAt(const Json::Value& v, st
 	return a.array();
 }
 
-bool tryLoadGameLevel(GameEntities& e, std::string_view path) {
-	const auto jsonOpt = tryLoadJsonFromFile(path);
-	if (!jsonOpt.has_value()) {
-		return false;
-	}
-	const auto& json = *jsonOpt;
+bool tryLoadGameLevelFromJson(GameEntities& e, const Json::Value& json) {
 	try {
 
 		{
@@ -259,9 +259,9 @@ bool tryLoadGameLevel(GameEntities& e, std::string_view path) {
 					return EditorPortalWallType::PORTAL;
 				};
 				auto convertPortal = [&convertPortalWallType](const LevelPortal& levelPortal) {
-					return EditorPortal{ 
-						.center = levelPortal.center, 
-						.normalAngle = levelPortal.normalAngle, 
+					return EditorPortal{
+						.center = levelPortal.center,
+						.normalAngle = levelPortal.normalAngle,
 						.wallType = convertPortalWallType(levelPortal.wallType),
 						.positionLocked = levelPortal.positionLocked,
 						.rotationLocked = levelPortal.rotationLocked,
@@ -311,4 +311,12 @@ bool tryLoadGameLevel(GameEntities& e, std::string_view path) {
 	}
 
 	return true;
+}
+
+bool tryLoadGameLevelFromFile(GameEntities& e, std::string_view path) {
+	const auto jsonOpt = tryLoadJsonFromFile(path);
+	if (!jsonOpt.has_value()) {
+		return false;
+	}
+	return tryLoadGameLevelFromJson(e, *jsonOpt);
 }

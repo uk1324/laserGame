@@ -18,6 +18,7 @@ struct Game {
 	void reset();
 	bool areObjectsInValidState();
 	bool tryLoadLevel(std::string_view path);
+	bool tryLoadLevelFromJson(const Json::Value& json);
 
 	LaserGrabTool laserGrabTool;
 	MirrorGrabTool mirrorGrabTool;
