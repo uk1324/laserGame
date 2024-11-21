@@ -12,6 +12,7 @@
 #include <gfx/ShaderManager.hpp>
 #include <gfx2d/Quad2dPt.hpp>
 #include <game/Paths.hpp>
+#include <gfx2d/DbgGfx2d.hpp>
 
 #define MAKE_VAO(Type) \
 	createInstancingVao<Type##Shader>(gfx.quad2dPtVbo, gfx.quad2dPtIbo, gfx.instancesVbo)
@@ -138,19 +139,40 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 		.clipToWorld = gfx.camera.clipSpaceToWorldSpace()
 	};
 	shaderSetUniforms(stereographicLineShader, uniforms);
-	for (const auto& wall : e.walls) {
-		const auto line = stereographicLine(wall->endpoints[0], wall->endpoints[1]);
-		const auto center = (wall->endpoints[0] + wall->endpoints[1]) / 2.0f;
-		const auto angle = (wall->endpoints[1] - wall->endpoints[0]).angle();
-		const auto size = Vec2((wall->endpoints[1] - wall->endpoints[0]).length(), 0.1f);
+
+	auto addLine = [&](Vec2 endpoint0, Vec2 endpoint1, Vec3 color) {
+		const auto line = stereographicLine(endpoint0, endpoint1);
+		f32 rectangleWidth;
+		Vec2 center(0.0f);
+		const auto chordCenter = (endpoint0 + endpoint1) / 2.0f;
+		const auto additionalWidth = 0.04f;
+		if (line.type == StereographicLine::Type::LINE) {
+			rectangleWidth = additionalWidth * 2.0f;
+			center = chordCenter;
+		} else {
+			rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
+			const auto circleCenterToChord = chordCenter - line.circle.center;
+			center = chordCenter + circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
+		}
+		const auto angle = (endpoint1 - endpoint0).angle();
+		const auto size = Vec2((endpoint1 - endpoint0).length() + additionalWidth, rectangleWidth + additionalWidth);
 		StereographicLineInstance instance{
-			/*.transform = gfx.camera.makeTransform(center, angle, size),*/
-			.transform = Mat3x2::identity,
-			.endpoint0 = wall->endpoints[0],
-			.endpoint1 = wall->endpoints[1]
+			.transform = gfx.camera.makeTransform(center, angle, size / 2.0f),
+			//.transform = Mat3x2::identity, // Makes it fullscreen
+			.color = color,
+			.endpoint0 = endpoint0,
+			.endpoint1 = endpoint1,
 		};
-		
 		instances.push_back(instance);
+	};
+
+	for (const auto& wall : e.walls) {
+		addLine(wall->endpoints[0], wall->endpoints[1], Color3::WHITE);
+		const auto a0 = antipodalPoint(wall->endpoints[0]);
+		const auto a1 = antipodalPoint(wall->endpoints[1]);
+		if (a0.length() <= 1.0f && a1.length() <= 1.0f) {
+			addLine(a0, a1, Color3::WHITE);
+		}
 	}
 	drawInstances(stereographicLineVao, gfx.instancesVbo, constView(instances), quad2dPtDrawInstances);
 
@@ -174,9 +196,13 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 		gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::RED / 2.0f);
 	}
 
-	//for (const auto& wall : e.walls) {
-	//	this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
-	//}
+	for (const auto& wall : e.walls) {
+		//this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
+		/*if (editor) {
+			gfx.disk(wall->endpoints[0], grabbableCircleRadius, Color3::RED);
+			gfx.disk(wall->endpoints[1], grabbableCircleRadius, Color3::RED);
+		}*/
+	}
 
 	for (const auto& door : e.doors) {
 		const auto info = GameState::triggerInfo(e.triggers, door->triggerIndex);

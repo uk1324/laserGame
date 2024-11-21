@@ -4,6 +4,7 @@ shader StereographicLine {
 	vertexStruct = Vertex2dPt;
 	vertInstance = {
 		Mat3x2 transform;
+		Vec3 color;
 	};
 	fragInstance = {
 		Vec2 endpoint0;

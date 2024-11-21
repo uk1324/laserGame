@@ -15,16 +15,12 @@ vec2 toStereographic(vec3 p) {
 
 vec3 fromStereographic(vec2 p) {
 	float d = p.x * p.x + p.y * p.y + 1.0;
-	return vec3(2.0f * p.x, 2.0f * p.y, -1.0f + p.x * p.x + p.y * p.y) / d;
+	return vec3(2.0 * p.x, 2.0 * p.y, -1.0 + p.x * p.x + p.y * p.y) / d;
 }
 
 float sphericalDistance(vec3 a, vec3 b) {
-    return acos(dot(a, b));
+    return acos(clamp(dot(a, b), -1.0, 1.0));
     //return acos(dot(normalize(a), normalize(b)));
-}
-
-float ellipticDistance(vec3 a, vec3 b) {
-    return min(sphericalDistance(a, b), sphericalDistance(a, -b));
 }
 
 struct Plane {
@@ -57,7 +53,7 @@ vec3 closestPointOnPlane(Plane p, vec3 v) {
 float distanceFromGeodesicLine(vec3 a, vec3 b, vec3 p) {
     Plane plane = greatCirclePlane(a, b);
     vec3 closest = normalize(closestPointOnPlane(plane, p));
-    return ellipticDistance(closest, p);
+    return sphericalDistance(closest, p);
 }
 
 float distanceFromGeodesicLine(vec2 a, vec2 b, vec2 p) {
@@ -71,10 +67,32 @@ float distanceFromGeodesicLine(vec2 a, vec2 b, vec2 p) {
 float distanceFromGeodesicSegment(vec3 a, vec3 b, vec3 p) {
     vec3 t = b - a;
     float along = dot(p, t);
-    if (along > dot(a, t) && along < dot(b, t)) {
-        return distanceFromGeodesicLine(a, b, p);
+// When checking if along was in the right range with the spherical points it would also calculate the anitipodal ones.
+// Technically couting them would be more correct, but would also require adding the rectange to the anitpodal line in the rendering.
+
+//    vec2 as = toStereographic(a);
+//    vec2 bs = toStereographic(b);
+//    vec2 t = bs - as;
+//    float along = dot(t, toStereographic(p));
+//
+//    if (along < dot(as, t)) {
+//        return sphericalDistance(a, p);
+//    }
+//
+//    if (along > dot(bs, t)) {
+//        return sphericalDistance(b, p);
+//    }
+
+    
+    if (along < dot(a, t)) {
+        return sphericalDistance(a, p);
     }
-    return min(ellipticDistance(a, p), ellipticDistance(b, p));
+
+    if (along > dot(b, t)) {
+        return sphericalDistance(b, p);
+    }
+
+    return distanceFromGeodesicLine(a, b, p);
 }
 
 float distanceFromGeodesicSegment(vec2 a, vec2 b, vec2 p) {
@@ -86,13 +104,18 @@ float distanceFromGeodesicSegment(vec2 a, vec2 b, vec2 p) {
 }
 
 void main() {
+    // When the outer hemisphere becomes the shorter segment the endpoints of lines wrap around which casues small parts of the wrapped around endpoint to be renderer (I think not sure). This happens for example if one endpoint is one the boundary.
+    if (dot(worldPosition, worldPosition) > 1.0)  {
+        return;
+    }
+
 	fragColor = vec4(worldPosition, 0.0, 1.0);
-	//fragColor = vec4(vec3(smoothstep(0.5, 0.51, length(worldPosition))), 1.0);
     float d = distanceFromGeodesicSegment(endpoint0, endpoint1, worldPosition);
-    float halfWidth = 0.02;
-    float smoothing = 0.001;
-    d = smoothstep(halfWidth, halfWidth + smoothing, d);
+    float halfWidth = 0.011;
+
+    float smoothing = fwidth(d) * 2.0;
+	d -= halfWidth  - smoothing;
+	d = smoothstep(smoothing, 0.0, d);
     vec3 col = vec3(d);
-    fragColor = vec4(col, 1.0);
-	//fragColor = vec4(vec3(worldPosition.y), 1.0);
+    fragColor = vec4(col, d);
 }
