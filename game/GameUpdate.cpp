@@ -487,7 +487,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 
 				CHECK_NOT_REACHED();
 				return HitResult::END;
-				};
+			};
 
 			auto checkOrbCollision = [&](Vec2 center, f32 radius, const Segment& segment) {
 				const auto centers = splitStereographicCircle(center, radius);
@@ -538,19 +538,57 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				return std::abs(hit.distance - *secondClosestDistance) < 0.001f;
 			};
 
+			// Sometimes the laser is properly calculated for collision, but when split into segments it stops working.
+			// This happens when the segment has 2 antipodal points. 
+			// One way to make this happens is to start a laser from a boundary.
+			// Then it hits the boundary on the other side.
+			// The laser position and the hit point are antipodal, which means they are the same point in the elliptic geometry so you can't draw a unique line through them.
+			// You can make similar things with lasers pointed at boundary where a mirror is (if you move slowly enough you can get it to happen).
+			// The game update still works only the visuals break. This can be verified by putting a trigger there. The trigger collision code uses laserLine to check for collisions so it properly detects them.
+
+			auto laserSegmentMidpoint = [&](Vec2 e0, Vec2 e1) {
+				const auto chordMidpoint = (e0 + e1) / 2.0f;
+				if (laserLine.type == StereographicLine::Type::LINE) {
+					return chordMidpoint;
+				}
+				auto midpoint = (chordMidpoint - laserLine.circle.center).normalized() * laserLine.circle.radius + laserLine.circle.center;
+				if (dot(laserDirection, midpoint) < 0.0f) {
+					midpoint = antipodalPoint(midpoint);
+				}
+				return midpoint;
+			};
+
+			auto processLaserSegmentEndpoints = [&](Vec2 e0, Vec2 e1) {
+				const auto nearlyAntipodal = (e0 + e1).length() < 0.01f;
+				if (!nearlyAntipodal) {
+					const auto s = Segment{ e0, e1, laser->color };
+					processLaserSegment(s);
+					return;
+				}
+				const auto midpoint = laserSegmentMidpoint(e0, e1);
+				const auto s0 = Segment{ e0, midpoint, laser->color };
+				const auto s1 = Segment{ midpoint, e1, laser->color };
+				processLaserSegment(s0);
+				processLaserSegment(s1);
+				//laserLine.
+			};
+
 			if (closest.has_value()) {
-				const auto s = Segment{ laserPosition, closest->point, laser->color };
-				processLaserSegment(s);
+				processLaserSegmentEndpoints(laserPosition, closest->point);
+				/*const auto s = Segment{ laserPosition, closest->point, laser->color };
+				processLaserSegment(s);*/
 				const auto result = processHit(*closest);
 				if (result == HitResult::END 
 					|| doubleIntersectionCheck(*closest, secondClosestDistance)) {
 					break;
 				}
 			} else if (closestToWrappedAround.has_value()) {
-				const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
-				const auto s1 = Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->point, laser->color };
-				processLaserSegment(s0);
-				processLaserSegment(s1);
+				processLaserSegmentEndpoints(laserPosition, boundaryIntersection);
+				processLaserSegmentEndpoints(boundaryIntersectionWrappedAround, closestToWrappedAround->point);
+				//const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
+				//const auto s1 = Segment{ boundaryIntersectionWrappedAround, closestToWrappedAround->point, laser->color };
+				//processLaserSegment(s0);
+				//processLaserSegment(s1);
 
 				const auto result = processHit(*closestToWrappedAround);
 				if (result == HitResult::END 
@@ -558,10 +596,42 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 					break;
 				}
 			} else {
-				const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
+				processLaserSegmentEndpoints(laserPosition, boundaryIntersection);
+				processLaserSegmentEndpoints(laserPosition, boundaryIntersectionWrappedAround);
+				/*const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
 				const auto s1 = Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color };
 				processLaserSegment(s0);
-				processLaserSegment(s1);
+				processLaserSegment(s1);*/
+				/*if (abs(laserPosition.length() - 1.0f) < 0.01f) {
+					auto pointAhead = moveOnStereographicGeodesic(laserPosition, laserDirection.angle(), 0.5f);
+					if (pointAhead.length() >= 1.0f) {
+						pointAhead = moveOnStereographicGeodesic(laserPosition, laserDirection.angle(), -0.5f);
+					}
+					const auto s0 = Segment{ pointAhead, laserPosition.normalized(), laser->color};
+					const auto s1 = Segment{ pointAhead, -laserPosition.normalized(), laser->color};
+					processLaserSegment(s0);
+					processLaserSegment(s1);
+				} else {
+					const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
+					const auto s1 = Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color };
+					processLaserSegment(s0);
+					processLaserSegment(s1);
+				}*/
+				/*if (nearlyTheSameAntipodalPoint && false) {
+					auto pointAhead = moveOnStereographicGeodesic(laserPosition, laserDirection.angle(), 0.5f);
+					if (pointAhead.length() >= 1.0f) {
+						pointAhead = moveOnStereographicGeodesic(laserPosition, laserDirection.angle(), -0.5f);
+					}
+					const auto s0 = Segment{ pointAhead, boundaryIntersection, laser->color };
+					const auto s1 = Segment{ pointAhead, boundaryIntersectionWrappedAround, laser->color };
+					processLaserSegment(s0);
+					processLaserSegment(s1);
+				} else {
+					const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
+					const auto s1 = Segment{ laserPosition, boundaryIntersectionWrappedAround, laser->color };
+					processLaserSegment(s0);
+					processLaserSegment(s1);
+				}*/
 			}
 		}
 	}

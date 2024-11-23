@@ -109,12 +109,13 @@ std::optional<Circle> circleThroughPointsWithNormalAngle(Vec2 p0, f32 angle0, Ve
 
 	return Circle(*result, distance(p0, *result));
 }
-
+#include <gfx2d/DbgGfx2d.hpp>
 StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAngle, f32 translation) {
 	//if (p == Vec2(0.0f)) {
 	//	return StereographicLine(Vec2::oriented(tangentAngle + PI<f32> / 2.0f));
 	//}
 	const auto pointAhead = moveOnStereographicGeodesic(p, tangentAngle, translation);
+	//Dbg::disk(pointAhead, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
 	return stereographicLine(p, pointAhead);
 }
 
@@ -122,16 +123,43 @@ Circle stereographicLineOld(Vec2 p0, Vec2 p1) {
 	// A great circle always passes through the antipodal point.
 	// Maybe doing the computation in S_2 would be more stable.
 	Vec2 antipodal = antipodalPoint(p0);
+	if (abs(p0.length() - 1.0f) < 0.01f) {
+		antipodal = antipodalPoint(p1);
+	}
+	//Dbg::disk(antipodal, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
+	//Dbg::disk(p0, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
+	//Dbg::disk(p1, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
 	return circleThroughPoints(p0, p1, antipodal);
 }
 
+bool nearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2) {
+	// https://stackoverflow.com/questions/65396833/testing-three-points-for-collinearity-in-a-numerically-robust-way
+	const auto l0 = p0.distanceTo(p1);
+	const auto l1 = p0.distanceTo(p2);
+	const auto l2 = p1.distanceTo(p2);
+	const auto longestSide = std::max(l0, std::max(l1, l2));
+	const auto parallelogramArea = abs(det(p1 - p0, p2 - p0));
+	const auto parallelogramHeight = parallelogramArea / longestSide;
+	return parallelogramHeight < 0.001f;
+}
+
 StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
-	const auto line = Line(p0, p1);
-	/*const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.0001f;*/
-	/*const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.001f;*/
-	const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.005f;
-	if (goesThroughOrigin) {
-		return StereographicLine(line.n);
+	const auto p2 = antipodalPoint(p0);
+
+	// https://math.stackexchange.com/questions/405966/if-i-have-three-points-is-there-an-easy-way-to-tell-if-they-are-collinear
+
+	//const auto longestSide
+	// 
+	//const auto nearlyColinear = abs((p1.y - p0.y) * (p2.x - p1.x) - (p2.y - p1.y) * (p1.x - p0.x)) < 0.001f;
+	//const auto line = Line(p0, p1);
+	///*const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.0001f;*/
+	///*const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.001f;*/
+	//const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.005f;
+	if (nearlyColinear(p0, p1, p2)) {
+		/*Dbg::disk(p0, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
+		Dbg::disk(p1, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
+		Dbg::disk(p2, 0.01f, Vec3(1.0f, 0.0f, 0.0f));*/
+		return StereographicLine((p0 - p1).rotBy90deg().normalized());
 	}
 	return stereographicLineOld(p0, p1);
 }

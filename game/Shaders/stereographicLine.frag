@@ -119,5 +119,5 @@ void main() {
     }
     vec3 col = mix(color0, color1, colorD);
     fragColor = vec4(col, d);
-    //fragColor = vec4(vec3(d), 1.0);
+    //fragColor = vec4(vec3(d) + vec3(0.1), 1.0);
 }

@@ -155,14 +155,6 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 	}
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	for (const auto& laser : e.lasers) {
-		gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
-		const auto arrowhead = laserArrowhead(laser.entity);
-		/*renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));*/
-		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[0], 0.01f, movablePartColor(false));
-		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[1], 0.01f, movablePartColor(false));
-	}
-
 	const auto activatableObjectColor = [](Vec3 baseColor, bool isActivated) {
 		return isActivated ? baseColor : baseColor / 2.0f;
 	};
@@ -253,10 +245,6 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 
 	renderStereographicSegmentsComplex();
 	renderStereographicDisks();
-	gfx.drawFilledTriangles();
-	gfx.drawCircles();
-	gfx.drawDisks();
-	gfx.drawLines();
 
 	glDisable(GL_STENCIL_TEST);
 
@@ -267,6 +255,19 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 		gfx.circleTriangulated(Constants::boundary.center, radius, width, color);
 	}
 	gfx.drawFilledTriangles();
+
+	for (const auto& laser : e.lasers) {
+		gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
+		const auto arrowhead = laserArrowhead(laser.entity);
+		/*renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));*/
+		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[0], 0.01f, movablePartColor(false));
+		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[1], 0.01f, movablePartColor(false));
+	}
+
+	gfx.drawFilledTriangles();
+	gfx.drawCircles();
+	gfx.drawDisks();
+	gfx.drawLines();
 }
 
 void GameRenderer::renderBackground() {
