@@ -25,6 +25,12 @@ struct StereographicLine {
 	};
 };
 
+struct SegmentEndpoints {
+	SegmentEndpoints(Vec2 e0, Vec2 e1);
+
+	Vec2 endpoints[2];
+};
+
 struct StereographicSegment {
 	StereographicSegment(Vec2 e0, Vec2 e1);
 
@@ -95,3 +101,7 @@ StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const Stere
 StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const StereographicLine& line, Vec2 lineEndpoint0, Vec2 lineEndpoint1, const Circle& circle);
 StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const StereographicSegment& a, const StereographicSegment& b);
 bool stereographicSegmentVsSegmentCollision(const StereographicSegment& a, Vec2 endpoint0, Vec2 endpoint1);
+
+
+StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 endpoint1);
+StaticList<Vec2, 2> splitStereographicCircle(Vec2 center, f32 radius);

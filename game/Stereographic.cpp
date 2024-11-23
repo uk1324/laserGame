@@ -435,6 +435,51 @@ bool stereographicSegmentVsSegmentCollision(const StereographicSegment& a, Vec2 
 	return false;
 }
 
+#include <game/Constants.hpp>
+
+StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 endpoint1) {
+	StaticList<SegmentEndpoints, 2> result;
+
+	const auto insideBoundary0 = endpoint0.length() < Constants::boundary.radius;
+	const auto insideBoundary1 = endpoint1.length() < Constants::boundary.radius;
+
+	if (insideBoundary0 && insideBoundary1) {
+		result.add(SegmentEndpoints(endpoint0, endpoint1));
+		return result;
+	}
+
+	const auto line = stereographicLine(endpoint0, endpoint1);
+	const auto intersections = stereographicSegmentVsCircleIntersection(line, endpoint0, endpoint1, Constants::boundary);
+
+	if (intersections.size() != 1) {
+		// Don't know what to do here yet.
+		result.add(SegmentEndpoints(endpoint0, endpoint1));
+		return result;
+	}
+
+	if (insideBoundary0) {
+		result.add(SegmentEndpoints(endpoint0, intersections[0]));
+		result.add(SegmentEndpoints(antipodalPoint(endpoint1), -intersections[0]));
+		return result;
+	} else {
+		result.add(SegmentEndpoints(endpoint1, intersections[0]));
+		result.add(SegmentEndpoints(antipodalPoint(endpoint0), -intersections[0]));
+		return result;
+	}
+}
+
+StaticList<Vec2, 2> splitStereographicCircle(Vec2 center, f32 radius) {
+	StaticList<Vec2, 2> result;
+	const auto circle = stereographicCircle(center, radius);
+
+	result.add(center);
+	if (circle.center.length() + radius < Constants::boundary.radius) {
+		return result;
+	}
+	result.add(antipodalPoint(center));
+	return result;
+}
+
 StereographicLine::StereographicLine(const StereographicLine& other)
 	: type(other.type) {
 	switch (type) {
@@ -499,3 +544,7 @@ bool AngleRange::isInRange(f32 angle) {
 StereographicSegment::StereographicSegment(Vec2 e0, Vec2 e1)
 	: line(stereographicLine(e0, e1))
 	, endpoints{ e0, e1 } {}
+
+SegmentEndpoints::SegmentEndpoints(Vec2 e0, Vec2 e1) 
+	: endpoints{ e0, e1 } {
+}

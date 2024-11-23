@@ -1,20 +1,12 @@
 #include "Game.hpp"
 #include <game/GameSerialization.hpp>
 #include <engine/Math/Interpolation.hpp>
+#include <game/Animation.hpp>
 #include <imgui/imgui.h>
 #include <engine/Input/Input.hpp>
 
 Game::Game() {
 	tryLoadLevel("./generated/test");
-}
-
-Vec2 snapPositionsOutsideBoundary(Vec2 v) {
-	const auto length = v.length();
-	const auto maxAllowedLength = Constants::boundary.radius - 0.05f;
-	if (length > maxAllowedLength) {
-		v *= maxAllowedLength / length;
-	}
-	return v;
 }
 
 Game::Result Game::update(GameRenderer& renderer) {
@@ -28,19 +20,8 @@ Game::Result Game::update(GameRenderer& renderer) {
 	const bool enforceConstrains = true;
 
 	laserGrabTool.update(e.lasers, std::nullopt, cursorPos, cursorCaptured, cursorExact, enforceConstrains);
-	for (auto laser : e.lasers) {
-		laser->position = snapPositionsOutsideBoundary(laser->position);
-	}
 	mirrorGrabTool.update(e.mirrors, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
-	for (auto mirror : e.mirrors) {
-		mirror->center = snapPositionsOutsideBoundary(mirror->center);
-	}
 	portalGrabTool.update(e.portalPairs, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
-	for (auto portalPair : e.portalPairs) {
-		for (auto& portal : portalPair->portals) {
-			portal.center = snapPositionsOutsideBoundary(portal.center);
-		}
-	}
 
 	const auto objectsInValidState = areObjectsInValidState();
 	s.update(e, objectsInValidState);
@@ -69,11 +50,11 @@ Game::Result Game::update(GameRenderer& renderer) {
 		
 		const auto pos = Ui::rectPositionRelativeToCorner(anchor, size, Ui::equalSizeReativeToX(r, 0.01f));
 
-		Ui::updateConstantSpeedT(goToNextLevelButtonActiveT, 0.3f, levelComplete);
+		updateConstantSpeedT(goToNextLevelButtonActiveT, 0.3f, levelComplete);
 
 		auto hover = Ui::isPointInRectPosSize(pos, size, uiCursorPos);
 		// Don't do hover highlighting when the level is not complete so the player doesn't try to press a button that doesn't do anything. Could instead just not have the button there when the level is not complete.
-		Ui::updateConstantSpeedT(goToNextLevelButtonHoverT, 0.3f, levelComplete && hover);
+		updateConstantSpeedT(goToNextLevelButtonHoverT, 0.3f, levelComplete && hover);
 
 		goToNextLevelButtonActiveT = std::clamp(goToNextLevelButtonActiveT, 0.0f, 1.0f);
 
@@ -152,11 +133,6 @@ bool Game::areObjectsInValidState() {
 			if (collision(a, b)) {
 				return false;
 			}
-		}
-	}
-	for (const auto& a : movableObjects) {
-		if (stereographicSegmentVsCircleIntersection(a.line, a.endpoints[0], a.endpoints[1], Constants::boundary).size() > 0) {
-			return false;
 		}
 	}
 

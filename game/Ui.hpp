@@ -51,8 +51,6 @@ namespace Ui {
 	// offset is in the coordinates such that the origin is set in such a way that the corner of the rect is at the corner. offset increases from the corner to (0, 0)
 	Vec2 rectPositionRelativeToCorner(Vec2 corner, Vec2 rectSize, Vec2 offset);
 
-	void updateConstantSpeedT(f32& t, f32 timeToFinish, bool active);
-
 	struct CenteredHorizontalListLayout {
 		f32 totalSizeY = 0.0f;
 		struct Block {

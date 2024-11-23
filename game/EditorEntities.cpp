@@ -1,5 +1,6 @@
 #include <game/EditorEntities.hpp>
 #include <array>
+#include <engine/Math/Interpolation.hpp>
 #include <engine/Math/Rotation.hpp>
 #include <engine/Math/Quat.hpp>
 #include <engine/Math/LineSegment.hpp>
@@ -230,6 +231,10 @@ void wallTypeCombo(const char* label, EditorWallType& type) {
 		"type",
 		reinterpret_cast<int*>(&type),
 		"reflecting\0absorbing\0");
+}
+
+Vec3 currentOrbColor(Vec3 color, f32 activationAnimationT) {
+	return lerp(color / 2.0f, color, activationAnimationT);
 }
 
 void editorLaserColorCombo(Vec3& selectedColor) {

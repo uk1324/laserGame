@@ -3,6 +3,8 @@
 #include <gfx2d/Gfx2d.hpp>
 #include <game/GameUpdate.hpp>
 #include <game/Constants.hpp>
+#include <game/Shaders/stereographicLineData.hpp>
+#include <game/Shaders/stereographicDiskData.hpp>
 
 const auto grabbableCircleRadius = 0.015f;
 
@@ -18,9 +20,9 @@ struct GameRenderer {
 	void wall(Vec2 e0, Vec2 e1, Vec3 color, bool editor = true);
 	void mirror(const EditorMirror& mirror);
 	void renderWalls();
-	void stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color);
+	void stereographicSegmentSimple(Vec2 e0, Vec2 e1, Vec3 color);
+	void stereographicSegmentSimple(Vec2 e0, Vec2 e1, Vec4 color, f32 width = Constants::wallWidth);
 	void stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color);
-	void stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width = Constants::wallWidth);
 	void lockedCell(const LockedCells& cells, i32 index, Vec4 color);
 
 	static constexpr Vec4 lockedCellColor = Vec4(Color3::WHITE / 2.0f, 0.5f);
@@ -35,6 +37,18 @@ struct GameRenderer {
 
 	Vao stereographicLineVao;
 	ShaderProgram& stereographicLineShader;
+	std::vector<StereographicLineInstance> stereographicLines;
+	void addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, Vec3 color0, Vec3 color1, f32 width);
+	void renderStereographicSegmentsComplex();
+	void stereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, Vec3 color0, Vec3 color1, f32 width);
+
+	Vao stereographicDiskVao;
+	ShaderProgram& stereographicDiskShader;
+	std::vector<StereographicDiskInstance> stereographicDisks;
+	void renderStereographicDisks();
+	void addStereographicDisk(Vec2 center, f32 radius, Vec3 colorInside, Vec3 colorBorder);
+
+	bool simplifiedGraphics = false;
 
 	Font font;
 

@@ -1,16 +1,15 @@
 import "../../engine/gfx2d/Vertex2dPt.data";
 
-shader StereographicLine {
+shader StereographicDisk {
 	vertexStruct = Vertex2dPt;
 	vertInstance = {
 		Mat3x2 transform;
 	};
 	fragInstance = {
-		Vec2 endpoint0;
-		Vec2 endpoint1;
-		Vec3 color0;
-		Vec3 color1;
-		float halfWidth;
+		Vec2 center;
+		float radius;
+		Vec3 colorInside;
+		Vec3 colorBorder;
 	};
 	vertOut = {
 		vec2 worldPosition;

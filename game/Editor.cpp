@@ -19,6 +19,12 @@ Editor::Editor()
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
+bool isOrbUnderCursor(Vec2 center, f32 radius, Vec2 cursorPos) {
+	const auto circle = stereographicCircle(center, radius);
+	const auto d = distance(cursorPos, circle.center);
+	return d < circle.radius + Constants::endpointGrabPointRadius;
+};
+
 void Editor::update(GameRenderer& renderer) {
 	auto id = ImGui::DockSpaceOverViewport(
 		ImGui::GetMainViewport(),
@@ -406,6 +412,10 @@ void Editor::targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		return;
 	}
 
+	if (cursorPos.length() > Constants::boundary.radius) {
+		return;
+	}
+
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		auto target = e.targets.create();
 		target.entity = EditorTarget{ .position = cursorPos, .radius = targetCreateTool.targetRadius };
@@ -476,6 +486,11 @@ void Editor::triggerCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 	if (cursorCaptured) {
 		return;
 	}
+
+	if (cursorPos.length() > Constants::boundary.radius) {
+		return;
+	}
+
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		auto trigger = e.triggers.create();
 		trigger.entity = EditorTrigger{
@@ -595,18 +610,8 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			}
 		}
 
-		auto isCursorUnderOrb = [](Circle circle, Vec2 center, Vec2 cursorPos) {
-			const auto d = distance(cursorPos, circle.center);
-			// If the circle is too small then check the distance from the center.
-			const auto smallCircle = circle.radius < Constants::endpointGrabPointRadius
-				&& d < Constants::endpointGrabPointRadius;
-			const auto normalCircle = d < circle.radius;
-			return smallCircle || normalCircle;
-		};
-
 		for (const auto& target : e.targets) {
-			const auto circle = target->calculateCircle();
-			if (isCursorUnderOrb(circle, target->position, cursorPos)) {
+			if (isOrbUnderCursor(target->position, target->radius, cursorPos)) {
 				selectTool.selectedEntity = EditorEntityId(target.id);
 				goto selectedEntity;
 			}
@@ -625,7 +630,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 		for (const auto& trigger : e.triggers) {
 			const auto circle = trigger->circle();
-			if (isCursorUnderOrb(circle, trigger->position, cursorPos)) {
+			if (isOrbUnderCursor(trigger->position, trigger->defaultRadius, cursorPos)) {
 				selectTool.selectedEntity = EditorEntityId(trigger.id);
 				goto selectedEntity;
 			}
@@ -906,7 +911,7 @@ void Editor::mirrorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 std::optional<Editor::GrabbedOrb> Editor::orbCheckGrab(Vec2 position, f32 radius, 
 	Vec2 cursorPos, bool& cursorCaptured) {
-	if (distance(position, cursorPos) > Constants::endpointGrabPointRadius) {
+	if (!isOrbUnderCursor(position, radius, cursorPos)) {
 		return std::nullopt;
 	}
 	cursorCaptured = true;
@@ -996,6 +1001,10 @@ std::optional<EditorMirror> Editor::MirrorCreateTool::update(bool down, bool can
 	if (!down) {
 		return std::nullopt;
 	}
+	if (cursorPos.length() > Constants::boundary.radius) {
+		return std::nullopt;
+	}
+
 	cursorCaptured = true;
 
 	if (!center.has_value()) {
@@ -1082,6 +1091,11 @@ std::optional<Editor::WallLikeEntity> Editor::WallLikeEntityCreateTool::update(b
 	if (!down) {
 		return std::nullopt;
 	}
+
+	if (cursorPos.length() > Constants::boundary.radius) {
+		return std::nullopt;
+	}
+
 	cursorCaptured = true;
 
 	if (!endpoint.has_value()) {

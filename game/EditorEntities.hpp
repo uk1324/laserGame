@@ -18,6 +18,7 @@ enum class EditorWallType {
 };
 
 void wallTypeCombo(const char* label, EditorWallType& type);
+Vec3 currentOrbColor(Vec3 color, f32 activationAnimationT);
 
 struct EditorWall {
 	struct DefaultInitialize {
@@ -107,6 +108,7 @@ struct EditorTarget {
 	f32 radius;
 
 	bool activated = false;
+	f32 activationAnimationT = 0.0f;
 };
 
 void editorTargetRadiusInput(f32& radius);
@@ -157,6 +159,7 @@ struct EditorTrigger {
 	i32 index;
 
 	bool activated = false;
+	f32 activationAnimationT = 0.0f;
 
 	Circle circle() const;
 

@@ -14,6 +14,7 @@ struct GameState {
 
 	struct TriggerInfo {
 		Vec3 color;
+		Vec3 currentColor;
 		bool active;
 	};
 	static std::optional<TriggerInfo> triggerInfo(TriggerArray& triggers, i32 triggerIndex);

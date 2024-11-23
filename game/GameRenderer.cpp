@@ -2,7 +2,6 @@
 #include <engine/Math/Color.hpp>
 #include <Overloaded.hpp>
 #include <game/Shaders/backgroundData.hpp>
-#include <game/Shaders/stereographicLineData.hpp>
 #include <engine/Math/Constants.hpp>
 #include <game/Stereographic.hpp>
 #include <glad/glad.h>
@@ -25,6 +24,8 @@ GameRenderer GameRenderer::make() {
 		.backgroundShader = MAKE_GENERATED_SHADER(BACKGROUND),
 		.stereographicLineVao = MAKE_VAO(StereographicLine),
 		.stereographicLineShader = MAKE_GENERATED_SHADER(STEREOGRAPHIC_LINE),
+		.stereographicDiskVao = MAKE_VAO(StereographicDisk),
+		.stereographicDiskShader = MAKE_GENERATED_SHADER(STEREOGRAPHIC_DISK),
 		.font = FontRenderer::loadFont(FONT_FOLDER, "RobotoMono-Regular"),
 		MOVE(gfx),
 	};
@@ -37,11 +38,15 @@ Vec3 GameRenderer::wallColor(EditorWallType type) {
 }
 
 void GameRenderer::multicoloredSegment(const std::array<Vec2, 2>& endpoints, f32 normalAngle, Vec3 normalColor, Vec3 backColor) {
-	const auto normal = Vec2::oriented(normalAngle);
-	const auto forward = normal * 0.005f;
-	const auto back = -normal * 0.005f;
-	stereographicSegment(endpoints[0] + forward, endpoints[1] + forward, normalColor);
-	stereographicSegment(endpoints[0] + back, endpoints[1] + back, backColor);
+	if (simplifiedGraphics) {
+		const auto normal = Vec2::oriented(normalAngle);
+		const auto forward = normal * 0.005f;
+		const auto back = -normal * 0.005f;
+		stereographicSegment(endpoints[0] + forward, endpoints[1] + forward, normalColor);
+		stereographicSegment(endpoints[0] + back, endpoints[1] + back, backColor);
+	} else {
+		stereographicSegmentComplex(endpoints[0], endpoints[1], backColor, normalColor, 0.035f);
+	}
 }
 
 void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color, bool editor) {
@@ -49,6 +54,7 @@ void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color, bool editor) {
 		gfx.disk(e0, grabbableCircleRadius, Color3::RED);
 		gfx.disk(e1, grabbableCircleRadius, Color3::RED);
 	}
+
 	stereographicSegment(e0, e1, color);
 }
 
@@ -75,19 +81,11 @@ void GameRenderer::renderWalls() {
 	gfx.drawDisks();
 }
 
-void GameRenderer::stereographicSegmentOld(Vec2 e0, Vec2 e1, Vec3 color) {
-	const auto line = stereographicLineOld(e0, e1);
-
-	const auto range = angleRangeBetweenPointsOnCircle(line.center, e0, e1);
-
-	gfx.circleArcTriangulated(line.center, line.radius, range.min, range.max, Constants::wallWidth, color, 1000);
+void GameRenderer::stereographicSegmentSimple(Vec2 e0, Vec2 e1, Vec3 color) {
+	stereographicSegmentSimple(e0, e1, Vec4(color, 1.0f));
 }
 
-void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) { 
-	stereographicSegment(e0, e1, Vec4(color, 1.0f));
-}
-
-void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width) {
+void GameRenderer::stereographicSegmentSimple(Vec2 e0, Vec2 e1, Vec4 color, f32 width) {
 	const auto stereographicLine = ::stereographicLine(e0, e1);
 	if (stereographicLine.type == StereographicLine::Type::LINE) {
 		gfx.lineTriangulated(e0, e1, width, color);
@@ -96,6 +94,14 @@ void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec4 color, f32 width)
 
 		const auto range = angleRangeBetweenPointsOnCircle(line.center, e0, e1);
 		gfx.circleArcTriangulated(line.center, line.radius, range.min, range.max, width, color, 1000);
+	}
+}
+
+void GameRenderer::stereographicSegment(Vec2 e0, Vec2 e1, Vec3 color) {
+	if (simplifiedGraphics) {
+		stereographicSegmentSimple(e0, e1, color);
+	} else {
+		stereographicSegmentComplex(e0, e1, color, color, 0.025f);
 	}
 }
 
@@ -110,9 +116,25 @@ void GameRenderer::renderClear() {
 	renderBackground();
 	gfx.diskTriangulated(Vec2(0.0f), 1.0f, Vec4(Color3::BLACK, 1.0f));
 	gfx.drawFilledTriangles();
+
 }
 
 void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool validGameState) {
+
+	glEnable(GL_STENCIL_TEST);
+	glClear(GL_STENCIL_BUFFER_BIT);
+	{
+		glColorMask(0, 0, 0, 0); // Disable color buffer writing.
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE); // Replace if the stencil test passes else do nothing.
+		glStencilFunc(GL_ALWAYS, 1, 0xFF); // Always pass stencil test.
+
+		gfx.diskTriangulated(Vec2(0.0f), 1.0f, Vec4(Color3::BLACK, 1.0f));
+		gfx.drawFilledTriangles();
+
+		glColorMask(1, 1, 1, 1); // Enable color buffer writing.
+		glStencilFunc(GL_EQUAL, 1, 0xFF); // Pass stencil test only in the stencil set region.
+	}
+
 
 	// If you triangulate things consistently that is if things share a side then they are made of triangles that share sides then you don't have to worry about gaps. When triangulating circular arc you just need to make sure that the number of discretization points is dependent only on the arc could make it constant or dependent on length for example.
 	for (const auto& cell : e.lockedCells.cells) {
@@ -129,53 +151,9 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 		}
 		drawnSegments++;
 		/*renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color, 0.5f), 0.05f);*/
-		stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color));
+		stereographicSegment(segment.endpoints[0], segment.endpoints[1], segment.color);
 	}
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	stereographicLineShader.use();
-	std::vector<StereographicLineInstance> instances;
-	StereographicLineVertUniforms uniforms{
-		.clipToWorld = gfx.camera.clipSpaceToWorldSpace()
-	};
-	shaderSetUniforms(stereographicLineShader, uniforms);
-
-	auto addLine = [&](Vec2 endpoint0, Vec2 endpoint1, Vec3 color) {
-		const auto line = stereographicLine(endpoint0, endpoint1);
-		f32 rectangleWidth;
-		Vec2 center(0.0f);
-		const auto chordCenter = (endpoint0 + endpoint1) / 2.0f;
-		const auto additionalWidth = 0.04f;
-		if (line.type == StereographicLine::Type::LINE) {
-			rectangleWidth = additionalWidth * 2.0f;
-			center = chordCenter;
-		} else {
-			rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
-			const auto circleCenterToChord = chordCenter - line.circle.center;
-			center = chordCenter + circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
-		}
-		const auto angle = (endpoint1 - endpoint0).angle();
-		const auto size = Vec2((endpoint1 - endpoint0).length() + additionalWidth, rectangleWidth + additionalWidth);
-		StereographicLineInstance instance{
-			// The rectangle isn't the most optimal shape, could divide the shape into multiple parts to optimize further. When both ends are on the boundary the line coves quite a bit of the screen. Could make the rect calculation for parts of the curve and then rendering with the same endpoints specified.
-			.transform = gfx.camera.makeTransform(center, angle, size / 2.0f),
-			//.transform = Mat3x2::identity, // Makes it fullscreen
-			.color = color,
-			.endpoint0 = endpoint0,
-			.endpoint1 = endpoint1,
-		};
-		instances.push_back(instance);
-	};
-
-	for (const auto& wall : e.walls) {
-		addLine(wall->endpoints[0], wall->endpoints[1], Color3::WHITE);
-		const auto a0 = antipodalPoint(wall->endpoints[0]);
-		const auto a1 = antipodalPoint(wall->endpoints[1]);
-		if (a0.length() <= 1.0f && a1.length() <= 1.0f) {
-			addLine(a0, a1, Color3::WHITE);
-		}
-	}
-	drawInstances(stereographicLineVao, gfx.instancesVbo, constView(instances), quad2dPtDrawInstances);
 
 	for (const auto& laser : e.lasers) {
 		gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
@@ -191,25 +169,16 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 
 	//const auto darkGreen = Vec3(2, 48, 32) / 255.0f;
 	//const auto darkRed = Vec3(255, 87, 51) / 255.0f;
-	if (validGameState) {
-		gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::GREEN / 2.0f);
-	} else {
-		gfx.circleTriangulated(Vec2(0.0f), 1.0f, 0.01f, Color3::RED / 2.0f);
-	}
 
 	for (const auto& wall : e.walls) {
-		//this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
-		/*if (editor) {
-			gfx.disk(wall->endpoints[0], grabbableCircleRadius, Color3::RED);
-			gfx.disk(wall->endpoints[1], grabbableCircleRadius, Color3::RED);
-		}*/
+		this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
 	}
 
 	for (const auto& door : e.doors) {
 		const auto info = GameState::triggerInfo(e.triggers, door->triggerIndex);
 		Vec3 color = absorbingColor;
 		if (info.has_value()) {
-			color = activatableObjectColor(info->color, info->active);
+			color = info->currentColor;
 		}
 
 		if (editor) {
@@ -223,15 +192,15 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 		}
 	}
 
-	renderWalls();
+	//renderWalls();
 
 	for (const auto& mirror : e.mirrors) {
 		this->mirror(mirror.entity);
 	}
 
-	gfx.drawCircles();
-	gfx.drawFilledTriangles();
-	gfx.drawDisks();
+	//gfx.drawCircles();
+	//gfx.drawFilledTriangles();
+	//gfx.drawDisks();
 
 	for (const auto& portalPair : e.portalPairs) {
 		for (const auto& portal : portalPair->portals) {
@@ -259,25 +228,45 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 		}
 	}
 
-	auto drawOrb = [&](Vec2 center, const Circle& circle, Vec3 color) {
-		gfx.circle(circle.center, circle.radius, 0.01f, color);
-		gfx.disk(center, 0.01f, color);
+	auto drawOrb = [&](Vec2 center, f32 radius, Vec3 color, f32 activationAnimationT) {
+		const auto currentColor = currentOrbColor(color, activationAnimationT);
+		//const auto c = activatableObjectColor(color, activationT);
+		const auto centers = splitStereographicCircle(center, radius);
+		for (const auto& center : centers) {
+			if (simplifiedGraphics) {
+				const auto circle = stereographicCircle(center, radius);
+				gfx.circle(circle.center, circle.radius, 0.01f, currentColor);
+				gfx.disk(center, 0.01f, currentColor);
+			} else {
+				addStereographicDisk(center, radius, currentColor, color / 2.0f);
+			}
+		}
 	};
 
 	for (const auto& target : e.targets) {
-		const auto circle = target->calculateCircle();
-		drawOrb(target->position, circle, activatableObjectColor(Color3::MAGENTA, target->activated));
+		drawOrb(target->position, target->radius, Color3::MAGENTA, target->activationAnimationT);
 	}
 
 	for (const auto& trigger : e.triggers) {
-		const auto circle = trigger->circle();
-		drawOrb(trigger->position, circle, activatableObjectColor(trigger->color, trigger->activated));
+		drawOrb(trigger->position, EditorTrigger::defaultRadius, trigger->color, trigger->activationAnimationT);
 	}
 
+	renderStereographicSegmentsComplex();
+	renderStereographicDisks();
 	gfx.drawFilledTriangles();
 	gfx.drawCircles();
 	gfx.drawDisks();
 	gfx.drawLines();
+
+	glDisable(GL_STENCIL_TEST);
+
+	{
+		const auto width = 0.01f;
+		const auto radius = Constants::boundary.radius + width / 2.0f;
+		auto color = validGameState ? Color3::GREEN / 2.0f : Color3::RED / 2.0f;;
+		gfx.circleTriangulated(Constants::boundary.center, radius, width, color);
+	}
+	gfx.drawFilledTriangles();
 }
 
 void GameRenderer::renderBackground() {
@@ -291,6 +280,89 @@ void GameRenderer::renderBackground() {
 		.time = elapsed,
 	};
 	drawInstances(backgroundVao, gfx.instancesVbo, constView(instance), quad2dPtDrawInstances);
+}
+
+void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, Vec3 color0, Vec3 color1, f32 width) {
+	//const auto l0 = endpoint0.length();
+	//const auto l1 = endpoint1.length();
+	//if (l0 > 1.0f) {
+	//	endpoint0 /= l0;
+	//}
+	//if (l1 > 1.0f) {
+	//	endpoint1 /= l1;
+	//}
+
+	const auto line = stereographicLine(endpoint0, endpoint1);
+	f32 rectangleWidth;
+	Vec2 center(0.0f);
+	const auto chordCenter = (endpoint0 + endpoint1) / 2.0f;
+	const auto additionalWidth = 0.04f;
+	if (line.type == StereographicLine::Type::LINE) {
+		rectangleWidth = additionalWidth * 2.0f;
+		center = chordCenter;
+	} else {
+		rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
+		const auto circleCenterToChord = chordCenter - line.circle.center;
+		center = chordCenter + circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
+	}
+	const auto angle = (endpoint1 - endpoint0).angle();
+	const auto size = Vec2((endpoint1 - endpoint0).length() + additionalWidth, rectangleWidth + additionalWidth);
+	StereographicLineInstance instance{
+		// The rectangle isn't the most optimal shape, could divide the shape into multiple parts to optimize further. When both ends are on the boundary the line coves quite a bit of the screen. Could make the rect calculation for parts of the curve and then rendering with the same endpoints specified.
+		.transform = gfx.camera.makeTransform(center, angle, size / 2.0f),
+		//.transform = Mat3x2::identity, // Makes it fullscreen
+		.endpoint0 = endpoint0,
+		.endpoint1 = endpoint1,
+		.color0 = color0,
+		.color1 = color1,
+		.halfWidth = width / 2.0f
+	};
+	stereographicLines.push_back(instance);
+}
+
+void GameRenderer::renderStereographicSegmentsComplex() {
+	stereographicLineShader.use();
+	StereographicLineVertUniforms uniforms{
+		.clipToWorld = gfx.camera.clipSpaceToWorldSpace()
+	};
+	shaderSetUniforms(stereographicLineShader, uniforms);
+	drawInstances(stereographicLineVao, gfx.instancesVbo, constView(stereographicLines), quad2dPtDrawInstances);
+	stereographicLines.clear();
+}
+
+void GameRenderer::stereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, Vec3 color0, Vec3 color1, f32 width) {
+	addStereographicSegmentComplex(endpoint0, endpoint1, color0, color1, width);
+	if (endpoint0.length() >= 1.0f || endpoint1.length() >= 1.0f) {
+		// This is done for example to make thing like walls on the boundary appear on both sides of the circle.
+		const auto line = stereographicLine(endpoint0, endpoint1);
+		const auto a0 = antipodalPoint(endpoint0);
+		const auto a1 = antipodalPoint(endpoint1);
+		// Adding the antipodal line might create a lot of points the are renderered but lie outside the circle.
+		// The above no longer holds, because a stencil buffer is used.
+		addStereographicSegmentComplex(a0, a1, color1, color0, width);
+	}
+}
+
+void GameRenderer::renderStereographicDisks() {
+	stereographicDiskShader.use();
+	StereographicDiskVertUniforms uniforms{
+		.clipToWorld = gfx.camera.clipSpaceToWorldSpace()
+	};
+	shaderSetUniforms(stereographicDiskShader, uniforms);
+	drawInstances(stereographicDiskVao, gfx.instancesVbo, constView(stereographicDisks), quad2dPtDrawInstances);
+	stereographicDisks.clear();
+}
+
+void GameRenderer::addStereographicDisk(Vec2 center, f32 radius, Vec3 colorInside, Vec3 colorBorder) {
+	const auto circle = stereographicCircle(center, radius);
+	StereographicDiskInstance instance{
+		.transform = gfx.camera.makeTransform(circle.center, 0.0f, Vec2(circle.radius + 0.01f)),
+		.center = center,
+		.radius = radius,
+		.colorInside = colorInside,
+		.colorBorder = colorBorder
+	};
+	stereographicDisks.push_back(instance);
 }
 
 Vec3 movablePartColor(bool isPositionLocked) {

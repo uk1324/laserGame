@@ -115,12 +115,6 @@ Vec2 Ui::rectPositionRelativeToCorner(Vec2 corner, Vec2 rectSize, Vec2 offset) {
 	return corner - (offset + rectSize / 2.0f) * direction;
 }
 
-void Ui::updateConstantSpeedT(f32& t, f32 timeToFinish, bool active) {
-	const auto speed = 1.0f / (timeToFinish);
-	t += speed * Constants::dt * (active ? 1.0f : -1.0f);
-	t = std::clamp(t, 0.0f, 1.0f);
-}
-
 f32 Ui::CenteredHorizontalListLayout::Block::worldCenter() const {
 	return (worldPositionTopY + worldPositionBottomY) / 2.0f;
 }

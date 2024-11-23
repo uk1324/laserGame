@@ -3,12 +3,21 @@
 #include <array>
 #include <game/Constants.hpp>
 #include <game/Stereographic.hpp>
-
+#include <game/Animation.hpp>
 #include <imgui/imgui.h>
 #include <engine/gfx2d/DbgGfx2d.hpp>
 #include <engine/Math/MarchingSquares.hpp>
 #include <Array2d.hpp>
 #include <engine/Math/Interpolation.hpp>
+
+Vec2 snapPositionsOutsideBoundary(Vec2 v) {
+	const auto length = v.length();
+	const auto maxAllowedLength = Constants::boundary.radius;
+	if (length > maxAllowedLength) {
+		v *= maxAllowedLength / length;
+	}
+	return v;
+}
 
 void GameState::update(GameEntities& e, bool objectsInValidState) {
 
@@ -75,6 +84,34 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 	//	}
 	//}
 
+	for (auto laser : e.lasers) {
+		laser->position = snapPositionsOutsideBoundary(laser->position);
+	}
+	for (auto mirror : e.mirrors) {
+		mirror->center = snapPositionsOutsideBoundary(mirror->center);
+	}
+	for (auto portalPair : e.portalPairs) {
+		for (auto& portal : portalPair->portals) {
+			portal.center = snapPositionsOutsideBoundary(portal.center);
+		}
+	}
+	for (auto wall : e.walls) {
+		for (auto& endpoint : wall->endpoints) {
+			endpoint = snapPositionsOutsideBoundary(endpoint);
+		}
+	}
+	for (auto door : e.doors) {
+		for (auto& endpoint : door->endpoints) {
+			endpoint = snapPositionsOutsideBoundary(endpoint);
+		}
+	}
+	for (auto target : e.targets) {
+		target->position = snapPositionsOutsideBoundary(target->position);
+	}
+	for (auto trigger : e.triggers) {
+		trigger->position = snapPositionsOutsideBoundary(trigger->position);
+	}
+
 	for (auto target : e.targets) {
 		target->activated = false;
 	}
@@ -124,6 +161,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				StereographicLine line;
 				EditorEntityId id;
 				i32 index;
+				bool objectMirrored;
 			};
 			std::optional<Hit> closest;
 			std::optional<f32> secondClosestDistance;
@@ -134,66 +172,84 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				Vec2 endpoint0,
 				Vec2 endpoint1,
 				EditorEntityId id,
+				i32 index = 0,
+				bool objectMirrored = false) {
+
+				if (distance(endpoint0, endpoint1) < 0.001f) {
+					// bug with doors creating steregraphic lines with infinite position and radius, when opening.
+					return;
+				}
+
+				const auto line = stereographicLine(endpoint0, endpoint1);
+				const auto intersections = stereographicLineVsStereographicLineIntersection(line, laserLine);
+
+				for (const auto& intersection : intersections) {
+					// The epsilon added, because there was a floating precision bug that caused a laser to go through a wall
+					if (const auto outsideBoundary = intersection.length() > 1.0001f) {
+						continue;
+					}
+
+					const auto epsilon = 0.001f;
+					const auto lineDirection = (endpoint1 - endpoint0).normalized();
+					const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
+					const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
+					const auto intersectionDAlong = dot(lineDirection, intersection);
+					if (intersectionDAlong <= dAlong0 || intersectionDAlong >= dAlong1) {
+						continue;
+					}
+
+					const auto distance = intersection.distanceTo(laserPosition);
+					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
+
+					const auto hitLastTime = hitOnLastIteration.has_value() && hitOnLastIteration->id == id && hitOnLastIteration->partIndex == index;
+
+					// hitLastTime should be only in the if not the else. You can hit an object from the front on one iteration and the from the wrapped around on the other.
+					if (!hitLastTime && dot(intersection - laserPosition, laserDirection) > 0.0f) {
+						if (!closest.has_value() || distance < closest->distance) {
+							if (closest.has_value()) {
+								secondClosestDistance = closest->distance;
+							}
+							closest = Hit{ intersection, distance, line, id, index, objectMirrored };
+						} else if (!secondClosestDistance.has_value()) {
+							secondClosestToWrappedAroundDistance = distance;
+						}
+					} else {
+						if (!closestToWrappedAround.has_value()
+							|| distanceToWrappedAround < closestToWrappedAround->distance) {
+
+							if (closestToWrappedAround.has_value()) {
+								secondClosestToWrappedAroundDistance = closestToWrappedAround->distance;
+							}
+							closestToWrappedAround = Hit{
+								intersection,
+								distanceToWrappedAround,
+								line,
+								id,
+								index,
+								objectMirrored
+							};
+						} else if (!secondClosestToWrappedAroundDistance.has_value()) {
+							secondClosestToWrappedAroundDistance = distanceToWrappedAround;
+						}
+					}
+				}
+			};
+
+			auto processSplitLineSegmentIntersections = [&processLineSegmentIntersections](
+				Vec2 endpoint0,
+				Vec2 endpoint1,
+				EditorEntityId id,
 				i32 index = 0) {
 
-					if (distance(endpoint0, endpoint1) < 0.001f) {
-						// bug with doors creating steregraphic lines with infinite position and radius, when opening.
-						return;
-					}
+				const auto segments = splitStereographicSegment(endpoint0, endpoint1);
 
-					const auto line = stereographicLine(endpoint0, endpoint1);
-					const auto intersections = stereographicLineVsStereographicLineIntersection(line, laserLine);
-
-					for (const auto& intersection : intersections) {
-						// The epsilon added, because there was a floating precision bug that caused a laser to go through a wall
-						if (const auto outsideBoundary = intersection.length() > 1.0001f) {
-							continue;
-						}
-
-						const auto epsilon = 0.001f;
-						const auto lineDirection = (endpoint1 - endpoint0).normalized();
-						const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
-						const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
-						const auto intersectionDAlong = dot(lineDirection, intersection);
-						if (intersectionDAlong <= dAlong0 || intersectionDAlong >= dAlong1) {
-							continue;
-						}
-
-						const auto distance = intersection.distanceTo(laserPosition);
-						const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
-
-						const auto hitLastTime = hitOnLastIteration.has_value() && hitOnLastIteration->id == id && hitOnLastIteration->partIndex == index;
-
-						// hitLastTime should be only in the if not the else. You can hit an object from the front on one iteration and the from the wrapped around on the other.
-						if (!hitLastTime && dot(intersection - laserPosition, laserDirection) > 0.0f) {
-							if (!closest.has_value() || distance < closest->distance) {
-								if (closest.has_value()) {
-									secondClosestDistance = closest->distance;
-								}
-								closest = Hit{ intersection, distance, line, id, index };
-							} else if (!secondClosestDistance.has_value()) {
-								secondClosestToWrappedAroundDistance = distance;
-							}
-						} else {
-							if (!closestToWrappedAround.has_value()
-								|| distanceToWrappedAround < closestToWrappedAround->distance) {
-
-								if (closestToWrappedAround.has_value()) {
-									secondClosestToWrappedAroundDistance = closestToWrappedAround->distance;
-								}
-								closestToWrappedAround = Hit{
-									intersection,
-									distanceToWrappedAround,
-									line,
-									id,
-									index
-								};
-							} else if (!secondClosestToWrappedAroundDistance.has_value()) {
-								secondClosestToWrappedAroundDistance = distanceToWrappedAround;
-							}
-						}
-					}
-				};
+				if (segments.size() == 1) {
+					processLineSegmentIntersections(segments[0].endpoints[0], segments[0].endpoints[1], id, index, false);
+				} else if (segments.size() == 2) {
+					processLineSegmentIntersections(segments[0].endpoints[0], segments[0].endpoints[1], id, index, false);
+					processLineSegmentIntersections(segments[1].endpoints[0], segments[1].endpoints[1], id, index, true);
+				}
+			};
 
 			for (const auto& wall : e.walls) {
 				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], EditorEntityId(wall.id));
@@ -254,14 +310,14 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 
 			for (const auto& mirror : e.mirrors) {
 				const auto endpoints = mirror->calculateEndpoints();
-				processLineSegmentIntersections(endpoints[0], endpoints[1], EditorEntityId(mirror.id));
+				processSplitLineSegmentIntersections(endpoints[0], endpoints[1], EditorEntityId(mirror.id));
 			}
 
 			for (const auto& portalPair : e.portalPairs) {
 				for (i32 i = 0; i < 2; i++) {
 					const auto& portal = portalPair->portals[i];
 					const auto endpoints = portal.endpoints();
-					processLineSegmentIntersections(endpoints[0], endpoints[1], EditorEntityId(portalPair.id), i);
+					processSplitLineSegmentIntersections(endpoints[0], endpoints[1], EditorEntityId(portalPair.id), i);
 				}
 			}
 
@@ -310,8 +366,12 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				}
 				//Dbg::line(hit.point, hit.point + normalAtHitPoint * 0.1f, 0.01f);
 
-				auto hitOnNormalSide = [&normalAtHitPoint](f32 hitObjectNormalAngle) {
-					return dot(Vec2::oriented(hitObjectNormalAngle), normalAtHitPoint) > 0.0f;
+				auto hitOnNormalSide = [&normalAtHitPoint, &hit](f32 hitObjectNormalAngle) {
+					bool result = dot(Vec2::oriented(hitObjectNormalAngle), normalAtHitPoint) > 0.0f;
+					if (hit.objectMirrored) {
+						result = !result;
+					}
+					return result;
 				};
 
 				auto doReflection = [&] {
@@ -429,10 +489,21 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				return HitResult::END;
 				};
 
+			auto checkOrbCollision = [&](Vec2 center, f32 radius, const Segment& segment) {
+				const auto centers = splitStereographicCircle(center, radius);
+				for (const auto& center : centers) {
+					const auto circle = stereographicCircle(center, radius);
+					const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], circle);
+					if (intersections.size() > 0) {
+						return true;
+					}
+				}
+				return false;
+			};
+
 			auto checkLaserVsTargetCollision = [&](const Segment& segment) {
 				for (auto target : e.targets) {
-					const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], target->calculateCircle());
-					if (intersections.size() > 0) {
+					if (checkOrbCollision(target->position, target->radius, segment)) {
 						target->activated = true;
 					}
 				}
@@ -440,8 +511,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 
 			auto checkLaserVsTriggerCollision = [&](const Segment& segment) {
 				for (auto trigger : e.triggers) {
-					const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], trigger->circle());
-					if (intersections.size() > 0) {
+					if (checkOrbCollision(trigger->position, trigger->defaultRadius, segment)) {
 						trigger->activated = true;
 					}
 				}
@@ -520,26 +590,46 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 		}
 	}
 
+	auto updateActivationAnimationT = [](f32& t, bool isActive) {
+		updateConstantSpeedT(t, 0.25f, isActive);
+	};
+
+	for (auto target : e.targets) {
+		updateActivationAnimationT(target->activationAnimationT, target->activated);
+	}
+	for (auto trigger : e.triggers) {
+		updateActivationAnimationT(trigger->activationAnimationT, trigger->activated);
+	}
+
+
 	if (objectsInValidState) {
 		for (auto door : e.doors) {
 			const auto info = triggerInfo(e.triggers, door->triggerIndex);
 			const auto isOpening = info.has_value() && info->active;
-			const auto speed = 1.5f;
-			door->openingT += speed * Constants::dt * (isOpening ? 1.0f : -1.0f);
-			door->openingT = std::clamp(door->openingT, 0.0f, 1.0f);
+			updateConstantSpeedT(door->openingT, 0.7f, isOpening);
 		}
 	}
+
 }
 
 std::optional<GameState::TriggerInfo> GameState::triggerInfo(TriggerArray& triggers, i32 triggerIndex) {
 	std::optional<TriggerInfo> result;
 	for (const auto& trigger : triggers) {
 		// If any trigger is activated the return that activated.
+		const auto currentColor = currentOrbColor(trigger->color, trigger->activationAnimationT);
 		if (trigger->index == triggerIndex) {
 			if (trigger->activated) {
-				return TriggerInfo{ .color = trigger->color, .active = trigger->activated };
+				return TriggerInfo{ 
+					.color = trigger->color, 
+					.currentColor = currentColor,
+					.active = trigger->activated, 
+				};
 			} else if (!result.has_value()) {
-				result = TriggerInfo{ .color = trigger->color, .active = trigger->activated };
+				result = TriggerInfo{ 
+					.color = trigger->color, 
+					.currentColor = currentColor,
+					.active = trigger->activated 
+				};
 			}
 		}
 	}
