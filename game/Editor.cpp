@@ -456,7 +456,7 @@ void Editor::targetGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cur
 		}		
 	}
 
-	if (Input::isMouseButtonUp(MouseButton::LEFT) && targetGrabTool.grabbed.has_value()) {
+	if (isGrabReleased() && targetGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
 		actions.addModifyAction<EditorTarget, EditorActionModifyTarget>(e.targets, targetGrabTool.grabbed->id, std::move(targetGrabTool.grabbed->grabStartState));
 		targetGrabTool.grabbed = std::nullopt;
@@ -535,7 +535,7 @@ void Editor::triggerGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool cu
 		}
 	}
 
-	if (Input::isMouseButtonUp(MouseButton::LEFT) && triggerGrabTool.grabbed.has_value()) {
+	if (isGrabReleased() && triggerGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
 		actions.addModifyAction<EditorTrigger, EditorActionModifyTrigger>(e.triggers, triggerGrabTool.grabbed->id, std::move(triggerGrabTool.grabbed->grabStartState));
 		triggerGrabTool.grabbed = std::nullopt;
@@ -703,7 +703,7 @@ void Editor::doorGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 		}
 	}
 
-	if (Input::isMouseButtonUp(MouseButton::LEFT) && doorGrabTool.grabbed.has_value()) {
+	if (isGrabReleased() && doorGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
 		actions.addModifyAction<EditorDoor, EditorActionModifyDoor>(e.doors, doorGrabTool.grabbed->id, std::move(doorGrabTool.grabbed->grabStartState));
 		doorGrabTool.grabbed = std::nullopt;
@@ -857,7 +857,7 @@ void Editor::wallGrabToolUpdate(Vec2 cursorPos, bool& cursorCaptured, bool curso
 		}
 	}
 
-	if (Input::isMouseButtonUp(MouseButton::LEFT) && wallGrabTool.grabbed.has_value()) {
+	if (isGrabReleased() && wallGrabTool.grabbed.has_value()) {
 		cursorCaptured = true;
 		actions.addModifyAction<EditorWall, EditorActionModifyWall>(e.walls, wallGrabTool.grabbed->id, std::move(wallGrabTool.grabbed->grabStartState));
 		wallGrabTool.grabbed = std::nullopt;

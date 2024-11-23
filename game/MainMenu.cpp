@@ -75,7 +75,7 @@ MainMenu::MainMenu() {
 Ui::RectMinMax MainMenu::buttonRect(const GameRenderer& renderer, const Ui::CenteredHorizontalListLayout& layout, const Button& button)
 {
 	const auto& block = layout.blocks[button.id];
-	const auto info = renderer.gfx.fontRenderer.getTextInfo(renderer.font, block.worldSize(), button.text);
+	const auto info = renderer.font.textInfo(block.worldSize(), button.text);
 	const auto pos = Vec2(0.0f, block.worldCenter());
 	const auto size = Vec2(info.size.x / renderer.gfx.camera.clipSpaceToWorldSpace()[0][0], block.worldSize());
 	return Ui::RectMinMax::fromPosSize(pos, size);
@@ -111,6 +111,7 @@ MainMenu::Result MainMenu::update(GameRenderer& renderer) {
 	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
 	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawLines();
+	renderer.renderGameText();
 	return result;
 }
 
@@ -140,11 +141,11 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 		const auto spacingBetween = 0.01f;
 		const auto sizeY = block.worldSize();
 		{
-			const auto info = renderer.gfx.fontRenderer.getTextInfo(renderer.font, sizeY, slider.name);
+			const auto info = renderer.font.textInfo(sizeY, slider.name);
 			Vec2 position = Vec2(renderer.gfx.camera.pos.x - info.size.x - spacingBetween, block.worldCenter());
 			position.y -= info.bottomY;
 			position.y -= info.size.y / 2.0f;
-			drawText(renderer, slider.name, position, sizeY);
+			renderer.gameTextCentered(position, sizeY, slider.name, Color3::WHITE);
 		}
 		{
 			const auto sizeY = block.worldSize();
@@ -208,6 +209,7 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
 	renderer.gfx.drawFilledTriangles();
 	renderer.gfx.drawLines();
+	renderer.renderGameText();
 	return result;
 }
 
@@ -228,28 +230,9 @@ SettingsAudio MainMenu::getSoundSettings() const {
 void MainMenu::drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id) {
 	auto& block = layout.blocks[id];
 	const auto center = Vec2(r.gfx.camera.pos.x, block.worldCenter());
-	drawTextCentered(r, text, center, block.worldSize());
-}
-
-void MainMenu::drawTextCentered(GameRenderer& r, std::string_view text, Vec2 position, f32 height) {
-	const auto info = r.gfx.fontRenderer.getTextInfo(r.font, height, text);
-	position.y -= info.bottomY;
-	position -= info.size / 2.0f;
-	drawText(r, text, position, height);
-}
-
-void MainMenu::drawText(GameRenderer& r, std::string_view text, Vec2 bottomLeftPosition, f32 height) {
-	r.gfx.fontRenderer.addTextToDraw(
-		r.font,
-		bottomLeftPosition,
-		Mat3x2::scale(Vec2(2.0f)) * r.gfx.camera.worldToCameraToNdc(),
-		height,
-		text
-	);
+	r.gameTextCentered(center, block.worldSize(), text, Color3::WHITE);
 }
 
 void MainMenu::drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button) {
 	drawText(r, button.text, layout, button.id);
 }
-
-

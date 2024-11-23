@@ -59,8 +59,8 @@ Game::Result Game::update(GameRenderer& renderer) {
 		goToNextLevelButtonActiveT = std::clamp(goToNextLevelButtonActiveT, 0.0f, 1.0f);
 
 		const auto color1 = lerp(Color3::WHITE / 15.0f, Color3::WHITE / 10.0f, goToNextLevelButtonHoverT);
-		const auto color2 = lerp(1.5f * color1, Color3::WHITE / 3.0f, goToNextLevelButtonActiveT);
-		Ui::rectPosSizeFilled(r, pos, size, Vec4(color1, goToNextLevelButtonActiveT));
+		const auto color2 = lerp(1.5f * color1, Color3::WHITE, goToNextLevelButtonActiveT);
+		//Ui::rectPosSizeFilled(r, pos, size, Vec4(color1, goToNextLevelButtonActiveT));
 
 		if (levelComplete && hover && Input::isMouseButtonDown(MouseButton::LEFT)) {
 			result = ResultGoToLevel{};

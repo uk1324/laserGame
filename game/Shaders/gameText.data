@@ -1,0 +1,18 @@
+import "../../engine/gfx2d/Vertex2dPt.data";
+
+shader GameText {
+	vertexStruct = Vertex2dPt;
+	vertInstance = {
+		Mat3x2 transform;
+		Vec2 offsetInAtlas;
+		Vec2 sizeInAtlas;
+	};
+	fragInstance = {
+		Vec3 color;
+	};
+	vertOut = {
+		Vec2 texturePosition;
+		Vec2 atlasMin;
+		Vec2 atlasMax;
+	};
+}

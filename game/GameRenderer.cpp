@@ -26,7 +26,9 @@ GameRenderer GameRenderer::make() {
 		.stereographicLineShader = MAKE_GENERATED_SHADER(STEREOGRAPHIC_LINE),
 		.stereographicDiskVao = MAKE_VAO(StereographicDisk),
 		.stereographicDiskShader = MAKE_GENERATED_SHADER(STEREOGRAPHIC_DISK),
-		.font = FontRenderer::loadFont(FONT_FOLDER, "RobotoMono-Regular"),
+		.gameTextVao = MAKE_VAO(GameText),
+		.gameTextShader = MAKE_GENERATED_SHADER(GAME_TEXT),
+		.font = Font::loadSdfWithCachingAtDefaultPath(FONT_FOLDER, "RobotoMono-Regular"),
 		MOVE(gfx),
 	};
 }
@@ -332,6 +334,12 @@ void GameRenderer::renderStereographicSegmentsComplex() {
 }
 
 void GameRenderer::stereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, Vec3 color0, Vec3 color1, f32 width) {
+	if (abs(endpoint0.length() - 1.0f) < 0.001f && abs(endpoint1.length() - 1.0f) < 0.001f && (endpoint0 + endpoint1).length() < 0.001f) {
+		addStereographicSegmentComplex(endpoint0, Vec2(0.0f), color0, color1, width);
+		addStereographicSegmentComplex(endpoint1, Vec2(0.0f), color0, color1, width);
+		return;
+	}
+
 	addStereographicSegmentComplex(endpoint0, endpoint1, color0, color1, width);
 	if (endpoint0.length() >= 1.0f || endpoint1.length() >= 1.0f) {
 		// This is done for example to make thing like walls on the boundary appear on both sides of the circle.
@@ -366,10 +374,48 @@ void GameRenderer::addStereographicDisk(Vec2 center, f32 radius, Vec3 colorInsid
 	stereographicDisks.push_back(instance);
 }
 
+void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::string_view text, Vec3 color) {
+	const auto toUiSpace = Mat3x2::scale(Vec2(2.0f)) * gfx.camera.worldToCameraToNdc();
+	TextRenderInfoIterator iterator(font, bottomLeftPosition, toUiSpace, maxHeight, text);
+	for (auto info = iterator.next(); info.has_value(); info = iterator.next()) {
+		gameTextInstances.push_back(GameTextInstance{
+			.transform = info->transform,
+			.offsetInAtlas = info->offsetInAtlas,
+			.sizeInAtlas = info->sizeInAtlas,
+			.color = color,
+		});
+	}
+}
+
+void GameRenderer::gameTextCentered(Vec2 position, float maxHeight, std::string_view text, Vec3 color) {
+	const auto info = font.textInfo(maxHeight, text);
+	position.y -= info.bottomY;
+	position -= info.size / 2.0f;
+	gameText(position, maxHeight, text, color);
+}
+
+void GameRenderer::renderGameText() {
+	gameTextShader.use();
+	gameTextShader.setTexture("fontAtlas", 0, font.fontAtlas);
+	drawInstances(gameTextVao, gfx.instancesVbo, constView(gameTextInstances), quad2dPtDrawInstances);
+	gameTextInstances.clear();
+}
+
 Vec3 movablePartColor(bool isPositionLocked) {
 	const auto movableColor = Color3::YELLOW;
 	const auto nonMovableColor = Vec3(0.3f);
 	return isPositionLocked
 		? nonMovableColor
 		: movableColor;
+}
+
+ColorRng::ColorRng()
+	: dist(0.0f, 1.0f) {}
+
+void ColorRng::seed(u32 seed) {
+	rng.seed(seed);
+}
+
+Vec3 ColorRng::colorRandomHue(f32 s, f32 v) {
+	return Color3::fromHsv(dist(rng), s, v);
 }

@@ -42,8 +42,6 @@ struct MainMenu {
 	SettingsAudio getSoundSettings() const;
 
 	void drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id);
-	void drawTextCentered(GameRenderer& r, std::string_view text, Vec2 position, f32 height);
-	void drawText(GameRenderer& r, std::string_view text, Vec2 bottomLeftPosition, f32 height);
 
 	void drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button);
 
@@ -70,4 +68,5 @@ struct MainMenu {
 		std::optional<GrabbedSlider> grabbedSlider;
 	} soundSettingsUi;
 
+	ColorRng rng;
 };

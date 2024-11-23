@@ -26,6 +26,14 @@ static Vec2 normalAtEndpoint0(Vec2 endpoint0, Vec2 endpoint1) {
 	return normal;
 }
 
+// This is done to fix a bug. When you grab something for example a mirror rotation gizmo and move the cursor onto the ui then the release won't be registered.
+bool isGrabReleased() {
+	Input::ignoreImGuiWantCapture = true;
+	const auto result = Input::isMouseButtonUp(MouseButton::LEFT);
+	Input::ignoreImGuiWantCapture = false;
+	return result;
+}
+
 std::optional<GrabbedRotatableSegment> rotatableSegmentCheckGrab(Vec2 center, f32 normalAngle, f32 length,
 	Vec2 cursorPos, bool& cursorCaptured, bool cursorExact) {
 
@@ -135,7 +143,7 @@ void LaserGrabTool::update(LaserArray& lasers, std::optional<EditorActions&> act
 		}
 	}
 
-	if (Input::isMouseButtonUp(MouseButton::LEFT) && grabbed.has_value()) {
+	if (isGrabReleased() && grabbed.has_value()) {
 		cursorCaptured = true;
 		auto laser = lasers.get(grabbed->id);
 		if (actions.has_value() && laser.has_value()) {
@@ -186,7 +194,8 @@ void MirrorGrabTool::update(MirrorArray& mirrors, std::optional<EditorActions&> 
 		}
 	}
 
-	if (Input::isMouseButtonUp(MouseButton::LEFT) && grabbed.has_value()) {
+	if (isGrabReleased() && grabbed.has_value()) {
+		Input::ignoreImGuiWantCapture = false;
 		cursorCaptured = true;
 		auto mirror = mirrors.get(grabbed->id);
 		if (actions.has_value() && mirror.has_value()) {
@@ -249,7 +258,7 @@ void PortalGrabTool::update(PortalPairArray& portalPairs, std::optional<EditorAc
 		}
 	}
 
-	if (Input::isMouseButtonUp(MouseButton::LEFT) && grabbed.has_value()) {
+	if (isGrabReleased() && grabbed.has_value()) {
 		cursorCaptured = true;
 		auto portalPair = portalPairs.get(grabbed->id);
 		if (actions.has_value() && portalPair.has_value()) {

@@ -144,7 +144,13 @@ bool nearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2) {
 }
 
 StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
-	const auto p2 = antipodalPoint(p0);
+	Vec2 p2(0.0f);
+	// The antipodal point of (0, 0) is infinity so this tries to prevent the antipodal point being set to zero.
+	if (p0.lengthSq() > p1.lengthSq()) {
+		p2 = antipodalPoint(p0);
+	} else {
+		p2 = antipodalPoint(p1);
+	}
 
 	// https://math.stackexchange.com/questions/405966/if-i-have-three-points-is-there-an-easy-way-to-tell-if-they-are-collinear
 

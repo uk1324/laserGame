@@ -3,6 +3,8 @@
 #include <game/EditorEntities.hpp>
 #include <game/EditorActions.hpp>
 
+bool isGrabReleased();
+
 enum class RotatableSegmentGizmoType {
 	TRANSLATION, ROTATION_0, ROTATION_1
 };

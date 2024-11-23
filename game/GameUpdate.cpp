@@ -570,7 +570,6 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				const auto s1 = Segment{ midpoint, e1, laser->color };
 				processLaserSegment(s0);
 				processLaserSegment(s1);
-				//laserLine.
 			};
 
 			if (closest.has_value()) {

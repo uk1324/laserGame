@@ -5,6 +5,18 @@
 #include <game/Constants.hpp>
 #include <game/Shaders/stereographicLineData.hpp>
 #include <game/Shaders/stereographicDiskData.hpp>
+#include <game/Shaders/gameTextData.hpp>
+#include <random>
+
+struct ColorRng {
+	ColorRng();
+	void seed(u32 seed);
+
+	Vec3 colorRandomHue(f32 s, f32 v);
+
+	std::default_random_engine rng;
+	std::uniform_real_distribution<f32> dist;
+};
 
 const auto grabbableCircleRadius = 0.015f;
 
@@ -47,6 +59,22 @@ struct GameRenderer {
 	std::vector<StereographicDiskInstance> stereographicDisks;
 	void renderStereographicDisks();
 	void addStereographicDisk(Vec2 center, f32 radius, Vec3 colorInside, Vec3 colorBorder);
+
+	Vao gameTextVao;
+	ShaderProgram& gameTextShader;
+	std::vector<GameTextInstance> gameTextInstances;
+	void gameText(
+		Vec2 bottomLeftPosition,
+		float maxHeight,
+		std::string_view text,
+		Vec3 color);
+
+	void gameTextCentered(
+		Vec2 position,
+		float maxHeight,
+		std::string_view text,
+		Vec3 color);
+	void renderGameText();
 
 	bool simplifiedGraphics = false;
 
