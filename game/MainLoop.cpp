@@ -32,30 +32,58 @@ void renderFadingTransition(GameRenderer& r, f32 t) {
 	r.gfx.drawFilledTriangles();
 }
 
+void renderSlidingTransition(GameRenderer& r, f32 t) {
+	const auto offset = Vec2(lerp(-1.0f, 1.0f, t), 0.0f);
+	const auto min = Vec2(-0.5f) + offset;
+	const auto max = Vec2(0.5f) + offset;
+	Ui::rectMinMaxFilled(r, min, max, Color3::BLACK);
+	r.gfx.drawFilledTriangles();
+}
+
+void renderTransition(GameRenderer& r, f32 t, TransitionEffectType type) {
+	switch (type) {
+		using enum TransitionEffectType;
+
+	case SLIDING:
+		renderSlidingTransition(r, t);
+		break;
+
+	case FADING:
+		renderFadingTransition(r, t);
+		break;
+	}
+}
+
 MainLoop::MainLoop()
 	: renderer(GameRenderer::make()) {
 
 	settingsManager.tryLoadSettings();
 	mainMenu.setSoundSettings(settingsManager.settings.audio);
-	//settingsManager.
+
+	gameSave.tryLoad();
 }
 #include <game/GameSerialization.hpp>
 
 void MainLoop::update() {
+	auto previewEditorLevelInGame = [this]() {
+		state = State::GAME;
+		const auto level = saveGameLevelToJson(editor.e);
+		game.tryLoadEditorPreviewLevel(level);
+	};
+
 	if (Input::isKeyDown(KeyCode::TAB)) {
 		switch (state) {
 			using enum State;
 		case GAME:
-			state = State::EDITOR;
+			if (game.isEditorPreviewLevelLoaded()) {
+				state = State::EDITOR;
+			}
 			break;
 
 		case EDITOR: {
-			state = State::GAME;
-			const auto level = saveGameLevelToJson(editor.e);
-			game.tryLoadLevelFromJson(level);
+			previewEditorLevelInGame();
 			break;
 		}
-			
 
 		default:
 			break;
@@ -77,12 +105,26 @@ void MainLoop::update() {
 		switch (result) {
 			using enum MainMenu::Result;
 
+		case PLAY: {
+			const auto firstUncompletedLevel = gameSave.firstUncompletedLevel(levels);
+			if (firstUncompletedLevel.has_value()) {
+				doTransitionToLevel(*firstUncompletedLevel, TransitionEffectType::FADING);
+			} else {
+				doBasicTransition(State::CONGRATULATIONS);
+			}
+			break;
+		}
+
 		case GO_TO_SOUND_SETTINGS:
 			doBasicTransition(State::SOUND_SETTINGS);
 			break;
 
 		case GO_TO_LEVEL_SELECT:
 			doBasicTransition(State::LEVEL_SELECT);
+			break;
+
+		case GO_TO_EDITOR:
+			state = State::EDITOR;
 			break;
 
 		case NONE:
@@ -111,74 +153,95 @@ void MainLoop::update() {
 		const auto result = game.update(renderer);
 		std::visit(overloaded{
 			[](const Game::ResultNone&) {},
-			[&](const Game::ResultGoToLevel& r) {
-				transitionFromLevelToLevel.t = 0;
-				state = State::TRANSITION_FROM_LEVEL_TO_LEVEL;
+			[&](const Game::ResultGoToNextLevel&) {
+				if (!game.currentLevel.has_value()) {
+					CHECK_NOT_REACHED();
+					return;
+					/*const auto firstUncompletedLevel = gameSave.firstUncompletedLevel(levels);
+					if (firstUncompletedLevel.has_value()) {
+						doTransitionToLevel(*firstUncompletedLevel, TransitionEffectType::SLIDING);
+					}*/
+				} 
+				//gameSave.completedLevels.insert(levels.levels[*game.currentLevel])
+				std::optional<i32> firstUncompletedLevelAfterCurrent = gameSave.firstUncompletedLevelAfter(*game.currentLevel, levels);
+
+				gameSave.markAsCompleted(*game.currentLevel, levels);
+				gameSave.trySave();
+				if (firstUncompletedLevelAfterCurrent.has_value()) {
+					doTransitionToLevel(*firstUncompletedLevelAfterCurrent, TransitionEffectType::SLIDING);
+					return;
+				}
+
+				const auto firstUncompletedLevel = gameSave.firstUncompletedLevel(levels);
+
+				if (!firstUncompletedLevel.has_value()) {
+					doBasicTransition(State::CONGRATULATIONS);
+					return;
+				} 
+				doTransitionToLevel(*firstUncompletedLevel, TransitionEffectType::SLIDING);
+			},
+			[&](const Game::ResultSkipLevel&) {
+				if (!game.currentLevel.has_value()) {
+					CHECK_NOT_REACHED();
+					return;
+				}
+				std::optional<i32> firstUncompletedLevelAfterCurrent = gameSave.firstUncompletedLevelAfter(*game.currentLevel, levels);
+
+				if (firstUncompletedLevelAfterCurrent.has_value()) {
+					doTransitionToLevel(*firstUncompletedLevelAfterCurrent, TransitionEffectType::SLIDING);
+					return;
+				}
+
+				const auto nextLevel = *game.currentLevel + 1;
+				if (nextLevel >= levels.levels.size()) {
+					doBasicTransition(State::CONGRATULATIONS);
+					return;
+				}
+
+				doTransitionToLevel(nextLevel, TransitionEffectType::SLIDING);
+			},
+			[&](const Game::ResultGoToMainMenu) {
+				doBasicTransition(State::MAIN_MENU);
 			}
 		}, result);
 		break;
 	}
 		 
 
-	case EDITOR:
-		editor.update(renderer);
+	case EDITOR: {
+		const auto result = editor.update(renderer);
+		switch (result) {
+			using enum Editor::Result;
+
+		case GO_TO_MAIN_MENU:
+			state = State::MAIN_MENU;
+			break;
+
+		case PREVIEW_LEVEL:
+			previewEditorLevelInGame();
+			break;
+
+		case NONE:
+			break;
+		}
 		break;
+	}
+		
 
 	case LEVEL_SELECT: {
-		const auto result = levelSelect.update(renderer);
+		const auto result = levelSelect.update(renderer, levels, gameSave);
 		std::visit(overloaded{
 			[](const LevelSelect::ResultNone&) {},
 			[&](const LevelSelect::ResultGoToLevel& r) {
-				transitionFromLevelSelectToLevel.t = 0;
-				state = State::TRANSITION_FROM_LEVEL_SELECT_TO_LEVEL;
+				doTransitionToLevel(r.index, TransitionEffectType::FADING);
+			},
+			[&](const LevelSelect::ResultGoBack&) {
+				doBasicTransition(State::MAIN_MENU);
 			}
 		}, result);
 		break;
 	}
 		
-
-	case TRANSITION_FROM_LEVEL_SELECT_TO_LEVEL: {
-		auto& s = transitionFromLevelSelectToLevel;
-
-		if (updateTAndCheckIfAtMid(s.t)) {
-			// load level
-		}
-
-		if (s.t < mid) {
-			levelSelect.update(renderer);
-		} else {
-			game.update(renderer);
-		}
-
-		if (s.t >= 1.0f) {
-			state = State::GAME;
-		}
-
-		renderFadingTransition(renderer, s.t);
-		break;
-	}
-
-	case TRANSITION_FROM_LEVEL_TO_LEVEL: {
-		auto& s = transitionFromLevelToLevel;
-
-		if (updateTAndCheckIfAtMid(s.t)) {
-			// load level
-		}
-
-		game.update(renderer);
-
-		if (s.t >= 1.0f) {
-			state = State::GAME;
-		}
-
-		const auto offset = Vec2(lerp(-1.0f, 1.0f, s.t), 0.0f);
-		const auto min = Vec2(-0.5f) + offset;
-		const auto max = Vec2(0.5f) + offset;
-		Ui::rectMinMaxFilled(renderer, min, max, Color3::BLACK);
-		renderer.gfx.drawFilledTriangles();
-		break;
-	}
-
 	case STATELESS_TRANSITION: {
 		auto& s = statelessTransition;
 
@@ -199,6 +262,36 @@ void MainLoop::update() {
 		break;
 	}
 
+	case TRANSITION_TO_LEVEL: {
+		auto& s = transitionToLevel;
+
+		if (updateTAndCheckIfAtMid(s.t)) {
+			renderer.changeTextColorRngSeed();
+			game.tryLoadGameLevel(levels, s.levelIndex);
+		}
+
+		if (s.t < mid) {
+			stateUpdate(s.startState);
+		} else {
+			game.update(renderer);
+		}
+
+		if (s.t >= 1.0f) {
+			state = State::GAME;
+		}
+		renderTransition(renderer, s.t, s.transitionEffect);
+		break;
+	}
+
+	case CONGRATULATIONS: {
+		// https://english.stackexchange.com/questions/240468/whats-the-difference-between-you-have-completed-the-task-and-you-com
+		// Congratutions you completed all the levels
+		// go to 
+		// main menu
+		// level select
+		break;
+	}
+
 	}
 	ShaderManager::update();
 	renderer.gfx.drawDebug();
@@ -211,16 +304,26 @@ void MainLoop::stateUpdate(State state) {
 	case MAIN_MENU: mainMenu.update(renderer); break;
 	case SOUND_SETTINGS: mainMenu.soundSettingsUpdate(renderer); break;
 	case EDITOR: editor.update(renderer); break;
-	case LEVEL_SELECT: levelSelect.update(renderer); break;
+	case LEVEL_SELECT: levelSelect.update(renderer, levels, gameSave); break;
 		// There should be a level loaded before transitioning into game.
 	case GAME: game.update(renderer); break;
+	case CONGRATULATIONS: congratulationsScreen.update(renderer); break;
 
 		// It doesn't make sense to transition from or into these states.
-	case TRANSITION_FROM_LEVEL_SELECT_TO_LEVEL:
-	case TRANSITION_FROM_LEVEL_TO_LEVEL:
+	case TRANSITION_TO_LEVEL:
 	case STATELESS_TRANSITION:
 		CHECK_NOT_REACHED(); break;
 	}
+}
+
+void MainLoop::doTransitionToLevel(i32 levelIndex, TransitionEffectType transitionEffect) {
+	transitionToLevel = TransitionToLevelState{
+		.startState = state,
+		.t = 0.0f,
+		.levelIndex = levelIndex,
+		.transitionEffect = transitionEffect,
+	};
+	state = State::TRANSITION_TO_LEVEL;
 }
 
 void MainLoop::doBasicTransition(State endState) {

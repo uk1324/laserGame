@@ -25,7 +25,9 @@ bool isOrbUnderCursor(Vec2 center, f32 radius, Vec2 cursorPos) {
 	return d < circle.radius + Constants::endpointGrabPointRadius;
 };
 
-void Editor::update(GameRenderer& renderer) {
+Editor::Result Editor::update(GameRenderer& renderer) {
+	Result result = Result::NONE;
+
 	auto id = ImGui::DockSpaceOverViewport(
 		ImGui::GetMainViewport(),
 		ImGuiDockNodeFlags_NoDockingOverCentralNode | ImGuiDockNodeFlags_PassthruCentralNode);
@@ -51,7 +53,14 @@ void Editor::update(GameRenderer& renderer) {
 				if (ImGui::MenuItem("open")) {
 					openButtonDown = true;
 				}
+				if (ImGui::MenuItem("preview in game mode", "tab")) {
+					result = Result::PREVIEW_LEVEL;
+				}
 				ImGui::EndMenu();
+			}
+
+			if (ImGui::MenuItem("main menu")) {
+				result = Result::GO_TO_MAIN_MENU;
 			}
 
 			ImGui::EndMainMenuBar();
@@ -77,7 +86,7 @@ void Editor::update(GameRenderer& renderer) {
 			if (trySaveLevel(*savePath)) {
 				levelSaveOpen.lastLoadedLevelPath = savePath;
 			} else {
-				levelSaveOpen.saveLevelErrorModal();
+				levelSaveOpen.openSaveLevelErrorModal();
 			}
 		}
 
@@ -87,7 +96,7 @@ void Editor::update(GameRenderer& renderer) {
 				if (tryLoadLevel(path->data())) {
 					levelSaveOpen.lastLoadedLevelPath = path;
 				} else {
-					levelSaveOpen.openLevelErrorModal();
+					levelSaveOpen.openOpenLevelErrorModal();
 				}
 			}
 		}
@@ -367,6 +376,8 @@ void Editor::update(GameRenderer& renderer) {
 		renderer.gfx.disk(cursorPos, 0.01f, Color3::WHITE);
 	}
 	renderer.gfx.drawDisks();
+
+	return result;
 }
 
 void Editor::undoRedoUpdate() {

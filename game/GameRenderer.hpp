@@ -71,13 +71,16 @@ struct GameRenderer {
 		Vec2 bottomLeftPosition,
 		float maxHeight,
 		std::string_view text,
-		Vec3 color);
+		f32 hoverT = 0.0f,
+		std::optional<Vec3> color = std::nullopt);
 
 	void gameTextCentered(
 		Vec2 position,
 		float maxHeight,
 		std::string_view text,
-		Vec3 color);
+		f32 hoverT = 0.0f,
+		std::optional<Vec3> color = std::nullopt);
+
 	void renderGameText();
 
 	bool simplifiedGraphics = false;

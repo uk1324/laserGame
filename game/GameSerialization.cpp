@@ -4,19 +4,16 @@
 #include <game/Level.hpp>
 #include <JsonFileIo.hpp>
 #include <RefOptional.hpp>
+#include <game/Serialization.hpp>
 #include <fstream>
 
 // TODO: Maybe validate the inputs. For example calmping the values to a certain range.
 // TODO: Maybe put the try catch only around loading of each element and continue if there is an error.
 
-Json::Value::ArrayType& makeArrayAt(Json::Value& v, std::string_view at) {
-	return (v[std::string(at)] = Json::Value::emptyArray()).array();
-}
-
 Json::Value saveGameLevelToJson(GameEntities& e) {
 	auto level = Json::Value::emptyObject();
 
-	{
+	if (e.walls.aliveCount() > 0) {
 		auto& jsonWalls = makeArrayAt(level, levelWallsName);
 
 		auto wallTypeToLevelWallType = [](EditorWallType type) {
@@ -38,7 +35,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 	}
 
-	{
+	if (e.lasers.aliveCount() > 0) {
 		auto& jsonLasers = makeArrayAt(level, levelLasersName);
 		for (const auto& laser : e.lasers) {
 			const auto levelLaser = LevelLaser{
@@ -51,7 +48,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 	}
 
-	{
+	if (e.mirrors.aliveCount() > 0) {
 		auto& jsonMirrors = makeArrayAt(level, levelMirrorsName);
 		for (const auto& e : e.mirrors) {
 			auto convertWallType = [](EditorMirrorWallType type) {
@@ -74,7 +71,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 	}
 
-	{
+	if (e.targets.aliveCount() > 0) {
 		auto& jsonTargets = makeArrayAt(level, levelTargetsName);
 		for (const auto& e : e.targets) {
 			const auto& levelTarget = LevelTarget{
@@ -85,7 +82,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 	}
 
-	{
+	if (e.portalPairs.aliveCount() > 0) {
 		auto& jsonPortalPairs = makeArrayAt(level, levelPortalPairsName);
 		for (const auto& e : e.portalPairs) {
 			auto convertWallType = [](EditorPortalWallType type) {
@@ -116,7 +113,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 	}
 
-	{
+	if (e.triggers.aliveCount() > 0) {
 		auto& jsonTriggers = makeArrayAt(level, levelTriggersName);
 		for (const auto& e : e.triggers) {
 			const auto levelE = LevelTrigger{
@@ -128,7 +125,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 	}
 
-	{
+	if (e.doors.aliveCount() > 0) {
 		auto& jsonDoors = makeArrayAt(level, levelDoorsName);
 		for (const auto& e : e.doors) {
 			const auto levelE = LevelDoor{
@@ -141,7 +138,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 	}
 
-	{
+	if (e.lockedCells.cells.size() > 0) {
 		LevelLockedCells levelLockedCells{
 			.ringCount = e.lockedCells.ringCount,
 			.segmentCount = e.lockedCells.segmentCount
@@ -158,7 +155,9 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 bool trySaveGameLevelToFile(GameEntities& e, std::string_view path) {
 	const auto level = saveGameLevelToJson(e);
 	std::ofstream file(path.data());
-	Json::print(file, level);
+
+	// Using prettyPrint so git can handle the files better.
+	Json::prettyPrint(file, level);
 
 	if (file.bad()) {
 		return false;
@@ -166,25 +165,11 @@ bool trySaveGameLevelToFile(GameEntities& e, std::string_view path) {
 	return true;
 }
 
-
-std::optional<const Json::Value::ArrayType&> tryArrayAt(const Json::Value& v, std::string_view name) {
-	const auto nameStr = std::string(name);
-	if (!v.contains(nameStr)) {
-		return std::nullopt;
-	}
-	const auto& a = v.at(nameStr);
-	if (!a.isArray()) {
-		return std::nullopt;
-	}
-	return a.array();
-}
-
 bool tryLoadGameLevelFromJson(GameEntities& e, const Json::Value& json) {
 	try {
 
-		{
-			const auto& jsonWalls = json.at(levelWallsName).array();
-			for (const auto& jsonWall : jsonWalls) {
+		if (const auto jsonWalls = tryArrayAt(json, levelWallsName); jsonWalls.has_value()) {
+			for (const auto& jsonWall : *jsonWalls) {
 				const auto levelWall = fromJson<LevelWall>(jsonWall);
 				auto wall = e.walls.create();
 

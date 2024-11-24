@@ -5,6 +5,14 @@
 #include <game/LevelSelect.hpp>
 #include <game/MainMenu.hpp>
 #include <game/SettingsManager.hpp>
+#include <game/GameSave.hpp>
+#include <game/Levels.hpp>
+#include <game/CongratulationsScreen.hpp>
+
+enum class TransitionEffectType {
+	SLIDING,
+	FADING
+};
 
 struct MainLoop {
 	MainLoop();
@@ -15,7 +23,10 @@ struct MainLoop {
 	Game game;
 	LevelSelect levelSelect;
 	MainMenu mainMenu;
+	CongratulationsScreen congratulationsScreen;
 	SettingsManager settingsManager;
+	GameSave gameSave;
+	Levels levels;
 
 	enum class State {
 		MAIN_MENU,
@@ -23,22 +34,20 @@ struct MainLoop {
 		GAME, 
 		EDITOR, 
 		LEVEL_SELECT, 
-		TRANSITION_FROM_LEVEL_SELECT_TO_LEVEL,
-		TRANSITION_FROM_LEVEL_TO_LEVEL,
+		TRANSITION_TO_LEVEL,
 		STATELESS_TRANSITION,
-	} state = State::MAIN_MENU;
+		CONGRATULATIONS,
+	} state = State::LEVEL_SELECT;
 
 	void stateUpdate(State state);
 
-	struct TransitionFromLevelSelectToLevelState {
+	struct TransitionToLevelState {
+		State startState;
 		f32 t = 0.0f;
-		i32 levelIndex = 0;
-	} transitionFromLevelSelectToLevel;
-
-	struct TransitionFromLevelToLevelState {
-		f32 t = 0.0f;
-		i32 levelIndex = 0;
-	} transitionFromLevelToLevel;
+		LevelIndex levelIndex = 0;
+		TransitionEffectType transitionEffect;
+	} transitionToLevel;
+	void doTransitionToLevel(i32 levelIndex, TransitionEffectType transitionEffect);
 
 	struct StatelessTransitionState {
 		f32 t = 0.0f;

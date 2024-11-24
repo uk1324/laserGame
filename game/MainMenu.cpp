@@ -1,6 +1,8 @@
 #include "MainMenu.hpp"
+#include <game/GameUi.hpp>
 #include <engine/Input/Input.hpp>
 #include <engine/Window.hpp>
+#include <game/Animation.hpp>
 #include <engine/Math/Interpolation.hpp>
 
 // Making a layout by calculating the total height and scaling things so that they fit would make it so that elements (like text) change size in different screens. 
@@ -21,6 +23,7 @@ static void addButton(
 }
 
 const char* playButtonText = "play";
+const char* levelSelectButtonText = "level select";
 const char* soundSettingsButtonText = "sound settings";
 const char* editorButtonText = "level editor";
 const char* exitButtonText = "exit";
@@ -40,6 +43,8 @@ MainMenu::MainMenu() {
 
 		std::string_view buttonNames[]{
 			playButtonText,
+			levelSelectButtonText,
+			editorButtonText,
 			soundSettingsButtonText,
 			exitButtonText,
 		};
@@ -72,13 +77,10 @@ MainMenu::MainMenu() {
 	}
 }
 
-Ui::RectMinMax MainMenu::buttonRect(const GameRenderer& renderer, const Ui::CenteredHorizontalListLayout& layout, const Button& button)
-{
+Ui::RectMinMax MainMenu::buttonRect(const GameRenderer& renderer, const Ui::CenteredHorizontalListLayout& layout, const Button& button) {
 	const auto& block = layout.blocks[button.id];
-	const auto info = renderer.font.textInfo(block.worldSize(), button.text);
 	const auto pos = Vec2(0.0f, block.worldCenter());
-	const auto size = Vec2(info.size.x / renderer.gfx.camera.clipSpaceToWorldSpace()[0][0], block.worldSize());
-	return Ui::RectMinMax::fromPosSize(pos, size);
+	return Ui::centeredTextBoundingRect(pos, block.worldSize(), button.text, renderer.font, renderer);
 }
 
 MainMenu::Result MainMenu::update(GameRenderer& renderer) {
@@ -91,17 +93,22 @@ MainMenu::Result MainMenu::update(GameRenderer& renderer) {
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
 
-	for (const auto& button : menuUi.buttons) {
+	for (auto& button : menuUi.buttons) {
 		const auto rect = buttonRect(renderer, menuUi.layout, button);
-		//Ui::rect(renderer, rect, 0.01f, Color3::WHITE);
+		const auto hovered = Ui::isPointInRect(rect, cursorPos);
+		button.update(hovered);
 
-		if (Ui::isPointInRect(rect, cursorPos) && Input::isMouseButtonDown(MouseButton::LEFT)) {
+		if (hovered && Input::isMouseButtonDown(MouseButton::LEFT)) {
 			if (button.text == exitButtonText) {
 				Window::close();
-			} else if (button.text == playButtonText) {
+			} else if (button.text == levelSelectButtonText) {
 				result = Result::GO_TO_LEVEL_SELECT;
 			} else if (button.text == soundSettingsButtonText) {
 				result = Result::GO_TO_SOUND_SETTINGS;
+			} else if (button.text == editorButtonText) {
+				result = Result::GO_TO_EDITOR;
+			} else if (button.text == playButtonText) {
+				result = Result::PLAY;
 			}
 		}
 	}
@@ -127,8 +134,10 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
 
-	for (const auto& button : soundSettingsUi.buttons) {
+	for (auto& button : soundSettingsUi.buttons) {
 		const auto rect = buttonRect(renderer, soundSettingsUi.layout, button);
+		const auto hovered = Ui::isPointInRect(rect, cursorPos);
+		button.update(hovered);
 		//Ui::rect(renderer, rect, 0.01f, Color3::WHITE);
 
 		if (Ui::isPointInRect(rect, cursorPos) && Input::isMouseButtonDown(MouseButton::LEFT)) {
@@ -150,7 +159,7 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 			Vec2 position = Vec2(renderer.gfx.camera.pos.x - info.size.x - spacingBetween, block.worldCenter());
 			position.y -= info.bottomY;
 			position.y -= info.size.y / 2.0f;
-			renderer.gameText(position, sizeY, slider.name, Color3::WHITE);
+			renderer.gameText(position, sizeY, slider.name);
 		}
 		{
 			const auto sizeY = block.worldSize();
@@ -232,12 +241,16 @@ SettingsAudio MainMenu::getSoundSettings() const {
 	};
 }
 
-void MainMenu::drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id) {
+void MainMenu::drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id, f32 hoverT) {
 	auto& block = layout.blocks[id];
 	const auto center = Vec2(r.gfx.camera.pos.x, block.worldCenter());
-	r.gameTextCentered(center, block.worldSize(), text, Color3::WHITE);
+	r.gameTextCentered(center, block.worldSize(), text, hoverT);
 }
 
 void MainMenu::drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button) {
-	drawText(r, button.text, layout, button.id);
+	drawText(r, button.text, layout, button.id, button.hoverAnimationT);
+}
+
+void MainMenu::Button::update(bool hovered) {
+	updateConstantSpeedT(hoverAnimationT, buttonHoverAnimationDuration, hovered);
 }

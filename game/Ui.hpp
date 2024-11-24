@@ -51,6 +51,9 @@ namespace Ui {
 	// offset is in the coordinates such that the origin is set in such a way that the corner of the rect is at the corner. offset increases from the corner to (0, 0)
 	Vec2 rectPositionRelativeToCorner(Vec2 corner, Vec2 rectSize, Vec2 offset);
 
+	RectMinMax centeredTextBoundingRect(Vec2 position, f32 maxHeight, std::string_view text, const Font& font, const GameRenderer& renderer);
+	Vec2 textBoundingRectSize(f32 maxHeight, std::string_view text, const Font& font, const GameRenderer& renderer);
+
 	struct CenteredHorizontalListLayout {
 		f32 totalSizeY = 0.0f;
 		struct Block {

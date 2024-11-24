@@ -27,4 +27,4 @@ _deps
 *.a
 
 .vscode/
-/assets/*
+# /assets/*

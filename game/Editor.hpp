@@ -92,7 +92,13 @@ struct EditorGridTool {
 struct Editor {
 	Editor();
 
-	void update(GameRenderer& renderer);
+	enum class Result {
+		GO_TO_MAIN_MENU,
+		PREVIEW_LEVEL,
+		NONE,
+	};
+
+	Result update(GameRenderer& renderer);
 	void undoRedoUpdate();
 
 	enum class Tool {

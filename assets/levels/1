@@ -1,0 +1,39 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                -1,
+                -8.74228e-08
+            ],
+            "endpoint1": [
+                1,
+                0
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                5.96244e-09,
+                -0.5
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.5708,
+            "positionLocked": true
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                -2.18557e-08,
+                0.5
+            ],
+            "radius": 0.1
+        }
+    ]
+}

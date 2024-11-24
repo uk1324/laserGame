@@ -1,5 +1,6 @@
 #include "Game.hpp"
 #include <game/GameSerialization.hpp>
+#include <game/GameUi.hpp>
 #include <engine/Math/Interpolation.hpp>
 #include <game/Animation.hpp>
 #include <imgui/imgui.h>
@@ -63,7 +64,7 @@ Game::Result Game::update(GameRenderer& renderer) {
 		//Ui::rectPosSizeFilled(r, pos, size, Vec4(color1, goToNextLevelButtonActiveT));
 
 		if (levelComplete && hover && Input::isMouseButtonDown(MouseButton::LEFT)) {
-			result = ResultGoToLevel{};
+			result = ResultGoToNextLevel{};
 		}
 
 		const auto padding = size * 0.1f;
@@ -81,6 +82,33 @@ Game::Result Game::update(GameRenderer& renderer) {
 			Vec2(min.x, min.y + 0.25f * insideSize.y),
 			Vec2(offset, max.y - 0.25f * insideSize.y),
 			color2a);
+	}
+
+	{
+		renderer.textColorRng.seed(renderer.textColorRngSeed);
+		const auto mainMenuButtonText = "main menu";
+		const auto height = navigationButtonTextHeight;
+		const auto padding = Ui::equalSizeReativeToX(renderer, 0.01f);
+		{
+			auto size = Ui::textBoundingRectSize(height, mainMenuButtonText, renderer.font, renderer);
+			auto pos = Ui::rectPositionRelativeToCorner(Vec2(-0.5f, 0.5f), size, padding);
+			renderer.gameTextCentered(pos, height, mainMenuButtonText, mainMenuButton.hoverAnimationT);
+			if (buttonPosSize(pos, size, mainMenuButton.hoverAnimationT, uiCursorPos)) {
+				result = ResultGoToMainMenu{};
+			}
+		}
+
+		{
+			const auto skipButtonText = "skip";
+			auto size = Ui::textBoundingRectSize(height, skipButtonText, renderer.font, renderer);
+			auto pos = Ui::rectPositionRelativeToCorner(Vec2(0.5f, 0.5f), size, padding);
+			renderer.gameTextCentered(pos, height, skipButtonText, skipButton.hoverAnimationT);
+			if (buttonPosSize(pos, size, skipButton.hoverAnimationT, uiCursorPos)) {
+				result = ResultSkipLevel{};
+			}
+		}
+
+		renderer.renderGameText();
 	}
 
 	renderer.gfx.drawFilledTriangles();
@@ -193,4 +221,28 @@ bool Game::tryLoadLevel(std::string_view path) {
 bool Game::tryLoadLevelFromJson(const Json::Value& json) {
 	reset();
 	return tryLoadGameLevelFromJson(e, json);
+}
+
+bool Game::tryLoadGameLevel(const Levels& levels, LevelIndex levelIndex) {
+	const auto& info = levels.tryGetLevelInfo(levelIndex);
+	if (!info.has_value()) {
+		currentLevel = std::nullopt;
+		return false;
+	}
+	if (tryLoadLevel(info->path)) {
+		currentLevel = levelIndex;
+		return true;
+	}
+	currentLevel = std::nullopt;
+	return false;
+}
+
+bool Game::tryLoadEditorPreviewLevel(const Json::Value& json) {
+	const auto result = tryLoadLevelFromJson(json);
+	currentLevel = std::nullopt;
+	return result;
+}
+
+bool Game::isEditorPreviewLevelLoaded() const {
+	return currentLevel == std::nullopt;
 }

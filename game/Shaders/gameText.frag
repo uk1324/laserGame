@@ -8,6 +8,7 @@ in vec2 atlasMax;
 
 in vec3 color; 
 in float randomValue; 
+in float hoverT; 
 out vec4 fragColor;
 
 /*generated end*/
@@ -72,11 +73,9 @@ void main() {
 
 	d = 1.0 / (d * d);
 	d /= 15.0;
-	// similar to 1/x^2 * (-x/b + a)
-	//d *= min(d2, d3);
 	d *= d2;
 	//d = clamp(d, 0.0, 1.0);
-	d *= octave01(vec2(randomValue, time / 2.0), 2);
+	d *= (hoverT + 0.5) / 1.5;
 	//d *= max(d2, d3);
 	//d *= d2 + d3;
 	//vec3 c = colr * exp(4.0 * g - 1.0);

@@ -115,6 +115,16 @@ Vec2 Ui::rectPositionRelativeToCorner(Vec2 corner, Vec2 rectSize, Vec2 offset) {
 	return corner - (offset + rectSize / 2.0f) * direction;
 }
 
+Ui::RectMinMax Ui::centeredTextBoundingRect(Vec2 position, f32 maxHeight, std::string_view text, const Font& font, const GameRenderer& renderer) {
+	return Ui::RectMinMax::fromPosSize(position, textBoundingRectSize(maxHeight, text, font, renderer));
+}
+
+Vec2 Ui::textBoundingRectSize(f32 maxHeight, std::string_view text, const Font& font, const GameRenderer& renderer) {
+	const auto info = font.textInfo(maxHeight, text);
+	const auto size = Vec2(info.size.x / renderer.gfx.camera.clipSpaceToWorldSpace()[0][0], maxHeight);
+	return size;
+}
+
 f32 Ui::CenteredHorizontalListLayout::Block::worldCenter() const {
 	return (worldPositionTopY + worldPositionBottomY) / 2.0f;
 }

@@ -14,6 +14,8 @@ struct MainMenu {
 		i32 id = INVALID;
 		std::string_view text;
 		f32 hoverAnimationT = 0.0f;
+
+		void update(bool hovered);
 	};
 
 	static Ui::RectMinMax buttonRect(const GameRenderer& renderer, const Ui::CenteredHorizontalListLayout& layout, const Button& button);
@@ -29,6 +31,8 @@ struct MainMenu {
 		NONE,
 		GO_TO_LEVEL_SELECT,
 		GO_TO_SOUND_SETTINGS,
+		GO_TO_EDITOR,
+		PLAY,
 	};
 
 	enum class SoundSettingsResult {
@@ -41,7 +45,7 @@ struct MainMenu {
 	void setSoundSettings(const SettingsAudio& audio);
 	SettingsAudio getSoundSettings() const;
 
-	void drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id);
+	void drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id, f32 hoverT = 0.0f);
 
 	void drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button);
 

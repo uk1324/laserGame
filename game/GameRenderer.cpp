@@ -379,16 +379,36 @@ void GameRenderer::changeTextColorRngSeed() {
 	textColorRngSeed = time(NULL);
 }
 
-void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::string_view text, Vec3 color) {
+#include <game/Ui.hpp>
+
+//void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::string_view text, Vec3 color, f32 hoverT) {
+//	const auto toUiSpace = Mat3x2::scale(Vec2(2.0f)) * gfx.camera.worldToCameraToNdc();
+//
+//	TextRenderInfoIterator iterator(font, bottomLeftPosition, toUiSpace, maxHeight, text);
+//	for (auto info = iterator.next(); info.has_value(); info = iterator.next()) {
+//		gameTextInstances.push_back(GameTextInstance{
+//			.transform = info->transform,
+//			.offsetInAtlas = info->offsetInAtlas,
+//			.sizeInAtlas = info->sizeInAtlas,
+//			.color = textColorRng.colorRandomHue(1.0f, 1.0f),
+//			.randomValue = textColorRng.dist(textColorRng.rng),
+//			.hoverT = hoverT
+//		});
+//	}
+//}
+
+void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::string_view text, f32 hoverT, std::optional<Vec3> color) {
 	const auto toUiSpace = Mat3x2::scale(Vec2(2.0f)) * gfx.camera.worldToCameraToNdc();
+
 	TextRenderInfoIterator iterator(font, bottomLeftPosition, toUiSpace, maxHeight, text);
 	for (auto info = iterator.next(); info.has_value(); info = iterator.next()) {
 		gameTextInstances.push_back(GameTextInstance{
 			.transform = info->transform,
 			.offsetInAtlas = info->offsetInAtlas,
 			.sizeInAtlas = info->sizeInAtlas,
-			.color = textColorRng.colorRandomHue(1.0f, 1.0f),
-			.randomValue = textColorRng.dist(textColorRng.rng)
+			.color = color.has_value() ? *color : textColorRng.colorRandomHue(1.0f, 1.0f),
+			.randomValue = textColorRng.dist(textColorRng.rng),
+			.hoverT = hoverT
 		});
 	}
 }
@@ -401,8 +421,9 @@ Vec2 textCenteredPosition(const Font& font, Vec2 center, f32 maxHeight, std::str
 	return position;
 }
 
-void GameRenderer::gameTextCentered(Vec2 position, float maxHeight, std::string_view text, Vec3 color) {
-	gameText(textCenteredPosition(font, position, maxHeight, text), maxHeight, text, color);
+void GameRenderer::gameTextCentered(Vec2 position, float maxHeight, std::string_view text, f32 hoverT, std::optional<Vec3> color) {
+	position = Ui::posToWorldSpace(*this, position) / 2.0f;
+	gameText(textCenteredPosition(font, position, maxHeight, text), maxHeight, text, hoverT, color);
 }
 
 void GameRenderer::renderGameText() {

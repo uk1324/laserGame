@@ -18,13 +18,25 @@ int main(int argc, char** argv) {
 
 	const path executablePath(executablePathString);
 
+	const auto gameOutputPath = outputPath / "laser game";
+
+	auto copyDirRecursive = [&](const char* dir) {
+		copy("./platformer/assets", gameOutputPath / "assets", copy_options::recursive | copy_options::overwrite_existing);
+	};
+
 	try {
-		const auto gameOutputPath = outputPath / "laser game";
 		create_directories(gameOutputPath);
 		create_directories(gameOutputPath / "assets/fonts");
-		copy("./engine/assets/fonts/RobotoMono-Regular.ttf", gameOutputPath / "assets/fonts/RobotoMono-Regular.ttf", copy_options::recursive | copy_options::overwrite_existing);
-		copy("./engine/dependencies/freetype.dll", gameOutputPath / "freetype.dll", copy_options::recursive | copy_options::overwrite_existing);
+		copy("./engine/assets/fonts/RobotoMono-Regular.ttf", gameOutputPath / "assets/fonts/RobotoMono-Regular.ttf", copy_options::overwrite_existing);
+		copy("./engine/dependencies/freetype.dll", gameOutputPath / "freetype.dll", copy_options::overwrite_existing);
 		copy_file(executablePath, gameOutputPath / ("laser game" + executablePath.extension().string()), copy_options::overwrite_existing);
+
+		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator("./assets/levels")) {
+			const auto& path = dirEntry.path();
+			// TODO: Minify the json.
+			//Json
+		}
+		
 	}
 	catch (const filesystem_error& e) {
 		cerr << e.what() << '\n';
