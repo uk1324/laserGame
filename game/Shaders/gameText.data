@@ -9,6 +9,7 @@ shader GameText {
 	};
 	fragInstance = {
 		Vec3 color;
+		float randomValue;
 	};
 	vertOut = {
 		Vec2 texturePosition;

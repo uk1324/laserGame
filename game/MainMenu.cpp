@@ -30,9 +30,9 @@ static constexpr const char* musicVolumeSliderName = "music";
 static constexpr const char* backButtonText = "back";
 
 MainMenu::MainMenu() {
-	static constexpr f32 buttonSize = 0.03f;
+	static constexpr f32 buttonSize = 0.04f;
 	f32 titleSize = 0.10f;
-	f32 smallTitleSize = 0.05f;
+	f32 smallTitleSize = 0.06f;
 	const auto padding = 0.008f;
 
 	{
@@ -150,7 +150,7 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 			Vec2 position = Vec2(renderer.gfx.camera.pos.x - info.size.x - spacingBetween, block.worldCenter());
 			position.y -= info.bottomY;
 			position.y -= info.size.y / 2.0f;
-			renderer.gameTextCentered(position, sizeY, slider.name, Color3::WHITE);
+			renderer.gameText(position, sizeY, slider.name, Color3::WHITE);
 		}
 		{
 			const auto sizeY = block.worldSize();

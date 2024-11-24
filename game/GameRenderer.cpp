@@ -388,6 +388,7 @@ void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::strin
 			.offsetInAtlas = info->offsetInAtlas,
 			.sizeInAtlas = info->sizeInAtlas,
 			.color = textColorRng.colorRandomHue(1.0f, 1.0f),
+			.randomValue = textColorRng.dist(textColorRng.rng)
 		});
 	}
 }

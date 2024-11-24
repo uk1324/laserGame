@@ -6,15 +6,18 @@ layout(location = 2) in mat3x2 instanceTransform;
 layout(location = 5) in vec2 instanceOffsetInAtlas; 
 layout(location = 6) in vec2 instanceSizeInAtlas; 
 layout(location = 7) in vec3 instanceColor; 
+layout(location = 8) in float instanceRandomValue; 
 
 out vec2 texturePosition; 
 out vec2 atlasMin; 
 out vec2 atlasMax; 
 
 out vec3 color; 
+out float randomValue; 
 
 void passToFragment() {
     color = instanceColor; 
+    randomValue = instanceRandomValue; 
 }
 
 /*generated end*/
@@ -28,7 +31,7 @@ void main() {
 	atlasMin = instanceOffsetInAtlas;
 	atlasMax = atlasMin + instanceSizeInAtlas;
 	vec2 center = (atlasMin + atlasMax) / 2.0;
-	float boxScale = 3.0;
+	float boxScale = 1.3;
 	texturePosition -= center;
 	texturePosition *= boxScale;
 	texturePosition += center;
