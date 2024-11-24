@@ -27,5 +27,10 @@ void main() {
 	texturePosition += instanceOffsetInAtlas;
 	atlasMin = instanceOffsetInAtlas;
 	atlasMax = atlasMin + instanceSizeInAtlas;
-	gl_Position = vec4(instanceTransform * vec3(vertexPosition, 1.0), 0.0, 1.0);
+	vec2 center = (atlasMin + atlasMax) / 2.0;
+	float boxScale = 3.0;
+	texturePosition -= center;
+	texturePosition *= boxScale;
+	texturePosition += center;
+	gl_Position = vec4(instanceTransform * vec3(vertexPosition * boxScale, 1.0), 0.0, 1.0);
 }

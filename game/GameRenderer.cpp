@@ -28,6 +28,7 @@ GameRenderer GameRenderer::make() {
 		.stereographicDiskShader = MAKE_GENERATED_SHADER(STEREOGRAPHIC_DISK),
 		.gameTextVao = MAKE_VAO(GameText),
 		.gameTextShader = MAKE_GENERATED_SHADER(GAME_TEXT),
+		.textColorRngSeed = u32(time(NULL)),
 		.font = Font::loadSdfWithCachingAtDefaultPath(FONT_FOLDER, "RobotoMono-Regular"),
 		MOVE(gfx),
 	};
@@ -374,6 +375,10 @@ void GameRenderer::addStereographicDisk(Vec2 center, f32 radius, Vec3 colorInsid
 	stereographicDisks.push_back(instance);
 }
 
+void GameRenderer::changeTextColorRngSeed() {
+	textColorRngSeed = time(NULL);
+}
+
 void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::string_view text, Vec3 color) {
 	const auto toUiSpace = Mat3x2::scale(Vec2(2.0f)) * gfx.camera.worldToCameraToNdc();
 	TextRenderInfoIterator iterator(font, bottomLeftPosition, toUiSpace, maxHeight, text);
@@ -382,23 +387,35 @@ void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::strin
 			.transform = info->transform,
 			.offsetInAtlas = info->offsetInAtlas,
 			.sizeInAtlas = info->sizeInAtlas,
-			.color = color,
+			.color = textColorRng.colorRandomHue(1.0f, 1.0f),
 		});
 	}
 }
 
-void GameRenderer::gameTextCentered(Vec2 position, float maxHeight, std::string_view text, Vec3 color) {
+Vec2 textCenteredPosition(const Font& font, Vec2 center, f32 maxHeight, std::string_view text) {
 	const auto info = font.textInfo(maxHeight, text);
+	Vec2 position = center;
 	position.y -= info.bottomY;
 	position -= info.size / 2.0f;
-	gameText(position, maxHeight, text, color);
+	return position;
+}
+
+void GameRenderer::gameTextCentered(Vec2 position, float maxHeight, std::string_view text, Vec3 color) {
+	gameText(textCenteredPosition(font, position, maxHeight, text), maxHeight, text, color);
 }
 
 void GameRenderer::renderGameText() {
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive blending
 	gameTextShader.use();
 	gameTextShader.setTexture("fontAtlas", 0, font.fontAtlas);
+	static f32 elapsed = 0.0f;
+	elapsed += Constants::dt;
+	shaderSetUniforms(gameTextShader, GameTextFragUniforms{
+		.time = elapsed
+	});
 	drawInstances(gameTextVao, gfx.instancesVbo, constView(gameTextInstances), quad2dPtDrawInstances);
 	gameTextInstances.clear();
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 Vec3 movablePartColor(bool isPositionLocked) {

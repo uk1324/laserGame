@@ -63,6 +63,10 @@ struct GameRenderer {
 	Vao gameTextVao;
 	ShaderProgram& gameTextShader;
 	std::vector<GameTextInstance> gameTextInstances;
+	ColorRng textColorRng;
+	u32 textColorRngSeed;
+	void changeTextColorRngSeed();
+
 	void gameText(
 		Vec2 bottomLeftPosition,
 		float maxHeight,

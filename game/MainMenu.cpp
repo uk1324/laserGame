@@ -82,9 +82,12 @@ Ui::RectMinMax MainMenu::buttonRect(const GameRenderer& renderer, const Ui::Cent
 }
 
 MainMenu::Result MainMenu::update(GameRenderer& renderer) {
+	renderer.textColorRng.seed(renderer.textColorRngSeed);
+
 	auto result = Result::NONE;
 
 	menuUi.layout.update(renderer.gfx.camera);
+
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
 
@@ -116,6 +119,8 @@ MainMenu::Result MainMenu::update(GameRenderer& renderer) {
 }
 
 MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& renderer) {
+	renderer.textColorRng.seed(renderer.textColorRngSeed);
+
 	auto result = SoundSettingsResult::NONE;
 
 	soundSettingsUi.layout.update(renderer.gfx.camera);

@@ -15,4 +15,7 @@ shader GameText {
 		Vec2 atlasMin;
 		Vec2 atlasMax;
 	};
+	fragUniforms = {
+		float time;
+	};
 }

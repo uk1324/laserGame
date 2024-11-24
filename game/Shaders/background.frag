@@ -11,10 +11,7 @@ out vec4 fragColor;
 
 float t = time / 20.0;
 
-vec2 hash(vec2 p) {
-    p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
-    return fract(sin(p) * 18.5453);
-}
+#include "noise2d.glsl"
 
 // x - distance to closest
 // y - closest cell index
@@ -29,7 +26,7 @@ vec3 voronoi(in vec2 x)
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
             vec2 g = vec2(float(i), float(j));
-            vec2 o = hash(n + g);
+            vec2 o = hash(n + g); 
 	        vec2 r = g - f + (0.5 + 0.5 * sin(t + 6.2831 * o));
             //float d = length(r);
             //float d = abs(r.x) + abs(r.y);
@@ -53,33 +50,6 @@ vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
-
-float perlin01(vec2 p) {
-    const float K1 = 0.366025404; // (sqrt(3)-1)/2;
-    const float K2 = 0.211324865; // (3-sqrt(3))/6;
-
-    vec2  i = floor(p + (p.x + p.y) * K1);
-    vec2  a = p - i + (i.x + i.y) * K2;
-    float m = step(a.y, a.x);
-    vec2  o = vec2(m, 1.0 - m);
-    vec2  b = a - o + K2;
-    vec2  c = a - 1.0 + 2.0 * K2;
-    vec3  h = max(0.5 - vec3(dot(a, a), dot(b, b), dot(c, c)), 0.0);
-    vec3  n = h * h * h * h * vec3(dot(a, hash(i + 0.0)), dot(b, hash(i + o)), dot(c, hash(i + 1.0)));
-    return (dot(n, vec3(70.0)) + 1.0) * 0.5;
-}
-
-float octave01(vec2 p, int octaves) {
-    float amplitude = .5;
-    float frequency = 0.;
-    float value = 0.0;
-    for (int i = 0; i < octaves; i++) {
-        value += amplitude * perlin01(p);
-        p *= 2.;
-        amplitude *= .5;
-    }
-    return value;
 }
 
 void main() {

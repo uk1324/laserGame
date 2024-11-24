@@ -182,7 +182,9 @@ void MainLoop::update() {
 	case STATELESS_TRANSITION: {
 		auto& s = statelessTransition;
 
-		updateT(s.t);
+		if (updateTAndCheckIfAtMid(s.t)) {
+			renderer.changeTextColorRngSeed();
+		}
 
 		if (s.t < 0.5f) {
 			stateUpdate(s.startState);
