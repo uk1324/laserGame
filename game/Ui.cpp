@@ -14,13 +14,25 @@ Ui::RectMinMax Ui::RectMinMax::fromPosSize(Vec2 pos, Vec2 size) {
 	return RectMinMax(pos - size / 2.0f, pos + size / 2.0f);
 }
 
+Ui::RectMinMax Ui::RectMinMax::fromMinSize(Vec2 min, Vec2 size) {
+	return RectMinMax(min, min + size);
+}
+
+Vec2 Ui::RectMinMax::center() const {
+	return (min + max) / 2.0f;
+}
+
+Vec2 Ui::RectMinMax::size() const {
+	return max - min;
+}
+
 Vec2 Ui::posToWorldSpace(const GameRenderer& r, Vec2 p) {
 	// @Performance: Could cache in renderer.
 	return p * 2.0f * r.gfx.camera.clipSpaceToWorldSpace();
 }
 
 f32 Ui::ySizeToWorldSpace(const GameRenderer& r, f32 ySize) {
-	return ySize * 2.0 * r.gfx.camera.clipSpaceToWorldSpace()[1][1];
+	return ySize * 2.0f * r.gfx.camera.clipSpaceToWorldSpace()[1][1];
 }
 
 Ui::RectMinMax Ui::rectToWorldSpace(const GameRenderer& r, Vec2 min, Vec2 max) {

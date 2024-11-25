@@ -120,3 +120,10 @@ Games like portal constrain the configuration for example only allowing to put p
 Not sure what would be the best way to display this. Could for example have cells for the tiling colored a certain color. Could have a boundary on each cells colored individually or just remove the boundaries of neighbouring  cells (this would also show that antipodal sides are connected) using algebraic topology.
 
 What you see in the game is a map of the elliptic plane. Just like on a map of the earth things are distorted. Shortest paths aren't straight lines, areas are scaled, boundaries on the map aren't boundaries of the space. The map used in the game preserves angles so the law of reflection has the same from as in eucledian geometry that is angle of incidence = angle of reflection. Antipodal points on the boundary are actually the same point. When you move through the boundary you emerge at the antipodal point.
+
+
+TODO: Document how the game spaces work and make text ui rendering work normally.
+
+Make the camera transforms take size instead of scale.
+
+On off switch with the text faded using sdfs. Would have to somehow combine the characters in the shader into a single sdf. Another option would be to use symbols like O and I instead of words.

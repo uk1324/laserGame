@@ -16,6 +16,11 @@ namespace Ui {
 	struct RectMinMax {
 		RectMinMax(Vec2 min, Vec2 max);
 		static RectMinMax fromPosSize(Vec2 pos, Vec2 size);
+		static RectMinMax fromMinSize(Vec2 min, Vec2 size);
+
+		Vec2 center() const;
+		Vec2 size() const;
+
 		Vec2 min;
 		Vec2 max;
 	};

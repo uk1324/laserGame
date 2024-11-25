@@ -42,21 +42,21 @@ void minifyShader(std::ostream& os, std::string_view source) {
 	int i = 0;
 	auto isAtEnd = [&]() {
 		return i >= source.size();
-		};
+	};
 
 	auto peek = [&]() {
 		if (isAtEnd()) {
 			return '\0';
 		}
 		return source[i];
-		};
+	};
 
 	auto peekNext = [&]() {
-		if (i + 1 >= source.size()) {
+		if ((unsigned long long)(i) + 1 >= source.size()) {
 			return '\0';
 		}
-		return source[i + 1];
-		};
+		return source[(unsigned long long)(i + 1)];
+	};
 
 	std::optional<char> lastOutputChar;
 	auto output = [&](char c) {
@@ -167,7 +167,8 @@ int main() {
 				output << "\";\n";
 			}
 		}
-		};
+		return EXIT_SUCCESS;
+	};
 	try {
 		recursiveProcessDirectory("./game/Shaders/");
 		recursiveProcessDirectory("./engine/gfx2d/Shaders/");

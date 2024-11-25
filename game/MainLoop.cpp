@@ -139,6 +139,8 @@ void MainLoop::update() {
 			using enum MainMenu::SoundSettingsResult;
 		case GO_BACK:
 			settingsManager.settings.audio = mainMenu.getSoundSettings();
+			settingsManager.settings.graphics.drawBackgrounds = mainMenu.settingsUi.drawBackgroundsButton.value;
+			renderer.settings = settingsManager.settings.graphics;
 			settingsManager.trySaveSettings();
 			doBasicTransition(State::MAIN_MENU);
 			break;

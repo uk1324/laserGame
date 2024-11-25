@@ -1,0 +1,17 @@
+import "../../engine/gfx2d/Vertex2dPt.data";
+
+shader GlowingArrow {
+	vertexStruct = Vertex2dPt;
+	vertInstance = {
+		Mat3x2 transform;
+		float widthOverHeight;
+	};
+	fragInstance = {
+		float hoverT;
+		float opacity;
+	};
+	vertOut = {
+		Vec2 position;
+		float width;
+	};
+}

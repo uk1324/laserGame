@@ -51,26 +51,35 @@ struct MainMenu {
 
 	struct MenuUi {
 		Ui::CenteredHorizontalListLayout layout;
-		i32 titleId = INVALID;
+		i32 titleId0 = INVALID;
+		i32 titleId1 = INVALID;
 		std::vector<Button> buttons;
 	} menuUi;
 
-	struct SoundSettingsUi {
+	struct ToggleButton {
+		i32 id = INVALID;
+		std::string_view text;
+		f32 hoverAnimationT = 0.0f;
+		bool value = true;
+	};
+
+	struct SettingsUi {
 		Ui::CenteredHorizontalListLayout layout;
 		i32 titleId = INVALID;
 		std::vector<SliderInput> sliderInputs;
 		std::vector<Button> buttons;
 
-		i32 masterVolumeSliderIndex = INVALID;
+		//i32 masterVolumeSliderIndex = INVALID;
 		i32 soundEffectVolumeSliderIndex = INVALID;
-		i32 musicVolumeSliderIndex = INVALID;
+		ToggleButton drawBackgroundsButton;
+		//i32 musicVolumeSliderIndex = INVALID;
 
 		struct GrabbedSlider {
 			i32 index;
 			Vec2 grabOffset;
 		};
 		std::optional<GrabbedSlider> grabbedSlider;
-	} soundSettingsUi;
+	} settingsUi;
 
 	ColorRng rng;
 };

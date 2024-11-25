@@ -2,6 +2,7 @@
 #include <engine/Math/Color.hpp>
 #include <Overloaded.hpp>
 #include <game/Shaders/backgroundData.hpp>
+#include <game/Shaders/glowingArrowData.hpp>
 #include <engine/Math/Constants.hpp>
 #include <game/Stereographic.hpp>
 #include <glad/glad.h>
@@ -29,6 +30,8 @@ GameRenderer GameRenderer::make() {
 		.gameTextVao = MAKE_VAO(GameText),
 		.gameTextShader = MAKE_GENERATED_SHADER(GAME_TEXT),
 		.textColorRngSeed = u32(time(NULL)),
+		.glowingArrowVao= MAKE_VAO(GlowingArrow),
+		.glowingArrowShader = MAKE_GENERATED_SHADER(GLOWING_ARROW),
 		.font = Font::loadSdfWithCachingAtDefaultPath(FONT_FOLDER, "RobotoMono-Regular"),
 		MOVE(gfx),
 	};
@@ -72,7 +75,7 @@ void GameRenderer::mirror(const EditorMirror& mirror) {
 		stereographicSegment(endpoints[0], endpoints[1], reflectingColor);
 		break;
 	}
-	for (const auto endpoint : endpoints) {
+	for (const auto& endpoint : endpoints) {
 		gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(false));
 	}
 	gfx.disk(mirror.center, grabbableCircleRadius, movablePartColor(mirror.positionLocked));
@@ -116,7 +119,14 @@ void GameRenderer::lockedCell(const LockedCells& cells, i32 index, Vec4 color) {
 void GameRenderer::renderClear() {
 	gfx.camera.zoom = 0.9f;
 
-	renderBackground();
+	if (settings.drawBackgrounds) {
+		renderBackground();
+	} else {
+		const auto v = 0.1f;
+		glClearColor(v, v, v, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	}
 	gfx.diskTriangulated(Vec2(0.0f), 1.0f, Vec4(Color3::BLACK, 1.0f));
 	gfx.drawFilledTriangles();
 
@@ -216,7 +226,7 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 				multicoloredSegment(endpoints, portal.normalAngle, portalColor, reflectingColor);
 				break;
 			}
-			for (const auto endpoint : endpoints) {
+			for (const auto& endpoint : endpoints) {
 				gfx.disk(endpoint, grabbableCircleRadius, movablePartColor(portal.rotationLocked));
 			}
 			gfx.disk(portal.center, grabbableCircleRadius, movablePartColor(portal.positionLocked));
@@ -376,7 +386,7 @@ void GameRenderer::addStereographicDisk(Vec2 center, f32 radius, Vec3 colorInsid
 }
 
 void GameRenderer::changeTextColorRngSeed() {
-	textColorRngSeed = time(NULL);
+	textColorRngSeed = u32(time(NULL));
 }
 
 #include <game/Ui.hpp>
@@ -402,11 +412,18 @@ void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::strin
 
 	TextRenderInfoIterator iterator(font, bottomLeftPosition, toUiSpace, maxHeight, text);
 	for (auto info = iterator.next(); info.has_value(); info = iterator.next()) {
+		Vec3 c(0.0f);
+		if (color.has_value()) {
+			c = *color;
+		} else {
+			c = textColorRng.colorRandomHue(1.0f, 1.0f);
+		}
+
 		gameTextInstances.push_back(GameTextInstance{
 			.transform = info->transform,
 			.offsetInAtlas = info->offsetInAtlas,
 			.sizeInAtlas = info->sizeInAtlas,
-			.color = color.has_value() ? *color : textColorRng.colorRandomHue(1.0f, 1.0f),
+			.color = c,
 			.randomValue = textColorRng.dist(textColorRng.rng),
 			.hoverT = hoverT
 		});
@@ -440,6 +457,19 @@ void GameRenderer::renderGameText() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+void GameRenderer::glowingArrow(const Aabb& rect, f32 hoverAnimationT, f32 opacity) {
+	glowingArrowShader.use();
+	static f32 elapsed = 0.0f;
+	elapsed += Constants::dt;
+	GlowingArrowInstance instance{
+		.transform = gfx.camera.makeTransform(rect.center(), 0.0f, rect.size() / 2.0f),
+		.widthOverHeight = rect.size().x / rect.size().y,
+		.hoverT = hoverAnimationT,
+		.opacity = opacity
+	};
+	drawInstances(glowingArrowVao, gfx.instancesVbo, constView(instance), quad2dPtDrawInstances);
+}
+
 Vec3 movablePartColor(bool isPositionLocked) {
 	const auto movableColor = Color3::YELLOW;
 	const auto nonMovableColor = Vec3(0.3f);
@@ -456,5 +486,17 @@ void ColorRng::seed(u32 seed) {
 }
 
 Vec3 ColorRng::colorRandomHue(f32 s, f32 v) {
-	return Color3::fromHsv(dist(rng), s, v);
+	const auto blueMin = 208.0f / 360.0f;
+	const auto blueMax = 259.0f / 360.0f;
+	const auto nonBlueArea0 = blueMin;
+	const auto nonBlueArea1 = 1.0f - blueMax;
+	const auto totalArea = nonBlueArea0 + nonBlueArea1;
+	// blue text is hard to read.
+	f32 h;
+	if (std::bernoulli_distribution(nonBlueArea0 / totalArea)(rng)) {
+		h = std::uniform_real_distribution<f32>(0.0f, blueMin)(rng);
+	} else {
+		h = std::uniform_real_distribution<f32>(blueMax, 1.0f)(rng);
+	}
+	return Color3::fromHsv(h, s, v);
 }

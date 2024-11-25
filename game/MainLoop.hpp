@@ -37,7 +37,7 @@ struct MainLoop {
 		TRANSITION_TO_LEVEL,
 		STATELESS_TRANSITION,
 		CONGRATULATIONS,
-	} state = State::LEVEL_SELECT;
+	} state = State::GAME;
 
 	void stateUpdate(State state);
 

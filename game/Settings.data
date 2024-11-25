@@ -1,9 +1,12 @@
 struct [[Json]] SettingsAudio {
-	float masterVolume;
 	float soundEffectVolume;
-	float musicVolume;
+}
+
+struct [[Json]] SettingsGraphics {
+	bool drawBackgrounds = `true`;
 }
 
 struct [[Json]] Settings {
 	SettingsAudio audio;
+	SettingsGraphics graphics;
 }

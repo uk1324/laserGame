@@ -42,7 +42,6 @@ Game::Result Game::update(GameRenderer& renderer) {
 
 	{
 		auto& r = renderer;
-
 		f32 xSize = 0.2f;
 		f32 ySize = 0.5f * Ui::xSizeToYSize(r, xSize);
 		Vec2 size(xSize, ySize);
@@ -55,7 +54,7 @@ Game::Result Game::update(GameRenderer& renderer) {
 
 		auto hover = Ui::isPointInRectPosSize(pos, size, uiCursorPos);
 		// Don't do hover highlighting when the level is not complete so the player doesn't try to press a button that doesn't do anything. Could instead just not have the button there when the level is not complete.
-		updateConstantSpeedT(goToNextLevelButtonHoverT, 0.3f, levelComplete && hover);
+		updateConstantSpeedT(goToNextLevelButtonHoverT, buttonHoverAnimationDuration, levelComplete && hover);
 
 		goToNextLevelButtonActiveT = std::clamp(goToNextLevelButtonActiveT, 0.0f, 1.0f);
 
@@ -73,15 +72,17 @@ Game::Result Game::update(GameRenderer& renderer) {
 		const auto max = pos + size / 2.0f - padding;
 		const auto offset = max.x - Ui::ySizeToXSize(r, insideSize.y / 2.0f * sqrt(2.0f));
 		const auto color2a = Vec4(color2, goToNextLevelButtonActiveT);
-		Ui::triFilled(r, 
-			Vec2(max.x, pos.y), 
-			Vec2(offset, max.y),
-			Vec2(offset, min.y),
-			color2a);
-		Ui::rectMinMaxFilled(r,
-			Vec2(min.x, min.y + 0.25f * insideSize.y),
-			Vec2(offset, max.y - 0.25f * insideSize.y),
-			color2a);
+
+		renderer.glowingArrow(Aabb(Ui::posToWorldSpace(renderer, min), Ui::posToWorldSpace(renderer, max)), goToNextLevelButtonHoverT, goToNextLevelButtonActiveT);
+		//Ui::triFilled(r, 
+		//	Vec2(max.x, pos.y), 
+		//	Vec2(offset, max.y),
+		//	Vec2(offset, min.y),
+		//	color2a);
+		//Ui::rectMinMaxFilled(r,
+		//	Vec2(min.x, min.y + 0.25f * insideSize.y),
+		//	Vec2(offset, max.y - 0.25f * insideSize.y),
+		//	color2a);
 	}
 
 	{

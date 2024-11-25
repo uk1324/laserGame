@@ -1,5 +1,8 @@
 #include <iostream>
 #include <filesystem>
+#include <JsonFileIo.hpp>
+#include <Json/JsonPrinter.hpp>
+#include <fstream>
 
 using namespace std;
 using namespace filesystem;
@@ -29,12 +32,23 @@ int main(int argc, char** argv) {
 		create_directories(gameOutputPath / "assets/fonts");
 		copy("./engine/assets/fonts/RobotoMono-Regular.ttf", gameOutputPath / "assets/fonts/RobotoMono-Regular.ttf", copy_options::overwrite_existing);
 		copy("./engine/dependencies/freetype.dll", gameOutputPath / "freetype.dll", copy_options::overwrite_existing);
+		copy_file("./OpenAL32.dll", gameOutputPath / "OpenAL32.dll", copy_options::overwrite_existing);
 		copy_file(executablePath, gameOutputPath / ("laser game" + executablePath.extension().string()), copy_options::overwrite_existing);
 
-		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator("./assets/levels")) {
-			const auto& path = dirEntry.path();
-			// TODO: Minify the json.
-			//Json
+		for (const auto& dirEntry : std::filesystem::directory_iterator("./assets/levels")) {
+			const auto& inPath = dirEntry.path();
+			const auto json = tryLoadJsonFromFile(inPath.string());
+			if (!json.has_value()) {
+				cerr << "invalid json file: " << inPath << '\n';
+				return EXIT_FAILURE;
+			}
+			const auto outDir = gameOutputPath / "assets/levels";
+			create_directories(outDir);
+			const auto outFile = outDir / inPath.filename();
+			cout << "copying level " << inPath.filename() << " to " << outFile << '\n';
+			std::ofstream file(outFile);
+			// minifying json
+			Json::print(file, *json);
 		}
 		
 	}

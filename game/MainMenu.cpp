@@ -24,56 +24,62 @@ static void addButton(
 
 const char* playButtonText = "play";
 const char* levelSelectButtonText = "level select";
-const char* soundSettingsButtonText = "sound settings";
+const char* settingsButtonText = "settings";
 const char* editorButtonText = "level editor";
 const char* exitButtonText = "exit";
 static constexpr const char* masterVolumeSliderName = "master";
-static constexpr const char* soundEffectVolumeSliderName = "sound effect";
+static constexpr const char* soundEffectVolumeSliderName = "sfx volume";
 static constexpr const char* musicVolumeSliderName = "music";
 static constexpr const char* backButtonText = "back";
 
 MainMenu::MainMenu() {
-	static constexpr f32 buttonSize = 0.04f;
-	f32 titleSize = 0.10f;
-	f32 smallTitleSize = 0.06f;
+	static constexpr f32 buttonSize = 0.03f;
+	f32 titleSize = 0.06f;
+	f32 smallTitleSize = 0.05f;
 	const auto padding = 0.008f;
 
 	{
-		menuUi.titleId = menuUi.layout.addBlock(titleSize);
+		menuUi.titleId0 = menuUi.layout.addBlock(titleSize);
+		menuUi.titleId1 = menuUi.layout.addBlock(titleSize);
 
 		std::string_view buttonNames[]{
 			playButtonText,
 			levelSelectButtonText,
 			editorButtonText,
-			soundSettingsButtonText,
+			settingsButtonText,
 			exitButtonText,
 		};
+		menuUi.layout.addPadding(padding); // additional padding
 		for (const auto& name : buttonNames) {
-			addButton(menuUi.buttons, menuUi.layout, name, buttonSize);
 			menuUi.layout.addPadding(padding);
+			addButton(menuUi.buttons, menuUi.layout, name, buttonSize);
 		}
 	}
 	{
 		auto addSliderInput = [&](std::string_view name) -> i32 {
-			i32 index = soundSettingsUi.sliderInputs.size();
-			soundSettingsUi.sliderInputs.push_back(SliderInput{
+			i32 index = i32(settingsUi.sliderInputs.size());
+			settingsUi.sliderInputs.push_back(SliderInput{
 				.name = name,
-				.id = soundSettingsUi.layout.addBlock(buttonSize),
+				.id = settingsUi.layout.addBlock(buttonSize),
 			});
 			return index;
 		};
-		soundSettingsUi.titleId = soundSettingsUi.layout.addBlock(smallTitleSize);
+		settingsUi.titleId = settingsUi.layout.addBlock(smallTitleSize);
+		/*soundSettingsUi.masterVolumeSliderIndex = addSliderInput(masterVolumeSliderName);
+		soundSettingsUi.layout.addPadding(padding);*/
 
-		soundSettingsUi.masterVolumeSliderIndex = addSliderInput(masterVolumeSliderName);
-		soundSettingsUi.layout.addPadding(padding);
+		settingsUi.soundEffectVolumeSliderIndex = addSliderInput(soundEffectVolumeSliderName);
+		settingsUi.layout.addPadding(padding);
 
-		soundSettingsUi.soundEffectVolumeSliderIndex = addSliderInput(soundEffectVolumeSliderName);
-		soundSettingsUi.layout.addPadding(padding);
+		settingsUi.drawBackgroundsButton = ToggleButton{
+			.id = settingsUi.layout.addBlock(buttonSize),
+			.text = "backgrounds",
+		};
 
-		soundSettingsUi.musicVolumeSliderIndex = addSliderInput(musicVolumeSliderName);
-		soundSettingsUi.layout.addPadding(padding);
+		//soundSettingsUi.musicVolumeSliderIndex = addSliderInput(musicVolumeSliderName);
+		//soundSettingsUi.layout.addPadding(padding);
 
-		addButton(soundSettingsUi.buttons, soundSettingsUi.layout, backButtonText, buttonSize);
+		addButton(settingsUi.buttons, settingsUi.layout, backButtonText, buttonSize);
 	}
 }
 
@@ -103,7 +109,7 @@ MainMenu::Result MainMenu::update(GameRenderer& renderer) {
 				Window::close();
 			} else if (button.text == levelSelectButtonText) {
 				result = Result::GO_TO_LEVEL_SELECT;
-			} else if (button.text == soundSettingsButtonText) {
+			} else if (button.text == settingsButtonText) {
 				result = Result::GO_TO_SOUND_SETTINGS;
 			} else if (button.text == editorButtonText) {
 				result = Result::GO_TO_EDITOR;
@@ -113,7 +119,8 @@ MainMenu::Result MainMenu::update(GameRenderer& renderer) {
 		}
 	}
 
-	drawText(renderer, "NAME", menuUi.layout, menuUi.titleId);
+	drawText(renderer, "Non-eucledian", menuUi.layout, menuUi.titleId0);
+	drawText(renderer, "lasers", menuUi.layout, menuUi.titleId1);
 	for (const auto& button : menuUi.buttons) {
 		drawButton(renderer, menuUi.layout, button);
 	}
@@ -130,12 +137,12 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 
 	auto result = SoundSettingsResult::NONE;
 
-	soundSettingsUi.layout.update(renderer.gfx.camera);
+	settingsUi.layout.update(renderer.gfx.camera);
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
 
-	for (auto& button : soundSettingsUi.buttons) {
-		const auto rect = buttonRect(renderer, soundSettingsUi.layout, button);
+	for (auto& button : settingsUi.buttons) {
+		const auto rect = buttonRect(renderer, settingsUi.layout, button);
 		const auto hovered = Ui::isPointInRect(rect, cursorPos);
 		button.update(hovered);
 		//Ui::rect(renderer, rect, 0.01f, Color3::WHITE);
@@ -147,20 +154,33 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 		}
 	}
 
-	drawText(renderer, "sound settings", soundSettingsUi.layout, soundSettingsUi.titleId);
+	drawText(renderer, "settings", settingsUi.layout, settingsUi.titleId);
 	
-	for (i32 sliderI = 0; sliderI < soundSettingsUi.sliderInputs.size(); sliderI++) {
-		const auto& slider = soundSettingsUi.sliderInputs[sliderI];
-		const auto block = soundSettingsUi.layout.blocks[slider.id];
-		const auto spacingBetween = 0.01f;
-		const auto sizeY = block.worldSize();
-		{
-			const auto info = renderer.font.textInfo(sizeY, slider.name);
-			Vec2 position = Vec2(renderer.gfx.camera.pos.x - info.size.x - spacingBetween, block.worldCenter());
-			position.y -= info.bottomY;
-			position.y -= info.size.y / 2.0f;
-			renderer.gameText(position, sizeY, slider.name);
+	const auto spacingBetween = 0.01f;
+
+	auto drawTextAlignedRelativeToCenter = [&](std::string_view text, f32 centerY, f32 sizeY, f32 alignmentDirection, f32 hoverT = 0.0f, std::optional<Vec3> color = std::nullopt) -> Ui::RectMinMax {
+		const auto info = renderer.font.textInfo(sizeY, text);
+		Vec2 position(spacingBetween * alignmentDirection, centerY);
+		if (alignmentDirection == -1.0f) {
+			position.x -= info.size.x;
 		}
+		position.y -= info.size.y / 2.0f;
+		//position.y -= sizeY / 2.0f;
+		position.y -= info.bottomY;
+
+		auto center = Vec2(0.0f + (spacingBetween + info.size.x / 2.0f) / renderer.gfx.camera.clipSpaceToWorldSpace()[0][0] * alignmentDirection, centerY);
+		//if (alignmentDirection == -1.0f) {
+		//	center.x += info.size.x / 4.0f;
+		//}
+		renderer.gameText(position, sizeY, text, hoverT, color);
+		return Ui::centeredTextBoundingRect(center, sizeY, text, renderer.font, renderer);
+	};
+
+	for (i32 sliderI = 0; sliderI < settingsUi.sliderInputs.size(); sliderI++) {
+		const auto& slider = settingsUi.sliderInputs[sliderI];
+		const auto& block = settingsUi.layout.blocks[slider.id];
+		const auto sizeY = block.worldSize();
+		drawTextAlignedRelativeToCenter(slider.name, block.worldCenter(), sizeY, -1.0f);
 		{
 			const auto sizeY = block.worldSize();
 			Vec2 min = Vec2(renderer.gfx.camera.pos.x + spacingBetween, block.worldPositionBottomY);
@@ -194,31 +214,49 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 
 			if (cursorPos.distanceTo(diskPos) < diskRadius &&
 				Input::isMouseButtonDown(MouseButton::LEFT) && 
-				!soundSettingsUi.grabbedSlider.has_value()) {
+				!settingsUi.grabbedSlider.has_value()) {
 
-				soundSettingsUi.grabbedSlider = SoundSettingsUi::GrabbedSlider{
+				settingsUi.grabbedSlider = SettingsUi::GrabbedSlider{
 					.index = sliderI,
 					.grabOffset = diskPos - cursorPos,
 				};
 			}
 
-			if (Input::isMouseButtonHeld(MouseButton::LEFT) && soundSettingsUi.grabbedSlider.has_value()) {
-				auto& slider = soundSettingsUi.sliderInputs[soundSettingsUi.grabbedSlider->index];
-				const auto offset = cursorPos.x - sliderMinX + soundSettingsUi.grabbedSlider->grabOffset.x;
+			if (Input::isMouseButtonHeld(MouseButton::LEFT) && settingsUi.grabbedSlider.has_value()) {
+				auto& slider = settingsUi.sliderInputs[settingsUi.grabbedSlider->index];
+				const auto offset = cursorPos.x - sliderMinX + settingsUi.grabbedSlider->grabOffset.x;
 				slider.value = offset / (sliderMaxX - sliderMinX);
 				slider.value = std::clamp(slider.value, 0.0f, 1.0f);
 			}
 
-			if (Input::isMouseButtonUp(MouseButton::LEFT) && soundSettingsUi.grabbedSlider.has_value()) {
-				soundSettingsUi.grabbedSlider = std::nullopt;
+			if (Input::isMouseButtonUp(MouseButton::LEFT) && settingsUi.grabbedSlider.has_value()) {
+				settingsUi.grabbedSlider = std::nullopt;
 			}
 		}
 	}
 
-	for (const auto& button : soundSettingsUi.buttons) {
-		drawButton(renderer, soundSettingsUi.layout, button);
+	auto toggleButton = [&](ToggleButton& button) {
+		const auto& block = settingsUi.layout.blocks[button.id];
+		const auto sizeY = block.worldSize();
+		const auto text = button.value ? "on" : "off";
+		const auto color = button.value ? Color3::GREEN : Color3::RED;
+
+		drawTextAlignedRelativeToCenter(button.text, block.worldCenter(), block.worldSize(), -1.0f);
+
+		const auto rect = drawTextAlignedRelativeToCenter(text, block.worldCenter(), block.worldSize(), 1.0f, button.hoverAnimationT, color);
+		const auto hovered = Ui::isPointInRect(rect, cursorPos);
+		if (hovered && Input::isMouseButtonDown(MouseButton::LEFT)) {
+			button.value = ! button.value;
+		}
+		updateConstantSpeedT(button.hoverAnimationT, buttonHoverAnimationDuration, hovered);
+	};
+
+
+	for (const auto& button : settingsUi.buttons) {
+		drawButton(renderer, settingsUi.layout, button);
 	}
 
+	toggleButton(settingsUi.drawBackgroundsButton);
 
 	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
 	renderer.gfx.drawFilledTriangles();
@@ -228,16 +266,16 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 }
 
 void MainMenu::setSoundSettings(const SettingsAudio& audio) {
-	soundSettingsUi.sliderInputs[soundSettingsUi.masterVolumeSliderIndex].value = audio.masterVolume;
-	soundSettingsUi.sliderInputs[soundSettingsUi.musicVolumeSliderIndex].value = audio.musicVolume;
-	soundSettingsUi.sliderInputs[soundSettingsUi.soundEffectVolumeSliderIndex].value = audio.soundEffectVolume;
+	//soundSettingsUi.sliderInputs[soundSettingsUi.masterVolumeSliderIndex].value = audio.masterVolume;
+	//soundSettingsUi.sliderInputs[soundSettingsUi.musicVolumeSliderIndex].value = audio.musicVolume;
+	settingsUi.sliderInputs[settingsUi.soundEffectVolumeSliderIndex].value = audio.soundEffectVolume;
 }
 
 SettingsAudio MainMenu::getSoundSettings() const {
 	return SettingsAudio{
-		.masterVolume = soundSettingsUi.sliderInputs[soundSettingsUi.masterVolumeSliderIndex].value,
-		.soundEffectVolume = soundSettingsUi.sliderInputs[soundSettingsUi.soundEffectVolumeSliderIndex].value,
-		.musicVolume = soundSettingsUi.sliderInputs[soundSettingsUi.musicVolumeSliderIndex].value,
+		//.masterVolume = soundSettingsUi.sliderInputs[soundSettingsUi.masterVolumeSliderIndex].value,
+		.soundEffectVolume = std::clamp(settingsUi.sliderInputs[settingsUi.soundEffectVolumeSliderIndex].value, 0.0f, 1.0f),
+		//.musicVolume = soundSettingsUi.sliderInputs[soundSettingsUi.musicVolumeSliderIndex].value,
 	};
 }
 

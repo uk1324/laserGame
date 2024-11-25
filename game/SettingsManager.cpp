@@ -14,7 +14,7 @@ void SettingsManager::tryLoadSettings() {
 	try {
 		settings = fromJson<Settings>(*json);
 	} catch (const Json::Value::Exception&) {
-
+		settings = SettingsManager::defaultSettings;
 	}
 }
 
@@ -29,8 +29,11 @@ void SettingsManager::trySaveSettings() {
 
 Settings SettingsManager::defaultSettings = Settings{
 	.audio = {
-		.masterVolume = 0.5f,
+		//.masterVolume = 0.5f,
 		.soundEffectVolume = 0.5f,
-		.musicVolume = 0.5f,
+		//.musicVolume = 0.5f,
 	},
+	.graphics = {
+		.drawBackgrounds = true	
+	}
 };

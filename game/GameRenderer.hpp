@@ -6,6 +6,7 @@
 #include <game/Shaders/stereographicLineData.hpp>
 #include <game/Shaders/stereographicDiskData.hpp>
 #include <game/Shaders/gameTextData.hpp>
+#include <game/SettingsData.hpp>
 #include <random>
 
 struct ColorRng {
@@ -83,9 +84,15 @@ struct GameRenderer {
 
 	void renderGameText();
 
+	Vao glowingArrowVao;
+	ShaderProgram& glowingArrowShader;
+	void glowingArrow(const Aabb& rect, f32 hoverAnimationT, f32 opacity);
+
 	bool simplifiedGraphics = false;
 
 	Font font;
+
+	SettingsGraphics settings;
 
 	Gfx2d gfx;
 };
