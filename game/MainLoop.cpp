@@ -54,6 +54,23 @@ void renderTransition(GameRenderer& r, f32 t, TransitionEffectType type) {
 	}
 }
 
+void updateTransition(GameRenderer& r, GameAudio& a, f32 previousT, f32 t, TransitionEffectType type) {
+	switch (type) {
+		using enum TransitionEffectType;
+	case SLIDING: {
+		renderSlidingTransition(r, t);
+		const auto soundEffectT = 0.05f;
+		if (previousT <= soundEffectT && t >= soundEffectT) {
+			a.playSoundEffect(a.transitionSwooshSound);
+		}
+		break;
+	}
+		
+	case FADING:
+		break;
+	}
+}
+
 MainLoop::MainLoop()
 	: renderer(GameRenderer::make()) {
 
@@ -152,7 +169,11 @@ void MainLoop::update() {
 	}
 
 	case GAME: {
-		const auto result = game.update(renderer);
+		const auto result = game.update(renderer, audio);
+		if (Input::isKeyDown(KeyCode::H)) {
+			doTransitionToLevel(0, TransitionEffectType::SLIDING);
+		}
+
 		std::visit(overloaded{
 			[](const Game::ResultNone&) {},
 			[&](const Game::ResultGoToNextLevel&) {
@@ -267,6 +288,7 @@ void MainLoop::update() {
 	case TRANSITION_TO_LEVEL: {
 		auto& s = transitionToLevel;
 
+		const auto previousT = s.t;
 		if (updateTAndCheckIfAtMid(s.t)) {
 			renderer.changeTextColorRngSeed();
 			game.tryLoadGameLevel(levels, s.levelIndex);
@@ -275,12 +297,13 @@ void MainLoop::update() {
 		if (s.t < mid) {
 			stateUpdate(s.startState);
 		} else {
-			game.update(renderer);
+			game.update(renderer, audio);
 		}
 
 		if (s.t >= 1.0f) {
 			state = State::GAME;
 		}
+		updateTransition(renderer, audio, previousT, s.t, s.transitionEffect);
 		renderTransition(renderer, s.t, s.transitionEffect);
 		break;
 	}
@@ -308,7 +331,7 @@ void MainLoop::stateUpdate(State state) {
 	case EDITOR: editor.update(renderer); break;
 	case LEVEL_SELECT: levelSelect.update(renderer, levels, gameSave); break;
 		// There should be a level loaded before transitioning into game.
-	case GAME: game.update(renderer); break;
+	case GAME: game.update(renderer, audio); break;
 	case CONGRATULATIONS: congratulationsScreen.update(renderer); break;
 
 		// It doesn't make sense to transition from or into these states.

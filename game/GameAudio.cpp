@@ -4,8 +4,28 @@
 //#include <platformer/Assets.hpp>
 #include <Put.hpp>
 
+#define SOUNDS_PATH "assets/sound/"
+
+#define SOUND(path) AudioBuffer::fromFile(SOUNDS_PATH path)
+
 GameAudio::GameAudio()
-	: attractingOrbSource(SoundSource{ .source = AudioSource::generate() }) {
+	// completetask_0
+	//: levelCompleteSound(SOUND("complete.ogg"))
+	// https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes swosh-30 changed pitch and length by 50%
+	: transitionSwooshSound(SOUND("swoosh.ogg")) 
+	// https://opengameart.org/content/ui-sounds
+	, targetOnSound(SOUND("on.ogg"))
+	, doorOpenSound(SOUND("door.ogg"))
+	// https://pixabay.com/sound-effects/error-message-182475/
+	, errorSound(SOUND("error.ogg"))
+	, doorOpeningSource(SoundSource{ .source = AudioSource::generate() })
+{
+
+	doorOpeningSource.source.stop();
+	doorOpeningSource.source.setBuffer(doorOpenSound);
+	doorOpeningSource.source.setLoop(true);
+	doorOpeningSource.source.play();
+	setSoundEffectSourceVolume(doorOpeningSource, 0.0f);
 
 	static constexpr auto SOURCE_COUNT = 16;
 	for (i32 i = 0; i < SOURCE_COUNT; i++) {

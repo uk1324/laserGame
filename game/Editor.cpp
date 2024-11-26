@@ -370,7 +370,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 	case MODIFY_LOCKED_CELLS: modifyLockedCellsToolRender(renderer, cursorPos, cursorCaptured);
 	}
 
-	renderer.render(e, s, true, true);
+	renderer.render(e, s, true, 0.0f);
 
 	if (snappedCursor) {
 		renderer.gfx.disk(cursorPos, 0.01f, Color3::WHITE);

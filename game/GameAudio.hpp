@@ -25,12 +25,18 @@ struct GameAudio {
 	void pauseSoundEffects();
 	void unpauseSoundEffects();
 
-	SoundSource attractingOrbSource;
-
 	void setSoundEffectSourceVolume(SoundSource& source, f32 value);
 
 	f32 soundEffectVolume = 1.0f;
 	f32 masterVolume = 1.0f;
+
+	//AudioBuffer levelCompleteSound;
+	AudioBuffer transitionSwooshSound;
+	AudioBuffer targetOnSound;
+	AudioBuffer doorOpenSound;
+	AudioBuffer errorSound;
+
+	SoundSource doorOpeningSource;
 
 	std::vector<SoundSource> soundEffectSourcePool;
 

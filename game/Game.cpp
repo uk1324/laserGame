@@ -10,7 +10,7 @@ Game::Game() {
 	tryLoadLevel("./generated/test");
 }
 
-Game::Result Game::update(GameRenderer& renderer) {
+Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	Result result = ResultNone();
 
 	bool cursorCaptured = false;
@@ -33,10 +33,65 @@ Game::Result Game::update(GameRenderer& renderer) {
 			allTargetsActivated = false;
 		}
 	}
-	const auto levelComplete = objectsInValidState && allTargetsActivated;
+	const auto allTasksComplete = objectsInValidState && allTargetsActivated;
+	// Introducing a delay to prevent issue with doors having a delay in closing.
+	if (allTasksComplete) {
+		if (timeForWhichAllTasksHaveBeenCompleted.has_value()) {
+			(*timeForWhichAllTasksHaveBeenCompleted) += Constants::dt;
+		} else {
+			timeForWhichAllTasksHaveBeenCompleted = 0.0f;
+		}
+	} else {
+		timeForWhichAllTasksHaveBeenCompleted = std::nullopt;
+	}
+	const auto levelComplete = 
+		allTasksComplete && 
+		timeForWhichAllTasksHaveBeenCompleted.has_value() && 
+		timeForWhichAllTasksHaveBeenCompleted > 0.5f;
+
+	if (!objectsInValidState && !previousFrameInvalidState && timeSincePlayedInvalidState > 0.1f) {
+		timeSincePlayedLevelComplete = 0.0f;
+		audio.playSoundEffect(audio.errorSound);
+	}
+	timeSincePlayedInvalidState += Constants::dt;
+
+	timeSincePlayedLevelComplete += Constants::dt;
+	if (levelComplete && !previousFrameLevelComplete && timeSincePlayedLevelComplete > 0.1f) {
+		//audio.playSoundEffect(audio.levelCompleteSound);
+		timeSincePlayedLevelComplete = 0.0f;
+	}
+
+	updateConstantSpeedT(invalidGameStateAnimationT, 0.2f, !objectsInValidState);
+
+	for (const auto& door : e.doors) {
+		/*f32 riseAndFallLength = 0.4f;
+		const Vec2 points[] = { Vec2(0.0f), Vec2(riseAndFallLength, 1.0f), Vec2(1.0 - riseAndFallLength, 1.0f), Vec2(0.0f) };
+		const auto volume = piecewiseLinearSample(constView(points), door->openingT);*/
+
+		/*f32 riseAndFallLength = 0.4f;*/
+		static f32 riseAndFallLength = 0.4f;
+		//ImGui::SliderFloat("riseAndFallLength", &riseAndFallLength, 0.0f, 0.5f);
+		f32 volume;
+		const auto t = door->openingT;
+		if (t < riseAndFallLength) {
+			volume = smoothstep(lerp(0.0f, 1.0f, t / riseAndFallLength));
+		} else if (t < 1.0f - riseAndFallLength) {
+			volume = 1.0f;
+		} else {
+			volume = smoothstep(lerp(1.0f, 0.0f, (t - (1.0f - riseAndFallLength)) / riseAndFallLength));
+		}
+		audio.setSoundEffectSourceVolume(audio.doorOpeningSource, volume);
+	}
+
+	if (s.anyTargetsTurnedOn) {
+		audio.playSoundEffect(audio.targetOnSound);
+	}
+
+	previousFrameLevelComplete = levelComplete;
+	previousFrameInvalidState = !objectsInValidState;
 
 	renderer.renderClear();
-	renderer.render(e, s, false, objectsInValidState);
+	renderer.render(e, s, false, invalidGameStateAnimationT);
 
 	auto uiCursorPos = Ui::cursorPosUiSpace();
 
@@ -123,6 +178,7 @@ Game::Result Game::update(GameRenderer& renderer) {
 void Game::reset() {
 	goToNextLevelButtonActiveT = 0.0f;
 	e.reset();
+	previousFrameLevelComplete = false;
 }
 
 bool Game::areObjectsInValidState() {
@@ -142,7 +198,10 @@ bool Game::areObjectsInValidState() {
 		staticObjects.push_back(StereographicSegment(wall->endpoints[0], wall->endpoints[1]));
 	}
 	for (const auto& door : e.doors) {
-		staticObjects.push_back(StereographicSegment(door->endpoints[0], door->endpoints[1]));
+		const auto segments = door->segments();
+		for (const auto& segment : segments) {
+			staticObjects.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
+		}
 	}
 
 	auto collision = [](const StereographicSegment& a, const StereographicSegment& b) {

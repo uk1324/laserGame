@@ -11,6 +11,7 @@ struct GameState {
 		bool ignore = false;
 	};
 	std::vector<Segment> laserSegmentsToDraw;
+	bool anyTargetsTurnedOn = false;
 
 	struct TriggerInfo {
 		Vec3 color;
@@ -28,4 +29,5 @@ struct GameState {
 		Vec2 b;
 	};
 	std::vector<Seg> segments;
+
 };

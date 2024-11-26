@@ -4,6 +4,7 @@
 #include <game/GrabTools.hpp>
 #include <game/Levels.hpp>
 #include <game/GameUpdate.hpp>
+#include <game/GameAudio.hpp>
 
 struct Game {
 	struct ResultNone {};
@@ -14,7 +15,7 @@ struct Game {
 	using Result = std::variant<ResultNone, ResultGoToNextLevel, ResultSkipLevel, ResultGoToMainMenu>;
 
 	Game();
-	Result update(GameRenderer& renderer);
+	Result update(GameRenderer& renderer, GameAudio& audio);
 
 	void reset();
 	bool areObjectsInValidState();
@@ -25,6 +26,16 @@ struct Game {
 	bool tryLoadEditorPreviewLevel(const Json::Value& json);
 
 	bool isEditorPreviewLevelLoaded() const;
+
+	std::optional<f32> timeForWhichAllTasksHaveBeenCompleted = std::numeric_limits<f32>::infinity();
+
+	bool previousFrameLevelComplete = false;
+	f32 timeSincePlayedLevelComplete = std::numeric_limits<f32>::infinity();
+
+	bool previousFrameInvalidState = false;
+	f32 timeSincePlayedInvalidState = std::numeric_limits<f32>::infinity();
+
+	f32 invalidGameStateAnimationT = 0.0f;
 
 	GameUiButton mainMenuButton;
 	GameUiButton skipButton;

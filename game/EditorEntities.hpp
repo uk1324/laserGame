@@ -108,6 +108,7 @@ struct EditorTarget {
 	f32 radius;
 
 	bool activated = false;
+	bool activatedLastFrame = false;
 	f32 activationAnimationT = 0.0f;
 };
 

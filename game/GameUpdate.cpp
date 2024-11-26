@@ -20,69 +20,7 @@ Vec2 snapPositionsOutsideBoundary(Vec2 v) {
 }
 
 void GameState::update(GameEntities& e, bool objectsInValidState) {
-
-	//ImGui::SliderFloat("test", &eccentricity, 0.0f, 12.0f);
-	//ImGui::SliderFloat2("f0", focus[0].data(), -1.0f, 1.0f);
-	//ImGui::SliderFloat2("f1", focus[1].data(), -1.0f, 1.0f);
-	//{
-	//	auto dist = [](Vec2 a, Vec2 b) {
-	//		const auto as = fromStereographic(a);
-	//		const auto bs = fromStereographic(b);
-	//		return std::min(
-	//			sphericalDistance(as, bs),
-	//			sphericalDistance(as, -bs));
-	//		};
-
-	//	const auto gridSize = 200;
-	//	auto f = Array2d<f32>::uninitialized(gridSize, gridSize);
-
-	//	auto indexToPos = [](f32 xi, f32 yi) -> Vec2 {
-	//		const auto xt = xi / f32(gridSize);
-	//		const auto yt = yi / f32(gridSize);
-	//		const auto x = lerp(-1.0f, 1.0f, xt);
-	//		const auto y = lerp(-1.0f, 1.0f, yt);
-	//		return Vec2(x, y);
-	//	};
-
-	//	for (i32 yi = 0; yi < gridSize; yi++) {
-	//		for (i32 xi = 0; xi < gridSize; xi++) {
-	//			const auto p = indexToPos(xi, yi);
-	//			f(xi, yi) = dist(p, focus[0]) + dist(p, focus[1]);
-	//		}
-	//	}
-	//	std::vector<MarchingSquaresLine> lines;
-	//	marchingSquares2(lines, constView2d(f), eccentricity, true);
-	//	for (auto& line : lines) {
-	//		line.a = indexToPos(line.a.x, line.a.y);
-	//		line.b = indexToPos(line.b.x, line.b.y);
-	//	}
-	//	for (const auto& line : lines) {
-	//		const auto aOutside = line.a.lengthSq() > 1.0f;
-	//		const auto bOutside = line.b.lengthSq() > 1.0f;
-	//		if (aOutside && bOutside) {
-	//			continue;
-	//		}
-	//		if (aOutside != bOutside) {
-	//			Vec2 start = line.a;
-	//			Vec2 end = line.b;
-	//			if (aOutside && !bOutside) {
-	//				std::swap(start, end);
-	//			}
-	//			const auto hit = circleRaycast(start, end, Constants::boundary);
-	//			if (hit.has_value()) {
-	//				Dbg::line(start, hit->pos, 0.01f);
-	//			}
-	//		} else {
-	//			Dbg::line(line.a, line.b, 0.01f);
-	//		}
-	//	}
-	//	Dbg::disk(focus[0], 0.02f, Color3::RED);
-	//	Dbg::disk(focus[1], 0.02f, Color3::RED);
-	//	segments.clear();
-	//	for (const auto& line : lines) {
-	//		segments.push_back(Seg{ .a = line.a, .b = line.b });
-	//	}
-	//}
+	anyTargetsTurnedOn = false;
 
 	for (auto laser : e.lasers) {
 		laser->position = snapPositionsOutsideBoundary(laser->position);
@@ -480,6 +418,16 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 					return HitResult::CONTINUE;
 				}
 
+				case DOOR: {
+					const auto& door = e.doors.get(hit.id.door());
+					if (!door.has_value()) {
+						CHECK_NOT_REACHED();
+						return HitResult::END;
+					}
+
+					return HitResult::END;
+				}
+
 				default:
 					break;
 
@@ -659,6 +607,13 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 		}
 	}
 
+	for (auto target : e.targets) {
+		if (!target->activatedLastFrame && target->activated && target->activationAnimationT == 0.0f) {
+			anyTargetsTurnedOn = true;
+		}
+		target->activatedLastFrame = target->activated;
+	}
+
 	auto updateActivationAnimationT = [](f32& t, bool isActive) {
 		updateConstantSpeedT(t, 0.25f, isActive);
 	};
@@ -670,13 +625,10 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 		updateActivationAnimationT(trigger->activationAnimationT, trigger->activated);
 	}
 
-
-	if (objectsInValidState) {
-		for (auto door : e.doors) {
-			const auto info = triggerInfo(e.triggers, door->triggerIndex);
-			const auto isOpening = info.has_value() && info->active;
-			updateConstantSpeedT(door->openingT, 0.7f, isOpening);
-		}
+	for (auto door : e.doors) {
+		const auto info = triggerInfo(e.triggers, door->triggerIndex);
+		const auto isOpening = info.has_value() && info->active;
+		updateConstantSpeedT(door->openingT, 0.7f, isOpening);
 	}
 
 }

@@ -1,6 +1,7 @@
 #include "GameRenderer.hpp"
 #include <engine/Math/Color.hpp>
 #include <Overloaded.hpp>
+#include <engine/Math/Interpolation.hpp>
 #include <game/Shaders/backgroundData.hpp>
 #include <game/Shaders/glowingArrowData.hpp>
 #include <engine/Math/Constants.hpp>
@@ -132,7 +133,7 @@ void GameRenderer::renderClear() {
 
 }
 
-void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool validGameState) {
+void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 invalidGameStateAnimationT) {
 
 	glEnable(GL_STENCIL_TEST);
 	glClear(GL_STENCIL_BUFFER_BIT);
@@ -264,7 +265,7 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, bool
 	{
 		const auto width = 0.01f;
 		const auto radius = Constants::boundary.radius + width / 2.0f;
-		auto color = validGameState ? Color3::GREEN / 2.0f : Color3::RED / 2.0f;;
+		const auto color = lerp(Color3::GREEN / 3.0f, Color3::RED / 3.0f, invalidGameStateAnimationT);
 		gfx.circleTriangulated(Constants::boundary.center, radius, width, color);
 	}
 	gfx.drawFilledTriangles();

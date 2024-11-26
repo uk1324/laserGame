@@ -146,10 +146,12 @@ void LaserGrabTool::update(LaserArray& lasers, std::optional<EditorActions&> act
 	if (isGrabReleased() && grabbed.has_value()) {
 		cursorCaptured = true;
 		auto laser = lasers.get(grabbed->id);
-		if (actions.has_value() && laser.has_value()) {
-			actions->addModifyAction<EditorLaser, EditorActionModifyLaser>(lasers, grabbed->id, std::move(grabbed->grabStartState));
-		} else {
-			CHECK_NOT_REACHED();
+		if (actions.has_value()) {
+			if (laser.has_value()) {
+				actions->addModifyAction<EditorLaser, EditorActionModifyLaser>(lasers, grabbed->id, std::move(grabbed->grabStartState));
+			} else {
+				CHECK_NOT_REACHED();
+			}
 		}
 		grabbed = std::nullopt;
 	}
@@ -199,9 +201,11 @@ void MirrorGrabTool::update(MirrorArray& mirrors, std::optional<EditorActions&> 
 		cursorCaptured = true;
 		auto mirror = mirrors.get(grabbed->id);
 		if (actions.has_value() && mirror.has_value()) {
-			actions->addModifyAction<EditorMirror, EditorActionModifyMirror>(mirrors, grabbed->id, std::move(grabbed->grabStartState));
-		} else {
-			CHECK_NOT_REACHED();
+			if (mirror.has_value()) {
+				actions->addModifyAction<EditorMirror, EditorActionModifyMirror>(mirrors, grabbed->id, std::move(grabbed->grabStartState));
+			} else {
+				CHECK_NOT_REACHED();
+			}
 		}
 		grabbed = std::nullopt;
 	}
@@ -261,10 +265,12 @@ void PortalGrabTool::update(PortalPairArray& portalPairs, std::optional<EditorAc
 	if (isGrabReleased() && grabbed.has_value()) {
 		cursorCaptured = true;
 		auto portalPair = portalPairs.get(grabbed->id);
-		if (actions.has_value() && portalPair.has_value()) {
-			actions->addModifyAction<EditorPortalPair, EditorActionModifyPortalPair>(portalPairs, grabbed->id, std::move(grabbed->grabStartState));
-		} else {
-			CHECK_NOT_REACHED();
+		if (actions.has_value()) {
+			if (portalPair.has_value()) {
+				actions->addModifyAction<EditorPortalPair, EditorActionModifyPortalPair>(portalPairs, grabbed->id, std::move(grabbed->grabStartState));
+			} else {
+				CHECK_NOT_REACHED();
+			}
 		}
 		grabbed = std::nullopt;
 	}
