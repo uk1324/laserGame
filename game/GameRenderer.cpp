@@ -33,7 +33,8 @@ GameRenderer GameRenderer::make() {
 		.textColorRngSeed = u32(time(NULL)),
 		.glowingArrowVao= MAKE_VAO(GlowingArrow),
 		.glowingArrowShader = MAKE_GENERATED_SHADER(GLOWING_ARROW),
-		.font = Font::loadSdfWithCachingAtDefaultPath(FONT_FOLDER, "RobotoMono-Regular"),
+		//.font = Font::loadSdfWithCachingAtDefaultPath(FONT_FOLDER, "RobotoMono-Regular"),
+		.font = Font::loadSdfWithCachingAtDefaultPath("./assets/fonts", "Tektur-Regular"),
 		MOVE(gfx),
 	};
 }
@@ -411,7 +412,7 @@ void GameRenderer::changeTextColorRngSeed() {
 void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::string_view text, f32 hoverT, std::optional<Vec3> color) {
 	const auto toUiSpace = Mat3x2::scale(Vec2(2.0f)) * gfx.camera.worldToCameraToNdc();
 
-	TextRenderInfoIterator iterator(font, bottomLeftPosition, toUiSpace, maxHeight, text);
+	TextRenderInfoIterator iterator(font, bottomLeftPosition, toUiSpace, maxHeight, text, Constants::additionalTextSpacing);
 	for (auto info = iterator.next(); info.has_value(); info = iterator.next()) {
 		Vec3 c(0.0f);
 		if (color.has_value()) {
@@ -432,7 +433,7 @@ void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::strin
 }
 
 Vec2 textCenteredPosition(const Font& font, Vec2 center, f32 maxHeight, std::string_view text) {
-	const auto info = font.textInfo(maxHeight, text);
+	const auto info = font.textInfo(maxHeight, text, Constants::additionalTextSpacing);
 	Vec2 position = center;
 	position.y -= info.bottomY;
 	position -= info.size / 2.0f;

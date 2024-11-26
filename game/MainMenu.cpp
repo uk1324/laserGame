@@ -25,7 +25,7 @@ static void addButton(
 const char* playButtonText = "play";
 const char* levelSelectButtonText = "level select";
 const char* settingsButtonText = "settings";
-const char* editorButtonText = "level editor";
+const char* editorButtonText = "editor";
 const char* exitButtonText = "exit";
 static constexpr const char* masterVolumeSliderName = "master";
 static constexpr const char* soundEffectVolumeSliderName = "sfx volume";
@@ -178,7 +178,7 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 	const auto spacingBetween = 0.01f;
 
 	auto drawTextAlignedRelativeToCenter = [&](std::string_view text, f32 centerY, f32 sizeY, f32 alignmentDirection, f32 hoverT = 0.0f, std::optional<Vec3> color = std::nullopt) -> Ui::RectMinMax {
-		const auto info = renderer.font.textInfo(sizeY, text);
+		const auto info = renderer.font.textInfo(sizeY, text, Constants::additionalTextSpacing);
 		Vec2 position(spacingBetween * alignmentDirection, centerY);
 		if (alignmentDirection == -1.0f) {
 			position.x -= info.size.x;

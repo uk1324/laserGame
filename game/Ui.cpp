@@ -132,7 +132,7 @@ Ui::RectMinMax Ui::centeredTextBoundingRect(Vec2 position, f32 maxHeight, std::s
 }
 
 Vec2 Ui::textBoundingRectSize(f32 maxHeight, std::string_view text, const Font& font, const GameRenderer& renderer) {
-	const auto info = font.textInfo(maxHeight, text);
+	const auto info = font.textInfo(maxHeight, text, Constants::additionalTextSpacing);
 	const auto size = Vec2(info.size.x / renderer.gfx.camera.clipSpaceToWorldSpace()[0][0], maxHeight);
 	return size;
 }
