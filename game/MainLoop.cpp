@@ -195,13 +195,18 @@ void MainLoop::update() {
 					return;
 				}
 
-				const auto firstUncompletedLevel = gameSave.firstUncompletedLevel(levels);
-
-				if (!firstUncompletedLevel.has_value()) {
-					doBasicTransition(State::CONGRATULATIONS);
+				if (const auto firstUncompletedLevel = gameSave.firstUncompletedLevel(levels); firstUncompletedLevel.has_value()) {
+					doTransitionToLevel(*firstUncompletedLevel, TransitionEffectType::SLIDING);
 					return;
 				} 
-				doTransitionToLevel(*firstUncompletedLevel, TransitionEffectType::SLIDING);
+
+				const auto nextLevel = *game.currentLevel + 1;
+				if (nextLevel >= levels.levels.size()) {
+					doBasicTransition(State::CONGRATULATIONS);
+					return;
+				}
+
+				doTransitionToLevel(nextLevel, TransitionEffectType::SLIDING);
 			},
 			[&](const Game::ResultSkipLevel&) {
 				if (!game.currentLevel.has_value()) {
@@ -309,11 +314,21 @@ void MainLoop::update() {
 	}
 
 	case CONGRATULATIONS: {
-		// https://english.stackexchange.com/questions/240468/whats-the-difference-between-you-have-completed-the-task-and-you-com
-		// Congratutions you completed all the levels
-		// go to 
-		// main menu
-		// level select
+		const auto result = mainMenu.congratulationsScreenUpdate(renderer);
+		switch (result) {
+			using enum MainMenu::CongratulationsScreenResult;
+
+		case NONE:
+			break;
+
+		case GO_TO_LEVEL_SELECT:
+			doBasicTransition(State::LEVEL_SELECT);
+			break;
+
+		case GO_TO_MAIN_MENU:
+			doBasicTransition(State::MAIN_MENU);
+			break;
+		}
 		break;
 	}
 
@@ -332,7 +347,7 @@ void MainLoop::stateUpdate(State state) {
 	case LEVEL_SELECT: levelSelect.update(renderer, levels, gameSave); break;
 		// There should be a level loaded before transitioning into game.
 	case GAME: game.update(renderer, audio); break;
-	case CONGRATULATIONS: congratulationsScreen.update(renderer); break;
+	case CONGRATULATIONS: mainMenu.congratulationsScreenUpdate(renderer); break;
 
 		// It doesn't make sense to transition from or into these states.
 	case TRANSITION_TO_LEVEL:

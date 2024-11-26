@@ -31,6 +31,7 @@ static constexpr const char* masterVolumeSliderName = "master";
 static constexpr const char* soundEffectVolumeSliderName = "sfx volume";
 static constexpr const char* musicVolumeSliderName = "music";
 static constexpr const char* backButtonText = "back";
+static constexpr const char* mainMenuButtonText = "main menu";
 
 MainMenu::MainMenu() {
 	static constexpr f32 buttonSize = 0.03f;
@@ -80,6 +81,24 @@ MainMenu::MainMenu() {
 		//soundSettingsUi.layout.addPadding(padding);
 
 		addButton(settingsUi.buttons, settingsUi.layout, backButtonText, buttonSize);
+	}
+	{
+		auto& ui = congratulationsUi;
+		ui.titleId0 = ui.layout.addBlock(titleSize);
+		ui.layout.addPadding(padding);
+		ui.titleId1 = ui.layout.addBlock(0.04f);
+		ui.titleId2 = ui.layout.addBlock(0.04f);
+		ui.layout.addPadding(padding);
+		ui.layout.addPadding(padding);
+		ui.layout.addPadding(padding);
+		std::string_view buttonNames[]{
+			mainMenuButtonText,
+			levelSelectButtonText,
+		};
+		for (const auto& name : buttonNames) {
+			ui.layout.addPadding(padding);
+			addButton(ui.buttons, ui.layout, name, buttonSize);
+		}
 	}
 }
 
@@ -287,6 +306,47 @@ void MainMenu::drawText(GameRenderer& r, std::string_view text, const Ui::Center
 
 void MainMenu::drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button) {
 	drawText(r, button.text, layout, button.id, button.hoverAnimationT);
+}
+
+MainMenu::CongratulationsScreenResult MainMenu::congratulationsScreenUpdate(GameRenderer& renderer) {
+	renderer.textColorRng.seed(renderer.textColorRngSeed);
+
+	auto result = CongratulationsScreenResult::NONE;
+
+	auto& ui = congratulationsUi;
+
+	ui.layout.update(renderer.gfx.camera);
+
+
+	const auto cursorPos = Ui::cursorPosUiSpace();
+
+	for (auto& button : ui.buttons) {
+		const auto rect = buttonRect(renderer, ui.layout, button);
+		const auto hovered = Ui::isPointInRect(rect, cursorPos);
+		button.update(hovered);
+
+		if (hovered && Input::isMouseButtonDown(MouseButton::LEFT)) {
+			if (button.text == levelSelectButtonText) {
+				result = CongratulationsScreenResult::GO_TO_LEVEL_SELECT;
+			} else if (button.text == mainMenuButtonText) {
+				result = CongratulationsScreenResult::GO_TO_MAIN_MENU;
+			}
+		}
+	}
+
+	drawText(renderer, "Congratulations", ui.layout, ui.titleId0);
+	drawText(renderer, "you've completed", ui.layout, ui.titleId1);
+	drawText(renderer, "all the levels", ui.layout, ui.titleId2);
+	// https://english.stackexchange.com/questions/240468/whats-the-difference-between-you-have-completed-the-task-and-you-com
+	for (const auto& button : ui.buttons) {
+		drawButton(renderer, ui.layout, button);
+	}
+
+	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
+	renderer.gfx.drawFilledTriangles();
+	renderer.gfx.drawLines();
+	renderer.renderGameText();
+	return result;
 }
 
 void MainMenu::Button::update(bool hovered) {

@@ -7,7 +7,6 @@
 #include <game/SettingsManager.hpp>
 #include <game/GameSave.hpp>
 #include <game/Levels.hpp>
-#include <game/CongratulationsScreen.hpp>
 #include <game/GameAudio.hpp>
 
 enum class TransitionEffectType {
@@ -25,7 +24,6 @@ struct MainLoop {
 	Game game;
 	LevelSelect levelSelect;
 	MainMenu mainMenu;
-	CongratulationsScreen congratulationsScreen;
 	SettingsManager settingsManager;
 	GameSave gameSave;
 	Levels levels;
@@ -39,7 +37,7 @@ struct MainLoop {
 		TRANSITION_TO_LEVEL,
 		STATELESS_TRANSITION,
 		CONGRATULATIONS,
-	} state = State::LEVEL_SELECT;
+	} state = State::CONGRATULATIONS;
 
 	void stateUpdate(State state);
 

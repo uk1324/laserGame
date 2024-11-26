@@ -81,5 +81,20 @@ struct MainMenu {
 		std::optional<GrabbedSlider> grabbedSlider;
 	} settingsUi;
 
+	struct CongratulationsScreenUi {
+		Ui::CenteredHorizontalListLayout layout;
+		i32 titleId0 = INVALID;
+		i32 titleId1 = INVALID;
+		i32 titleId2 = INVALID;
+		std::vector<Button> buttons;
+	} congratulationsUi;
+	enum class CongratulationsScreenResult {
+		NONE,
+		GO_TO_MAIN_MENU,
+		GO_TO_LEVEL_SELECT
+	};
+
+	CongratulationsScreenResult congratulationsScreenUpdate(GameRenderer& renderer);
+
 	ColorRng rng;
 };
