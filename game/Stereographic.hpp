@@ -73,8 +73,10 @@ f32 angleToRangeZeroTau(f32 a);
 struct AngleRange {
 	f32 min, max;
 
-	bool isInRange(f32 angle);
+	bool isInRange(f32 angle) const;
 };
+
+bool isPointOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 point);
 
 f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange);
 
@@ -105,3 +107,5 @@ bool stereographicSegmentVsSegmentCollision(const StereographicSegment& a, Vec2 
 
 StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 endpoint1);
 StaticList<Vec2, 2> splitStereographicCircle(Vec2 center, f32 radius);
+
+Vec2 tangentAtPointOnLine(const StereographicLine& line, Vec2 pointOnLine, Vec2 pointBeforePointOnLine);

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-set(FINAL_RELEASE TRUE)
+#set(FINAL_RELEASE TRUE)
 
 if (FINAL_RELEASE)
 	add_definitions(-DFINAL_RELEASE)

@@ -206,6 +206,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 #include <gfx2d/DbgGfx2d.hpp>
 
+bool isPointOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 point) {
+	
+}
+
 f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange) {
 	if (angleRange.isInRange((p - circle.center).angle())) {
 		return abs(distance(p, circle.center) - circle.radius);
@@ -419,11 +423,29 @@ StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const Stereographic
 	const auto dAlong1 = dot(lineDirection, lineEndpoint1);
 
 	StaticList<Vec2, 2> result;
-	for (const auto& intersection : intersections) {
-		const auto intersectionDAlong = dot(lineDirection, intersection);
-		// Using the regular segment check works, because the stereographic segment is convex.
-		if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
-			result.add(intersection);
+	//for (const auto& intersection : intersections) {
+	//	const auto intersectionDAlong = dot(lineDirection, intersection);
+	//	// Using the regular segment check works, because the stereographic segment is convex.
+	//	// This actually doesn't work for example if you have 2 intersections on antipodal or nearly antipodal points of the sphere. Then they will both line in the chord region (both have values of intersectionDAlong that is the length of the projection of onto the chord in the region), but obsiously the segment can't contain antipodal point.
+	//	if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
+	//		result.add(intersection);
+	//	}
+	//}
+
+	// TODO: They incorrect method with dot products should be replaced in other places where it was used.
+	if (line.type == StereographicLine::Type::CIRCLE) {
+		const auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, lineEndpoint0, lineEndpoint1);
+		for (const auto& intersection : intersections) {
+			if (angleRange.isInRange((intersection - line.circle.center).angle())) {
+				result.add(intersection);
+			}
+		}
+	} else {
+		for (const auto& intersection : intersections) {
+			const auto intersectionDAlong = dot(lineDirection, intersection);
+			if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
+				result.add(intersection);
+			}
 		}
 	}
 	return result;
@@ -484,23 +506,44 @@ StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 e
 	}
 
 	const auto line = stereographicLine(endpoint0, endpoint1);
-	const auto intersections = stereographicSegmentVsCircleIntersection(line, endpoint0, endpoint1, Constants::boundary);
+	auto intersections = stereographicSegmentVsCircleIntersection(line, endpoint0, endpoint1, Constants::boundary);
+	for (auto& intersection : intersections) {
+		intersection = intersection.normalized();
+	}
+	
 
 	if (intersections.size() != 1) {
 		// Don't know what to do here yet.
 		result.add(SegmentEndpoints(endpoint0, endpoint1));
+		Dbg::disk(endpoint0, 0.01f);
+		Dbg::disk(endpoint1, 0.01f);
+		Dbg::disk(intersections[0], 0.01f, Vec3(1.0f, 0.0f, 0.0f));
+		Dbg::disk(intersections[1], 0.01f, Vec3(1.0f, 0.0f, 0.0f));
 		return result;
 	}
 
+	const auto epsilon = 0.05f;
+	auto addSegmentExtendedOutOfBoundary = [&](Vec2 pointInside, Vec2 pointOnBoundary) {
+		const auto tangent = tangentAtPointOnLine(line, pointOnBoundary, pointInside);
+		/*Dbg::line(pointOnBoundary, pointOnBoundary + tangent.normalized() * 0.03f, 0.01f);
+		pointOnBoundary = moveOnStereographicGeodesic(pointOnBoundary, tangent.angle(), epsilon);
+		Dbg::disk(pointInside, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
+		Dbg::disk(pointOnBoundary, 0.01f);*/
+		result.add(SegmentEndpoints(pointInside, pointOnBoundary));
+	};
+
 	if (insideBoundary0) {
-		result.add(SegmentEndpoints(endpoint0, intersections[0]));
-		result.add(SegmentEndpoints(antipodalPoint(endpoint1), -intersections[0]));
-		return result;
+		addSegmentExtendedOutOfBoundary(endpoint0, intersections[0]);
+		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint1), -intersections[0]);
+		/*result.add(SegmentEndpoints(endpoint0, intersections[0]));
+		result.add(SegmentEndpoints(antipodalPoint(endpoint1), -intersections[0]));*/
 	} else {
-		result.add(SegmentEndpoints(endpoint1, intersections[0]));
-		result.add(SegmentEndpoints(antipodalPoint(endpoint0), -intersections[0]));
-		return result;
+		addSegmentExtendedOutOfBoundary(endpoint1, intersections[0]);
+		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint0), -intersections[0]);
+		//result.add(SegmentEndpoints(endpoint1, intersections[0]));
+		//result.add(SegmentEndpoints(antipodalPoint(endpoint0), -intersections[0]));
 	}
+	return result;
 }
 
 StaticList<Vec2, 2> splitStereographicCircle(Vec2 center, f32 radius) {
@@ -513,6 +556,27 @@ StaticList<Vec2, 2> splitStereographicCircle(Vec2 center, f32 radius) {
 	}
 	result.add(antipodalPoint(center));
 	return result;
+}
+
+Vec2 tangentAtPointOnLine(const StereographicLine& line, Vec2 pointOnLine, Vec2 pointBeforePointOnLine) {
+	const auto correctTangentDirection = (pointOnLine - pointBeforePointOnLine); 
+
+	Vec2 tangent(0.0f);
+	switch (line.type) {
+		using enum StereographicLine::Type;
+	case CIRCLE:
+		tangent = (pointOnLine - line.circle.center).rotBy90deg();
+		break;
+	case LINE:
+		tangent = line.lineNormal.rotBy90deg();
+		break;
+	}
+
+	// This is done, because stereographicLine changes the center position when the line transitions from CIRCLE to LINE to CIRCLE. This also causes the normal (center - line.circle.center) to change direction, which is visible, for example when using portals.
+	if (dot(tangent, correctTangentDirection) < 0.0f) {
+		tangent = -tangent;
+	}
+	return tangent;
 }
 
 StereographicLine::StereographicLine(const StereographicLine& other)
@@ -550,7 +614,7 @@ void StereographicLine::operator=(const StereographicLine& other) {
 	}
 }
 
-bool AngleRange::isInRange(f32 angle) {
+bool AngleRange::isInRange(f32 angle) const {
 	/*
 	min = a0 + m tau
 	max = a1 + m tau
