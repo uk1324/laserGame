@@ -21,12 +21,6 @@ GameAudio::GameAudio()
 	, doorOpeningSource(SoundSource{ .source = AudioSource::generate() })
 {
 
-	doorOpeningSource.source.stop();
-	doorOpeningSource.source.setBuffer(doorOpenSound);
-	doorOpeningSource.source.setLoop(true);
-	doorOpeningSource.source.play();
-	setSoundEffectSourceVolume(doorOpeningSource, 0.0f);
-
 	static constexpr auto SOURCE_COUNT = 16;
 	for (i32 i = 0; i < SOURCE_COUNT; i++) {
 		auto source = AudioSource::tryGenerate();
@@ -38,6 +32,8 @@ GameAudio::GameAudio()
 	for (auto& source : soundEffectSourcePool) {
 		soundEffectSources.push_back(&source);
 	}
+
+	soundEffectSources.push_back(&doorOpeningSource);
 
 	updateSoundEffectVolumes();
 }

@@ -1,6 +1,7 @@
 #include "MainMenu.hpp"
 #include <game/GameUi.hpp>
 #include <engine/Input/Input.hpp>
+#include <imgui/imgui.h>
 #include <engine/Window.hpp>
 #include <game/Animation.hpp>
 #include <engine/Math/Interpolation.hpp>
@@ -201,8 +202,12 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 		const auto sizeY = block.worldSize();
 		drawTextAlignedRelativeToCenter(slider.name, block.worldCenter(), sizeY, -1.0f);
 		{
+			// A hacky way to fix text alignment issues.
+			static f32 offset = -0.003f;
+			//ImGui::SliderFloat("slider offset", &offset, -0.01f, 0.00f);
+
 			const auto sizeY = block.worldSize();
-			Vec2 min = Vec2(renderer.gfx.camera.pos.x + spacingBetween, block.worldPositionBottomY);
+			Vec2 min = Vec2(renderer.gfx.camera.pos.x + spacingBetween, block.worldPositionBottomY + offset);
 			Vec2 max = Vec2(0.2f, min.y + sizeY);
 			const auto mid = (min + max) / 2.0f;
 			
@@ -262,7 +267,14 @@ MainMenu::SoundSettingsResult MainMenu::soundSettingsUpdate(GameRenderer& render
 
 		drawTextAlignedRelativeToCenter(button.text, block.worldCenter(), block.worldSize(), -1.0f);
 
-		const auto rect = drawTextAlignedRelativeToCenter(text, block.worldCenter(), block.worldSize(), 1.0f, button.hoverAnimationT, color);
+		// Hacky way to fix alignment issues
+		static f32 offsetOn = 0.0f;
+		static f32 offsetOff = 0.004f;
+		//ImGui::SliderFloat("offsetOn", &offsetOn, 0.0f, 0.01f);
+		//ImGui::SliderFloat("offsetOff", &offsetOff, 0.0f, 0.01f);
+
+		auto offset = button.value ? offsetOn : offsetOff;
+		const auto rect = drawTextAlignedRelativeToCenter(text, block.worldCenter() + offset, block.worldSize(), 1.0f, button.hoverAnimationT, color);
 		const auto hovered = Ui::isPointInRect(rect, cursorPos);
 		if (hovered && Input::isMouseButtonDown(MouseButton::LEFT)) {
 			button.value = ! button.value;

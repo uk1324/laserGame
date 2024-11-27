@@ -28,6 +28,8 @@ struct MainLoop {
 	GameSave gameSave;
 	Levels levels;
 
+	void propagateSettings(const Settings& settings);
+
 	enum class State {
 		MAIN_MENU,
 		SOUND_SETTINGS,
@@ -39,6 +41,7 @@ struct MainLoop {
 		CONGRATULATIONS,
 	} state = State::CONGRATULATIONS;
 
+	void switchToState(State currentState, State newState);
 	void stateUpdate(State state);
 
 	struct TransitionToLevelState {

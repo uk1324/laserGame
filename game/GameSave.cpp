@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <fstream>
 
-const auto savePath = "cached/settings.json";
+const auto savePath = "cached/save.json";
 const auto completedName = "completed";
 
 // Storing it in an array like this instead of some bitfiled, because it makes it easier to modify levels without breaking things. The only thing that has to remain is the name.

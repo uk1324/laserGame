@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
 		create_directories(gameOutputPath);
 		create_directories(gameOutputPath / "assets/fonts");
 		copy("./engine/assets/fonts/RobotoMono-Regular.ttf", gameOutputPath / "assets/fonts/RobotoMono-Regular.ttf", copy_options::overwrite_existing);
+		copy("./assets/fonts/Tektur-Regular.ttf", gameOutputPath / "assets/fonts/Tektur-Regular.ttf", copy_options::overwrite_existing);
 		copy("./engine/dependencies/freetype.dll", gameOutputPath / "freetype.dll", copy_options::overwrite_existing);
 		copy_file("./OpenAL32.dll", gameOutputPath / "OpenAL32.dll", copy_options::overwrite_existing);
 		copy_file(executablePath, gameOutputPath / ("laser game" + executablePath.extension().string()), copy_options::overwrite_existing);

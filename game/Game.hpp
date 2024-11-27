@@ -16,6 +16,10 @@ struct Game {
 
 	Game();
 	Result update(GameRenderer& renderer, GameAudio& audio);
+	std::optional<Result> updateUi(GameRenderer& r, bool levelComplete);
+
+	void onSwitchToGame(GameAudio& audio);
+	void onSwitchFromGame(GameAudio& audio);
 
 	void reset();
 	bool areObjectsInValidState();

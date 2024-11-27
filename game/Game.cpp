@@ -47,7 +47,8 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	const auto levelComplete = 
 		allTasksComplete && 
 		timeForWhichAllTasksHaveBeenCompleted.has_value() && 
-		timeForWhichAllTasksHaveBeenCompleted > 0.5f;
+		timeForWhichAllTasksHaveBeenCompleted > 0.5f &&
+		!isEditorPreviewLevelLoaded();
 
 	if (!objectsInValidState && !previousFrameInvalidState && timeSincePlayedInvalidState > 0.1f) {
 		timeSincePlayedLevelComplete = 0.0f;
@@ -63,16 +64,16 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 
 	updateConstantSpeedT(invalidGameStateAnimationT, 0.2f, !objectsInValidState);
 
+	f32 doorOpeningT = 0.0f;
 	for (const auto& door : e.doors) {
-		/*f32 riseAndFallLength = 0.4f;
-		const Vec2 points[] = { Vec2(0.0f), Vec2(riseAndFallLength, 1.0f), Vec2(1.0 - riseAndFallLength, 1.0f), Vec2(0.0f) };
-		const auto volume = piecewiseLinearSample(constView(points), door->openingT);*/
+		doorOpeningT = std::max(door->openingT, doorOpeningT);
+	}
 
-		/*f32 riseAndFallLength = 0.4f;*/
+	{
 		static f32 riseAndFallLength = 0.4f;
 		//ImGui::SliderFloat("riseAndFallLength", &riseAndFallLength, 0.0f, 0.5f);
 		f32 volume;
-		const auto t = door->openingT;
+		const auto t = doorOpeningT;
 		if (t < riseAndFallLength) {
 			volume = smoothstep(lerp(0.0f, 1.0f, t / riseAndFallLength));
 		} else if (t < 1.0f - riseAndFallLength) {
@@ -93,16 +94,27 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	renderer.renderClear();
 	renderer.render(e, s, false, invalidGameStateAnimationT);
 
+	if (!isEditorPreviewLevelLoaded()) {
+		const auto uiResult = updateUi(renderer, levelComplete);
+		if (uiResult.has_value()) {
+			result = *uiResult;
+		}
+	}
+
+	return result;
+}
+
+std::optional<Game::Result> Game::updateUi(GameRenderer& r, bool levelComplete) {
+	std::optional<Result> result;
 	auto uiCursorPos = Ui::cursorPosUiSpace();
 
 	{
-		auto& r = renderer;
 		f32 xSize = 0.2f;
 		f32 ySize = 0.5f * Ui::xSizeToYSize(r, xSize);
 		Vec2 size(xSize, ySize);
 
 		const auto anchor = Vec2(0.5f, -0.5f);
-		
+
 		const auto pos = Ui::rectPositionRelativeToCorner(anchor, size, Ui::equalSizeReativeToX(r, 0.01f));
 
 		updateConstantSpeedT(goToNextLevelButtonActiveT, 0.3f, levelComplete);
@@ -128,27 +140,19 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 		const auto offset = max.x - Ui::ySizeToXSize(r, insideSize.y / 2.0f * sqrt(2.0f));
 		const auto color2a = Vec4(color2, goToNextLevelButtonActiveT);
 
-		renderer.glowingArrow(Aabb(Ui::posToWorldSpace(renderer, min), Ui::posToWorldSpace(renderer, max)), goToNextLevelButtonHoverT, goToNextLevelButtonActiveT);
-		//Ui::triFilled(r, 
-		//	Vec2(max.x, pos.y), 
-		//	Vec2(offset, max.y),
-		//	Vec2(offset, min.y),
-		//	color2a);
-		//Ui::rectMinMaxFilled(r,
-		//	Vec2(min.x, min.y + 0.25f * insideSize.y),
-		//	Vec2(offset, max.y - 0.25f * insideSize.y),
-		//	color2a);
+		r.glowingArrow(Aabb(Ui::posToWorldSpace(r, min), Ui::posToWorldSpace(r, max)), goToNextLevelButtonHoverT, goToNextLevelButtonActiveT);
+		// TODO: Could actually check if the cursor is in the arrow not just the rect.
 	}
 
 	{
-		renderer.textColorRng.seed(renderer.textColorRngSeed);
+		r.textColorRng.seed(r.textColorRngSeed);
 		const auto mainMenuButtonText = "main menu";
 		const auto height = navigationButtonTextHeight;
-		const auto padding = Ui::equalSizeReativeToX(renderer, 0.01f);
+		const auto padding = Ui::equalSizeReativeToX(r, 0.01f);
 		{
-			auto size = Ui::textBoundingRectSize(height, mainMenuButtonText, renderer.font, renderer);
+			auto size = Ui::textBoundingRectSize(height, mainMenuButtonText, r.font, r);
 			auto pos = Ui::rectPositionRelativeToCorner(Vec2(-0.5f, 0.5f), size, padding);
-			renderer.gameTextCentered(pos, height, mainMenuButtonText, mainMenuButton.hoverAnimationT);
+			r.gameTextCentered(pos, height, mainMenuButtonText, mainMenuButton.hoverAnimationT);
 			if (buttonPosSize(pos, size, mainMenuButton.hoverAnimationT, uiCursorPos)) {
 				result = ResultGoToMainMenu{};
 			}
@@ -156,23 +160,31 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 
 		{
 			const auto skipButtonText = "skip";
-			auto size = Ui::textBoundingRectSize(height, skipButtonText, renderer.font, renderer);
+			auto size = Ui::textBoundingRectSize(height, skipButtonText, r.font, r);
 			auto pos = Ui::rectPositionRelativeToCorner(Vec2(0.5f, 0.5f), size, padding);
-			renderer.gameTextCentered(pos, height, skipButtonText, skipButton.hoverAnimationT);
+			r.gameTextCentered(pos, height, skipButtonText, skipButton.hoverAnimationT);
 			if (buttonPosSize(pos, size, skipButton.hoverAnimationT, uiCursorPos)) {
 				result = ResultSkipLevel{};
 			}
 		}
 
-		renderer.renderGameText();
+		r.renderGameText();
 	}
-
-	renderer.gfx.drawFilledTriangles();
-	renderer.gfx.drawLines();
-
-	//renderer.gfx.fontRenderer.render(font, renderer.gfx.instancesVbo);
-
 	return result;
+}
+
+void Game::onSwitchToGame(GameAudio& a) {
+	a.doorOpeningSource.source.stop();
+	a.doorOpeningSource.source.setBuffer(a.doorOpenSound);
+	a.doorOpeningSource.source.setLoop(true);
+	a.doorOpeningSource.source.play();
+	a.setSoundEffectSourceVolume(a.doorOpeningSource, 0.0f);
+}
+
+void Game::onSwitchFromGame(GameAudio& audio) {
+	for (const auto& source : audio.soundEffectSources) {
+		source->source.stop();
+	}
 }
 
 void Game::reset() {

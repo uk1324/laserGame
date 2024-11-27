@@ -140,7 +140,7 @@ bool nearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2) {
 	const auto longestSide = std::max(l0, std::max(l1, l2));
 	const auto parallelogramArea = abs(det(p1 - p0, p2 - p0));
 	const auto parallelogramHeight = parallelogramArea / longestSide;
-	return parallelogramHeight < 0.001f;
+	return parallelogramHeight < 0.0005f;
 }
 
 StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
@@ -365,6 +365,7 @@ StaticList<Vec2, 2> stereographicLineVsCircleIntersection(const StereographicLin
 	}
 
 	}
+	return StaticList<Vec2, 2>();
 }
 
 StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const StereographicLine& a, const StereographicLine& b) {

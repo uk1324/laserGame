@@ -76,6 +76,9 @@ MainLoop::MainLoop()
 
 	settingsManager.tryLoadSettings();
 	mainMenu.setSoundSettings(settingsManager.settings.audio);
+	mainMenu.settingsUi.drawBackgroundsButton.value = settingsManager.settings.graphics.drawBackgrounds;
+
+	propagateSettings(settingsManager.settings);
 
 	gameSave.tryLoad();
 }
@@ -83,7 +86,7 @@ MainLoop::MainLoop()
 
 void MainLoop::update() {
 	auto previewEditorLevelInGame = [this]() {
-		state = State::GAME;
+		switchToState(state, State::GAME);
 		const auto level = saveGameLevelToJson(editor.e);
 		game.tryLoadEditorPreviewLevel(level);
 	};
@@ -93,7 +96,7 @@ void MainLoop::update() {
 			using enum State;
 		case GAME:
 			if (game.isEditorPreviewLevelLoaded()) {
-				state = State::EDITOR;
+				switchToState(state, State::EDITOR);
 			}
 			break;
 
@@ -157,8 +160,8 @@ void MainLoop::update() {
 		case GO_BACK:
 			settingsManager.settings.audio = mainMenu.getSoundSettings();
 			settingsManager.settings.graphics.drawBackgrounds = mainMenu.settingsUi.drawBackgroundsButton.value;
-			renderer.settings = settingsManager.settings.graphics;
 			settingsManager.trySaveSettings();
+			propagateSettings(settingsManager.settings);
 			doBasicTransition(State::MAIN_MENU);
 			break;
 
@@ -284,7 +287,7 @@ void MainLoop::update() {
 		}
 
 		if (s.t >= 1.0f) {
-			state = s.endState;
+			switchToState(s.startState, s.endState);
 		}
 		renderFadingTransition(renderer, s.t);
 		break;
@@ -306,7 +309,7 @@ void MainLoop::update() {
 		}
 
 		if (s.t >= 1.0f) {
-			state = State::GAME;
+			switchToState(s.startState, State::GAME);
 		}
 		updateTransition(renderer, audio, previousT, s.t, s.transitionEffect);
 		renderTransition(renderer, s.t, s.transitionEffect);
@@ -335,6 +338,35 @@ void MainLoop::update() {
 	}
 	ShaderManager::update();
 	renderer.gfx.drawDebug();
+}
+
+void MainLoop::propagateSettings(const Settings& settings) {
+	audio.setSoundEffectVolume(settings.audio.soundEffectVolume);
+	renderer.settings = settings.graphics;
+}
+
+void MainLoop::switchToState(State currentState, State newState) {
+	switch (currentState) {
+		using enum State;
+	case GAME:
+		game.onSwitchFromGame(audio);
+		break;
+
+	default:
+		break;
+	}
+
+	state = newState;
+
+	switch (state) {
+		using enum State;
+	case GAME:
+		game.onSwitchToGame(audio);
+		break;
+
+	default:
+		break;
+	}
 }
 
 void MainLoop::stateUpdate(State state) {

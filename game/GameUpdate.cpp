@@ -598,7 +598,8 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 
 			auto& b = laserSegmentsToDraw[j];
 
-			const auto epsilon = 0.01f;
+			// > 0.01f Buggy.
+			const auto epsilon = 0.001f;
 			const auto epsilonSquared = epsilon * epsilon;
 			if (a.endpoints[0].distanceSquaredTo(b.endpoints[0]) < epsilonSquared
 				&& a.endpoints[1].distanceSquaredTo(b.endpoints[1]) < epsilonSquared) {

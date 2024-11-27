@@ -451,9 +451,9 @@ void GameRenderer::renderGameText() {
 	gameTextShader.setTexture("fontAtlas", 0, font.fontAtlas);
 	static f32 elapsed = 0.0f;
 	elapsed += Constants::dt;
-	shaderSetUniforms(gameTextShader, GameTextFragUniforms{
+	/*shaderSetUniforms(gameTextShader, GameTextFragUniforms{
 		.time = elapsed
-	});
+	});*/
 	drawInstances(gameTextVao, gfx.instancesVbo, constView(gameTextInstances), quad2dPtDrawInstances);
 	gameTextInstances.clear();
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
