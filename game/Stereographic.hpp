@@ -76,7 +76,7 @@ struct AngleRange {
 	bool isInRange(f32 angle) const;
 };
 
-bool isPointOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 point);
+bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine);
 
 f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange);
 

@@ -127,12 +127,16 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 						continue;
 					}
 
-					const auto epsilon = 0.001f;
+					/*const auto epsilon = 0.001f;
 					const auto lineDirection = (endpoint1 - endpoint0).normalized();
 					const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
 					const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
 					const auto intersectionDAlong = dot(lineDirection, intersection);
 					if (intersectionDAlong <= dAlong0 || intersectionDAlong >= dAlong1) {
+						continue;
+					}*/
+					// TODO: Should there be epsilon checks?
+					if (!isPointOnLineAlsoOnStereographicSegment(line, endpoint0, endpoint1, intersection)) {
 						continue;
 					}
 

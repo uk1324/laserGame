@@ -1,0 +1,46 @@
+{
+    "walls": [],
+    "lasers": [
+        {
+            "position": [
+                1.07324e-08,
+                -0.9
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.5708,
+            "positionLocked": true
+        }
+    ],
+    "mirrors": [
+        {
+            "positionLocked": true,
+            "center": [
+                -1.74846e-08,
+                0.4
+            ],
+            "normalAngle": 1.5708,
+            "wallType": 1,
+            "length": 0.6
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                -0.9,
+                -7.86805e-08
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                0.9,
+                0
+            ],
+            "radius": 0.1
+        }
+    ]
+}

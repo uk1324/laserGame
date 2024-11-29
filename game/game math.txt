@@ -127,3 +127,23 @@ TODO: Document how the game spaces work and make text ui rendering work normally
 Make the camera transforms take size instead of scale.
 
 On off switch with the text faded using sdfs. Would have to somehow combine the characters in the shader into a single sdf. Another option would be to use symbols like O and I instead of words.
+
+
+Level 4 but there is a trigger. 
+
+
+1 Introduce lasers
+2 Show that lasers wrap around.
+3 Introduce mirrors
+4 Same level but moved by an isometry. Maybe the player will notice.
+5 Show bending at cross or T pattern.
+6 More bending
+7 Just a puzzle. More t patterns if you notice.
+8 Show that you can move some mirrors. The player can't reach the target so they will try to move something hopefully.
+9 Variation of 6. Just a puzzle doesn't show anything new.
+10. Puzzle not solvable using one one sided mirror I think. A bit of a motivation for the double sided mirror. One solution is to create a double sided  mirror. There are also solutions that don't do this. (used 24 line grid)
+11 Same as 10 but with a double sided mirror.
+
+TODO: Unreachability when cut but 2 lines.
+
+I wonder if the bending works in a similar way to Einstein crosses. I thing you would see several copies of the object if light bend like this. In 2d one on the left of the blocking object and one on the right.

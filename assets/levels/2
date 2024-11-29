@@ -1,0 +1,73 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                -1,
+                -8.74228e-08
+            ],
+            "endpoint1": [
+                1.19249e-08,
+                -1
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                1.19249e-08,
+                -1
+            ],
+            "endpoint1": [
+                1,
+                0
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                1.19249e-08,
+                -1
+            ],
+            "endpoint1": [
+                0,
+                0
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                -0.353553,
+                -0.353553
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": -0.244978,
+            "positionLocked": true
+        }
+    ],
+    "mirrors": [
+        {
+            "positionLocked": true,
+            "center": [
+                -2.18557e-08,
+                0.5
+            ],
+            "normalAngle": -3.14159,
+            "wallType": 1,
+            "length": 0.6
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                0.353554,
+                -0.353553
+            ],
+            "radius": 0.1
+        }
+    ]
+}

@@ -206,8 +206,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 #include <gfx2d/DbgGfx2d.hpp>
 
-bool isPointOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 point) {
-	
+bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine) {
+	if (line.type == StereographicLine::Type::CIRCLE) {
+		const auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
+		return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle());
+	} else {
+		const auto lineDirection = (endpoint1 - endpoint0).normalized();
+		const auto dAlong0 = dot(lineDirection, endpoint0);
+		const auto dAlong1 = dot(lineDirection, endpoint1);
+		const auto intersectionDAlong = dot(lineDirection, pointThatLiesOnLine);
+		return intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1;
+	}
 }
 
 f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange) {
@@ -417,38 +426,46 @@ StaticList<Vec2, 2> stereographicLineVsStereographicLineIntersection(const Stere
 
 StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const StereographicLine& line, Vec2 lineEndpoint0, Vec2 lineEndpoint1, const Circle& circle) {
 	const auto intersections = stereographicLineVsCircleIntersection(line, circle);
-	//const auto epsilon = 0.001f;
-	const auto lineDirection = (lineEndpoint1 - lineEndpoint0).normalized();
-	const auto dAlong0 = dot(lineDirection, lineEndpoint0);
-	const auto dAlong1 = dot(lineDirection, lineEndpoint1);
-
 	StaticList<Vec2, 2> result;
-	//for (const auto& intersection : intersections) {
-	//	const auto intersectionDAlong = dot(lineDirection, intersection);
-	//	// Using the regular segment check works, because the stereographic segment is convex.
-	//	// This actually doesn't work for example if you have 2 intersections on antipodal or nearly antipodal points of the sphere. Then they will both line in the chord region (both have values of intersectionDAlong that is the length of the projection of onto the chord in the region), but obsiously the segment can't contain antipodal point.
-	//	if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
-	//		result.add(intersection);
-	//	}
-	//}
 
-	// TODO: They incorrect method with dot products should be replaced in other places where it was used.
-	if (line.type == StereographicLine::Type::CIRCLE) {
-		const auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, lineEndpoint0, lineEndpoint1);
-		for (const auto& intersection : intersections) {
-			if (angleRange.isInRange((intersection - line.circle.center).angle())) {
-				result.add(intersection);
-			}
-		}
-	} else {
-		for (const auto& intersection : intersections) {
-			const auto intersectionDAlong = dot(lineDirection, intersection);
-			if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
-				result.add(intersection);
-			}
+	for (const auto& intersection : intersections) {
+		if (isPointOnLineAlsoOnStereographicSegment(line, lineEndpoint0, lineEndpoint1, intersection)) {
+			result.add(intersection);
 		}
 	}
 	return result;
+
+	////const auto epsilon = 0.001f;
+	//const auto lineDirection = (lineEndpoint1 - lineEndpoint0).normalized();
+	//const auto dAlong0 = dot(lineDirection, lineEndpoint0);
+	//const auto dAlong1 = dot(lineDirection, lineEndpoint1);
+
+	////for (const auto& intersection : intersections) {
+	////	const auto intersectionDAlong = dot(lineDirection, intersection);
+	////	// Using the regular segment check works, because the stereographic segment is convex.
+	////	// This actually doesn't work for example if you have 2 intersections on antipodal or nearly antipodal points of the sphere. Then they will both line in the chord region (both have values of intersectionDAlong that is the length of the projection of onto the chord in the region), but obsiously the segment can't contain antipodal point.
+	////	if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
+	////		result.add(intersection);
+	////	}
+	////}
+
+	//// TODO: They incorrect method with dot products should be replaced in other places where it was used.
+	//if (line.type == StereographicLine::Type::CIRCLE) {
+	//	const auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, lineEndpoint0, lineEndpoint1);
+	//	for (const auto& intersection : intersections) {
+	//		if (angleRange.isInRange((intersection - line.circle.center).angle())) {
+	//			result.add(intersection);
+	//		}
+	//	}
+	//} else {
+	//	for (const auto& intersection : intersections) {
+	//		const auto intersectionDAlong = dot(lineDirection, intersection);
+	//		if (intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1) {
+	//			result.add(intersection);
+	//		}
+	//	}
+	//}
+	//return result;
 }
 
 bool intersectionsOnSegment(Vec2 e0, Vec2 e1, Vec2 i) {
