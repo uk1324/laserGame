@@ -8,7 +8,6 @@ Levels::Levels() {
 		.name = levelName, \
 	});
 
-	A("0")
 	A("1")
 	A("2")
 	A("3")
@@ -19,6 +18,8 @@ Levels::Levels() {
 	A("8")
 	A("9")
 	A("10")
+	A("11")
+	A("12")
 
 #undef A
 }

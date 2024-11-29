@@ -206,14 +206,32 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 #include <gfx2d/DbgGfx2d.hpp>
 
-bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine) {
+bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine, f32 epsilon) {
 	if (line.type == StereographicLine::Type::CIRCLE) {
-		const auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
+		auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
+		// arcLength = radius * angle
+		// angle = arcLength / radius.
+		const auto angleEpsilon = epsilon / line.circle.radius;
+		// I found a bug and the epsilon break thing even more for some reason. The level is just a chaotic laser. Not sure why it passes through. It shouldn't happen in normal gameplay so I won't bother with it for now.
+		angleRange.min -= angleEpsilon;
+		angleRange.max += angleEpsilon;
+		// TODO: Maybe clamp if min switches to max.
+
 		return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle());
+
+		//const auto lineDirection = (endpoint1 - endpoint0).normalized();
+		//const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
+		//const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
+		//const auto intersectionDAlong = dot(lineDirection, pointThatLiesOnLine);
+		//const auto test = intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1;
+
+		//return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle()) || test;
 	} else {
 		const auto lineDirection = (endpoint1 - endpoint0).normalized();
-		const auto dAlong0 = dot(lineDirection, endpoint0);
-		const auto dAlong1 = dot(lineDirection, endpoint1);
+		const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
+		const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
+		//const auto dAlong0 = dot(lineDirection, endpoint0);
+		//const auto dAlong1 = dot(lineDirection, endpoint1);
 		const auto intersectionDAlong = dot(lineDirection, pointThatLiesOnLine);
 		return intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1;
 	}

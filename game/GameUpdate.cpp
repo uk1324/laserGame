@@ -136,7 +136,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 						continue;
 					}*/
 					// TODO: Should there be epsilon checks?
-					if (!isPointOnLineAlsoOnStereographicSegment(line, endpoint0, endpoint1, intersection)) {
+					if (!isPointOnLineAlsoOnStereographicSegment(line, endpoint0, endpoint1, intersection, 0.01f)) {
 						continue;
 					}
 
@@ -484,6 +484,11 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 			// If you have a corner then there is no real way to define a reflection and it probably doesn't really matter if a laser end there.
 			// A bigger issue is configurations like crosses made out of mirrors. Then If you point right at the intersection of 2 lines then if you process only one line intersection the laser will reflect and go through the other. One option would be to process the 2 reflections sequentially, but it probably doesn't matter much. Technically only one of the walls needs to be a mirror.
 			auto doubleIntersectionCheck = [](const Hit& hit, std::optional<f32> secondClosestDistance) {
+				// If the closest hit is to close to the laser position sometimes bugs happen.
+				if (hit.distance < 0.001f) {
+					return false;
+				}
+
 				if (!secondClosestDistance.has_value()) {
 					return false;
 				}

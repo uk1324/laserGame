@@ -1,0 +1,119 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                -1,
+                -8.74228e-08
+            ],
+            "endpoint1": [
+                1,
+                0
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0,
+                0
+            ],
+            "endpoint1": [
+                -4.37114e-08,
+                1
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                1.19249e-08,
+                -1
+            ],
+            "endpoint1": [
+                8.34742e-09,
+                -0.7
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0,
+                0
+            ],
+            "endpoint1": [
+                3.57746e-09,
+                -0.3
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                -0.353553,
+                0.353553
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 2.35619,
+            "positionLocked": true
+        }
+    ],
+    "mirrors": [
+        {
+            "positionLocked": false,
+            "center": [
+                -0.282843,
+                0.282843
+            ],
+            "normalAngle": 2.35619,
+            "wallType": 1,
+            "length": 0.6
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                -0.267878,
+                -0.646716
+            ],
+            "radius": 0.1
+        }
+    ],
+    "triggers": [
+        {
+            "position": [
+                0.267879,
+                -0.646716
+            ],
+            "color": [
+                0,
+                1,
+                0.5
+            ],
+            "index": 0
+        }
+    ],
+    "doors": [
+        {
+            "endpoint0": [
+                3.57746e-09,
+                -0.3
+            ],
+            "endpoint1": [
+                8.34742e-09,
+                -0.7
+            ],
+            "triggerIndex": 0,
+            "openByDefault": false
+        }
+    ],
+    "lockedCells": {
+        "cells": [
+            0
+        ],
+        "ringCount": 1,
+        "segmentCount": 4
+    }
+}

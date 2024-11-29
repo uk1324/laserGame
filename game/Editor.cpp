@@ -762,6 +762,7 @@ void Editor::modifyLockedCellsToolRender(GameRenderer& renderer, Vec2 cursorPos,
 	Vec4 color = GameRenderer::lockedCellColor;
 	color.w /= 2.0f;
 	renderer.lockedCell(e.lockedCells, *cellIndex, color);
+	renderer.gfx.drawFilledTriangles();
 }
 
 void Editor::activateEntity(const EditorEntityId& id) {
@@ -1103,7 +1104,7 @@ std::optional<Editor::WallLikeEntity> Editor::WallLikeEntityCreateTool::update(b
 		return std::nullopt;
 	}
 
-	if (cursorPos.length() > Constants::boundary.radius) {
+	if (cursorPos.length() > Constants::boundary.radius + 0.001f) {
 		return std::nullopt;
 	}
 
