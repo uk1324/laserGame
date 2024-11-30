@@ -394,6 +394,7 @@ void GameEntities::reset() {
 	portalPairs.reset();
 	triggers.reset();
 	doors.reset();
+	lockedCells.reset();
 }
 
 f32 LaserArrowhead::distanceTo(Vec2 v) const {
@@ -426,6 +427,10 @@ LockedCells::CellBounds LockedCells::cellBounds(i32 index) const {
 		.minR = startR,
 		.maxR = endR
 	};
+}
+
+void LockedCells::reset() {
+	cells.clear();
 }
 
 bool LockedCells::CellBounds::containsPoint(Vec2 v) const {

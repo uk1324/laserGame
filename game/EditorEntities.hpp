@@ -243,6 +243,8 @@ struct LockedCells {
 
 	std::optional<i32> getIndex(Vec2 pos) const;
 	CellBounds cellBounds(i32 index) const;
+
+	void reset();
 };
 
 // I decided put here all the things that relate to the level and put things that change every frame or are related to the update in game state.

@@ -155,6 +155,7 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 	for (const auto& cell : e.lockedCells.cells) {
 		lockedCell(e.lockedCells, cell, GameRenderer::lockedCellColor);
 	}
+	gfx.drawFilledTriangles();
 
 	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.
 	// srcAlpha * srcColor + 1 * dstColor

@@ -1,0 +1,113 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                -0.96592575,
+                -0.2588193
+            ],
+            "endpoint1": [
+                -0.9659259,
+                0.25881892
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                -0.8,
+                -6.9938224e-08
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 0.090637326,
+            "positionLocked": true
+        }
+    ],
+    "mirrors": [
+        {
+            "positionLocked": true,
+            "center": [
+                -0.2,
+                -1.7484556e-08
+            ],
+            "normalAngle": -0.14194936,
+            "wallType": 0,
+            "length": 0.6
+        },
+        {
+            "positionLocked": true,
+            "center": [
+                0.2,
+                0
+            ],
+            "normalAngle": -0.069366604,
+            "wallType": 0,
+            "length": 0.6
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                0.7,
+                0
+            ],
+            "radius": 0.1
+        }
+    ],
+    "triggers": [
+        {
+            "position": [
+                -0.5,
+                -4.371139e-08
+            ],
+            "color": [
+                0,
+                1,
+                0.5
+            ],
+            "index": 0
+        }
+    ],
+    "doors": [
+        {
+            "endpoint0": [
+                3.5774643e-09,
+                -0.3
+            ],
+            "endpoint1": [
+                -1.3113417e-08,
+                0.3
+            ],
+            "triggerIndex": 0,
+            "openByDefault": true
+        },
+        {
+            "endpoint0": [
+                3.5774643e-09,
+                -0.3
+            ],
+            "endpoint1": [
+                1.1924881e-08,
+                -1
+            ],
+            "triggerIndex": 0,
+            "openByDefault": false
+        },
+        {
+            "endpoint0": [
+                -1.3113417e-08,
+                0.3
+            ],
+            "endpoint1": [
+                -4.371139e-08,
+                1
+            ],
+            "triggerIndex": 0,
+            "openByDefault": false
+        }
+    ]
+}

@@ -1,0 +1,81 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                -0.70710665,
+                -0.7071069
+            ],
+            "endpoint1": [
+                0,
+                0
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0,
+                0
+            ],
+            "endpoint1": [
+                -0.70710677,
+                0.70710677
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                -0.5,
+                -4.371139e-08
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.1920929e-07,
+            "positionLocked": true
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                -0.30614683,
+                0.7391036
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                -0.3061465,
+                -0.73910373
+            ],
+            "radius": 0.1
+        }
+    ],
+    "portalPairs": [
+        {
+            "portal0": {
+                "center": [
+                    0.6,
+                    0
+                ],
+                "positionLocked": false,
+                "normalAngle": 3.1415927,
+                "rotationLocked": false,
+                "wallType": 2
+            },
+            "portal1": {
+                "center": [
+                    0.4,
+                    0
+                ],
+                "positionLocked": false,
+                "normalAngle": 3.1415927,
+                "rotationLocked": false,
+                "wallType": 2
+            }
+        }
+    ]
+}

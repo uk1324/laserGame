@@ -43,6 +43,17 @@
                 -0.3
             ],
             "type": 1
+        },
+        {
+            "endpoint0": [
+                -1,
+                -8.742278e-08
+            ],
+            "endpoint1": [
+                1.1924881e-08,
+                -1
+            ],
+            "type": 1
         }
     ],
     "lasers": [
@@ -108,12 +119,5 @@
             "triggerIndex": 0,
             "openByDefault": false
         }
-    ],
-    "lockedCells": {
-        "cells": [
-            0
-        ],
-        "ringCount": 1,
-        "segmentCount": 4
-    }
+    ]
 }

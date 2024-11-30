@@ -143,6 +143,17 @@ Level 4 but there is a trigger.
 9 Variation of 6. Just a puzzle doesn't show anything new.
 10. Puzzle not solvable using one one sided mirror I think. A bit of a motivation for the double sided mirror. One solution is to create a double sided  mirror. There are also solutions that don't do this. (used 24 line grid)
 11 Same as 10 but with a double sided mirror.
+12. Chaos
+13. Symmetry
+14. Portals introduction
+15. Just portals puzzle
+16. Portals and mirrors puzzle
+17. Unrechable
+18. Door introduction
+19. Unrechable
+
+No Hysteresis. You can't solve using the double mirror trick (you could technically, but would need to do it very fast).
+Hysteresis. You
 
 TODO: Unreachability when cut but 2 lines.
 
