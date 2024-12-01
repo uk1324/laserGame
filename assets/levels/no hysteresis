@@ -26,15 +26,15 @@
     "lasers": [
         {
             "position": [
-                0.4141777,
-                -0.17814966
+                9.539905e-09,
+                -0.8
             ],
             "color": [
                 0,
                 0,
                 1
             ],
-            "angle": -0.97042644,
+            "angle": 1.5707964,
             "positionLocked": false
         }
     ],
@@ -42,20 +42,20 @@
         {
             "positionLocked": false,
             "center": [
-                0.071684636,
-                -0.3660556
+                0.3061469,
+                -0.73910356
             ],
-            "normalAngle": 2.150651,
+            "normalAngle": 2.0071316,
             "wallType": 1,
             "length": 0.6
         },
         {
             "positionLocked": true,
             "center": [
-                -0.48851722,
-                -0.2933758
+                -0.3061465,
+                -0.73910373
             ],
-            "normalAngle": -1.5127219,
+            "normalAngle": -2.007131,
             "wallType": 1,
             "length": 0.6
         }

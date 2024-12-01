@@ -317,7 +317,19 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				};
 
 				auto doReflection = [&] {
+					//const auto r = 0.3f;
+
+					//const auto r0 = angleRangeBetweenPointsOnCircle(Vec2(0.0f), laserTangentAtHitPoint, normalAtHitPoint);
+					///*Dbg::circleArc(laserDirection.angle(), normalAtHitPoint.angle(), hit.point, 0.05f, 0.01f, Color3::RED);*/
+					//Dbg::circleArc(r0.min, r0.max, hit.point, r / 2.0f, 0.01f / 2.0f, Color3::RED);
+
 					laserDirection = laserTangentAtHitPoint.reflectedAroundNormal(normalAtHitPoint);
+
+					//const auto r1 = angleRangeBetweenPointsOnCircle(Vec2(0.0f), laserDirection, normalAtHitPoint);
+					///*Dbg::circleArc(laserDirection.angle(), normalAtHitPoint.angle(), hit.point, 0.05f, 0.01f, Color3::RED);*/
+					//Dbg::circleArc(r1.min, r1.max, hit.point, r / 2.0f, 0.01f / 2.0f, Vec3(1.0f) - Color3::RED);
+
+					//Dbg::line(hit.point, hit.point + normalAtHitPoint.normalized() * r, 0.01f, Color3::GREEN);
 					laserPosition = hit.point;
 					hitOnLastIteration = EditorEntity{ hit.id, hit.index };
 					//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
@@ -515,8 +527,15 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				return midpoint;
 			};
 
+			auto areNearlyAntipodal = [](Vec2 e0, Vec2 e1) {
+				return 
+					(abs(e0.length() - 1.0f) < 0.01f) &&
+					(abs(e1.length() - 1.0f) < 0.01f) && 
+					(e0 + e1).length() < 0.01f;
+			};
+
 			auto processLaserSegmentEndpoints = [&](Vec2 e0, Vec2 e1) {
-				const auto nearlyAntipodal = (e0 + e1).length() < 0.01f;
+				const auto nearlyAntipodal = areNearlyAntipodal(e0, e1);
 				if (!nearlyAntipodal) {
 					const auto s = Segment{ e0, e1, laser->color };
 					processLaserSegment(s);

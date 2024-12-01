@@ -53,7 +53,8 @@ void GameRenderer::multicoloredSegment(const std::array<Vec2, 2>& endpoints, f32
 		stereographicSegment(endpoints[0] + forward, endpoints[1] + forward, normalColor);
 		stereographicSegment(endpoints[0] + back, endpoints[1] + back, backColor);
 	} else {
-		stereographicSegmentComplex(endpoints[0], endpoints[1], backColor, normalColor, 0.035f);
+		//stereographicSegmentComplex(endpoints[0], endpoints[1], backColor, normalColor, 0.035f);
+		stereographicSegmentComplex(endpoints[0], endpoints[1], backColor, normalColor, 0.040f);
 	}
 }
 

@@ -1,6 +1,6 @@
 #include "Stereographic.hpp"
-#include <engine/Math/Constants.hpp>
 #include <array>
+//#include <engine/Math/Constants.hpp>
 #include <engine/Math/LineSegment.hpp>
 
 // The 3d coordinate system is the set of points satisfying x^2 + y^2 + z^2 = 1, z <= 0, hemisphere.
@@ -168,11 +168,6 @@ StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
 		return StereographicLine((p0 - p1).rotBy90deg().normalized());
 	}
 	return stereographicLineOld(p0, p1);
-}
-
-f32 angleToRangeZeroTau(f32 a) {
-	a -= floor(a / TAU<f32>) * TAU<f32>;
-	return a;
 }
 
 /*
@@ -646,32 +641,6 @@ void StereographicLine::operator=(const StereographicLine& other) {
 	case CIRCLE:
 		circle = other.circle;
 		break;
-	}
-}
-
-bool AngleRange::isInRange(f32 angle) const {
-	/*
-	min = a0 + m tau
-	max = a1 + m tau
-	min and max both have the same multiple of tau added because they are a range. That is max is measured with respect to min.
-	angle = a + n tau
-
-	subtracting floor(p / TAU<f32>) * TAU<f32> brings the angles into the same range
-	*/
-	angle -= floor(angle / TAU<f32>) * TAU<f32>;
-	{
-		const auto offset = floor(min / TAU<f32>) * TAU<f32>;
-		const auto mn = min - offset;
-		const auto mx = max - offset;
-		if (angle >= mn && angle <= mx) {
-			return true;
-		}
-	}
-	{
-		const auto offset = floor(max / TAU<f32>) * TAU<f32>;
-		const auto mn = min - offset;
-		const auto mx = max - offset;
-		return angle >= mn && angle <= mx;
 	}
 }
 

@@ -10,6 +10,8 @@ Levels::Levels() {
 
 	A("1")
 	A("2")
+	A("line1")
+	A("line2")
 	A("3")
 	A("4")
 	A("5")
@@ -25,6 +27,11 @@ Levels::Levels() {
 	A("15")
 	A("16")
 	A("17")
+	A("18")
+	A("19")
+	A("block4")
+	A("no hysteresis")
+	A("hysteresis")
 
 #undef A
 }

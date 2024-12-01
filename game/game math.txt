@@ -158,3 +158,6 @@ Hysteresis. You
 TODO: Unreachability when cut but 2 lines.
 
 I wonder if the bending works in a similar way to Einstein crosses. I thing you would see several copies of the object if light bend like this. In 2d one on the left of the blocking object and one on the right.
+
+
+Could add arrows to indicate that a laser has gone around the hemisphere, but with mirrors there would be multiple arrows at the same point.

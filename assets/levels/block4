@@ -23,7 +23,7 @@
                 0,
                 1
             ],
-            "angle": 0.090637326,
+            "angle": 3.1415927,
             "positionLocked": true
         }
     ],
@@ -34,7 +34,7 @@
                 -0.2,
                 -1.7484556e-08
             ],
-            "normalAngle": -0.14194936,
+            "normalAngle": 1.5707964,
             "wallType": 0,
             "length": 0.6
         },
@@ -44,7 +44,7 @@
                 0.2,
                 0
             ],
-            "normalAngle": -0.069366604,
+            "normalAngle": 1.5707964,
             "wallType": 0,
             "length": 0.6
         }

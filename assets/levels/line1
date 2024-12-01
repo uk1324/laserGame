@@ -1,0 +1,77 @@
+{
+    "walls": [],
+    "lasers": [
+        {
+            "position": [
+                -0.5,
+                -4.371139e-08
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 0,
+            "positionLocked": false
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                8.94366e-09,
+                -0.75
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                5.9624403e-09,
+                -0.5
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                2.9812202e-09,
+                -0.25
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                0,
+                0
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                -1.0927847e-08,
+                0.25
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                -2.1855694e-08,
+                0.5
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                -3.278354e-08,
+                0.75
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                1.1924881e-08,
+                -1
+            ],
+            "radius": 0.1
+        }
+    ],
+    "portalPairs": []
+}

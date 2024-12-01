@@ -4,6 +4,7 @@
 #include <engine/Math/Quat.hpp>
 #include <StaticList.hpp>
 #include <variant>
+#include <engine/Math/Angles.hpp>
 #include <game/Circle.hpp>
 
 struct StereographicLine {
@@ -67,14 +68,6 @@ StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAn
 
 Circle stereographicLineOld(Vec2 p0, Vec2 p1);
 StereographicLine stereographicLine(Vec2 p0, Vec2 p1);
-
-f32 angleToRangeZeroTau(f32 a);
-
-struct AngleRange {
-	f32 min, max;
-
-	bool isInRange(f32 angle) const;
-};
 
 bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine, f32 epsilon = 0.0f);
 
