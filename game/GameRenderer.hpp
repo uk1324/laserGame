@@ -45,9 +45,16 @@ struct GameRenderer {
 	void render(GameEntities& e, const GameState& s, bool editor, f32 invalidGameStateAnimationT);
 
 	void renderBackground();
+	struct TilingBackgroundState {
+		Vec3 axis = Vec3(0.5f);
+	} tilingBackground;
+	void renderTilingBackground();
 
 	Vao backgroundVao;
 	ShaderProgram& backgroundShader;
+
+	Vao tilingBackgroundVao;
+	ShaderProgram& tilingBackgroundShader;
 
 	Vao stereographicLineVao;
 	ShaderProgram& stereographicLineShader;

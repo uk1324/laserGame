@@ -1,0 +1,16 @@
+import "../../engine/gfx2d/Vertex2dPt.data";
+
+shader TilingBackground {
+	vertexStruct = Vertex2dPt;
+	vertOut = {
+		vec2 position;
+	};
+	vertUniforms = {
+		float aspectRatio;
+	};
+	fragUniforms = {
+
+		Mat3 transformation;
+		float time;
+	};
+}

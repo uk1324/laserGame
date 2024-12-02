@@ -110,6 +110,7 @@ Ui::RectMinMax MainMenu::buttonRect(const GameRenderer& renderer, const Ui::Cent
 }
 
 MainMenu::Result MainMenu::update(GameRenderer& renderer) {
+	renderer.renderTilingBackground();
 	renderer.textColorRng.seed(renderer.textColorRngSeed);
 
 	auto result = Result::NONE;

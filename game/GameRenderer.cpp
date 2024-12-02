@@ -3,6 +3,7 @@
 #include <Overloaded.hpp>
 #include <engine/Math/Interpolation.hpp>
 #include <game/Shaders/backgroundData.hpp>
+#include <game/Shaders/tilingBackgroundData.hpp>
 #include <game/Shaders/glowingArrowData.hpp>
 #include <engine/Math/Constants.hpp>
 #include <game/Stereographic.hpp>
@@ -24,6 +25,8 @@ GameRenderer GameRenderer::make() {
 	return GameRenderer{
 		.backgroundVao = MAKE_VAO(Background),
 		.backgroundShader = MAKE_GENERATED_SHADER(BACKGROUND),
+		.tilingBackgroundVao = MAKE_VAO(TilingBackground),
+		.tilingBackgroundShader = MAKE_GENERATED_SHADER(TILING_BACKGROUND),
 		.stereographicLineVao = MAKE_VAO(StereographicLine),
 		.stereographicLineShader = MAKE_GENERATED_SHADER(STEREOGRAPHIC_LINE),
 		.stereographicDiskVao = MAKE_VAO(StereographicDisk),
@@ -298,6 +301,33 @@ void GameRenderer::renderBackground() {
 		.time = elapsed,
 	};
 	drawInstances(backgroundVao, gfx.instancesVbo, constView(instance), quad2dPtDrawInstances);
+}
+
+void GameRenderer::renderTilingBackground() {
+	static std::default_random_engine rng;
+	const auto ds = std::uniform_real_distribution<f32>(-1.0f, 1.0f)(rng) * 1.0f * Constants::dt;
+	const auto r = tilingBackground.axis.length();
+	const auto dir = std::uniform_real_distribution<f32>(0.0f, TAU<f32>)(rng);
+
+	tilingBackground.axis = moveOnSphericalGeodesic(tilingBackground.axis.normalized(), dir, r * ds) * r;
+
+	const auto dr = tilingBackground.axis * ds;
+	tilingBackground.axis += dr;
+
+	glDisable(GL_BLEND);
+	tilingBackgroundShader.use();
+
+	static f32 elapsed = 0.0f;
+	elapsed += Constants::dt;
+
+	shaderSetUniforms(tilingBackgroundShader, TilingBackgroundVertUniforms{ .aspectRatio = Window::aspectRatio() });
+	shaderSetUniforms(tilingBackgroundShader, TilingBackgroundFragUniforms{ 
+		.transformation = Quat(tilingBackground.axis.length(), tilingBackground.axis.normalized()).toMatrix(),
+		.time = elapsed
+	});
+	TilingBackgroundInstance instance{};
+	drawInstances(tilingBackgroundVao, gfx.instancesVbo, constView(instance), quad2dPtDrawInstances);
+	glEnable(GL_BLEND);
 }
 
 void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, Vec3 color0, Vec3 color1, f32 width) {

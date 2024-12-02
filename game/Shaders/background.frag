@@ -79,8 +79,6 @@ void main() {
     //col *= clamp(1.0 - 0.9 * c.x * c.x, 0.0, 1.0);
     //col *= vec3(c.x);
     //col -= (1.0-smoothstep( 0.08, 0.09, c.x));
-    fragColor = vec4( col, 1.0 );
-
    // col = vec3(d);
 
 	fragColor = vec4(col, 1.0);

@@ -39,7 +39,7 @@ struct MainLoop {
 		TRANSITION_TO_LEVEL,
 		STATELESS_TRANSITION,
 		CONGRATULATIONS,
-	} state = State::EDITOR;
+	} state = State::MAIN_MENU;
 
 	void switchToState(State currentState, State newState);
 	void stateUpdate(State state);

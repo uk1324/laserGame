@@ -161,3 +161,11 @@ I wonder if the bending works in a similar way to Einstein crosses. I thing you 
 
 
 Could add arrows to indicate that a laser has gone around the hemisphere, but with mirrors there would be multiple arrows at the same point.
+
+Rotation in 3D
+Euler angles is 3 circles so it's going to be a quotient of the 3 torus
+Quaternions is the surface of the 3 sphere, because it's all quaternions with unit length. Also a quotient space.
+Axis and angle will be a ball in R^3 with antipodal points identified. The radius of a point will be the angle.
+
+Not sure what is the best way to move in a random direction.
+Could move on the 3 ball by generating a random radius change and a random 2d direction. Would move on a geodesic in the direction (dx, dy) * r and move on the radius by dr.
