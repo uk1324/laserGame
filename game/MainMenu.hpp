@@ -4,11 +4,14 @@
 #include <game/SettingsData.hpp>
 #include <variant>
 
+// TODO: Instead of storing the settings state inside the structs. Could just pass the value from the settings struct directly.
 struct MainMenu {
 	// Setting this to a big number so if accessed it hopefully crashes.
 	static constexpr i32 INVALID = 0xFFFFFF;
 
 	MainMenu();
+
+	Settings settings;
 
 	struct Button {
 		i32 id = INVALID;
@@ -23,7 +26,6 @@ struct MainMenu {
 	struct SliderInput {
 		std::string_view name;
 		i32 id = INVALID;
-		f32 value = 0.5f; // from 0 to 1
 		f32 hoverAnimationT = 0.0f;
 	};
 
@@ -35,19 +37,20 @@ struct MainMenu {
 		PLAY,
 	};
 
-	enum class SoundSettingsResult {
+	enum class SettingsResult {
 		GO_BACK,
+		PROPAGATE_SETTINGS,
 		NONE,
 	};
 
 	Result update(GameRenderer& renderer);
-	SoundSettingsResult soundSettingsUpdate(GameRenderer& renderer);
-	void setSoundSettings(const SettingsAudio& audio);
-	SettingsAudio getSoundSettings() const;
+	SettingsResult settingsUpdate(GameRenderer& renderer);
 
 	void drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id, f32 hoverT = 0.0f);
 
 	void drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button);
+
+	void uiSceneBegin(GameRenderer& renderer);
 
 	struct MenuUi {
 		Ui::CenteredHorizontalListLayout layout;
@@ -60,18 +63,17 @@ struct MainMenu {
 		i32 id = INVALID;
 		std::string_view text;
 		f32 hoverAnimationT = 0.0f;
-		bool value = true;
 	};
 
 	struct SettingsUi {
 		Ui::CenteredHorizontalListLayout layout;
 		i32 titleId = INVALID;
-		std::vector<SliderInput> sliderInputs;
 		std::vector<Button> buttons;
 
-		//i32 masterVolumeSliderIndex = INVALID;
+		SliderInput volumeSlider;
 		i32 soundEffectVolumeSliderIndex = INVALID;
 		ToggleButton drawBackgroundsButton;
+		ToggleButton fullscreenButton;
 		//i32 musicVolumeSliderIndex = INVALID;
 
 		struct GrabbedSlider {

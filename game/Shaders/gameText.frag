@@ -7,7 +7,6 @@ in vec2 atlasMin;
 in vec2 atlasMax; 
 
 in vec3 color; 
-in float randomValue; 
 in float hoverT; 
 out vec4 fragColor;
 

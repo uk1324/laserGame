@@ -168,7 +168,7 @@ std::optional<Game::Result> Game::updateUi(GameRenderer& r, bool levelComplete) 
 			}
 		}
 
-		r.renderGameText();
+		r.renderGameText(false);
 	}
 	return result;
 }

@@ -34,6 +34,7 @@ Settings SettingsManager::defaultSettings = Settings{
 		//.musicVolume = 0.5f,
 	},
 	.graphics = {
-		.drawBackgrounds = true	
+		.drawBackgrounds = true,
+		.fullscreen = false,
 	}
 };

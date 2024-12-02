@@ -9,8 +9,7 @@ shader TilingBackground {
 		float aspectRatio;
 	};
 	fragUniforms = {
-
-		Mat3 transformation;
 		float time;
+		bool icosahedralIfTrueDodecahedralIfFalse;
 	};
 }

@@ -4,6 +4,7 @@ struct [[Json]] SettingsAudio {
 
 struct [[Json]] SettingsGraphics {
 	bool drawBackgrounds = `true`;
+	bool fullscreen = `false`;
 }
 
 struct [[Json]] Settings {

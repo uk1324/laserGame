@@ -46,14 +46,12 @@ struct GameRenderer {
 	void render(GameEntities& e, const GameState& s, bool editor, f32 invalidGameStateAnimationT);
 
 	void renderBackground();
-	struct TilingBackgroundState {
-		Vec3 axis = Vec3(0.5f);
-	} tilingBackground;
 	void renderTilingBackground();
 
 	Vao backgroundVao;
 	ShaderProgram& backgroundShader;
 
+	bool tilingBackgroundIcosahedralIfTrueDodecahedralIfFalse;
 	Vao tilingBackgroundVao;
 	ShaderProgram& tilingBackgroundShader;
 
@@ -76,6 +74,7 @@ struct GameRenderer {
 	ColorRng textColorRng;
 	u32 textColorRngSeed;
 	void changeTextColorRngSeed();
+	void randomize();
 
 	void gameText(
 		Vec2 bottomLeftPosition,
@@ -91,7 +90,7 @@ struct GameRenderer {
 		f32 hoverT = 0.0f,
 		std::optional<Vec3> color = std::nullopt);
 
-	void renderGameText();
+	void renderGameText(bool useAdditiveBlending);
 
 	Vao glowingArrowVao;
 	ShaderProgram& glowingArrowShader;

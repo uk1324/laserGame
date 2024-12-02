@@ -75,8 +75,7 @@ MainLoop::MainLoop()
 	: renderer(GameRenderer::make()) {
 
 	settingsManager.tryLoadSettings();
-	mainMenu.setSoundSettings(settingsManager.settings.audio);
-	mainMenu.settingsUi.drawBackgroundsButton.value = settingsManager.settings.graphics.drawBackgrounds;
+	mainMenu.settings = settingsManager.settings;
 
 	propagateSettings(settingsManager.settings);
 
@@ -154,15 +153,18 @@ void MainLoop::update() {
 	}
 
 	case SOUND_SETTINGS: {
-		const auto result = mainMenu.soundSettingsUpdate(renderer);
+		const auto result = mainMenu.settingsUpdate(renderer);
 		switch (result) {
-			using enum MainMenu::SoundSettingsResult;
+			using enum MainMenu::SettingsResult;
 		case GO_BACK:
-			settingsManager.settings.audio = mainMenu.getSoundSettings();
-			settingsManager.settings.graphics.drawBackgrounds = mainMenu.settingsUi.drawBackgroundsButton.value;
+			settingsManager.settings = mainMenu.settings;
 			settingsManager.trySaveSettings();
 			propagateSettings(settingsManager.settings);
 			doBasicTransition(State::MAIN_MENU);
+			break;
+
+		case PROPAGATE_SETTINGS:
+			propagateSettings(mainMenu.settings);
 			break;
 
 		case NONE:
@@ -277,7 +279,7 @@ void MainLoop::update() {
 		auto& s = statelessTransition;
 
 		if (updateTAndCheckIfAtMid(s.t)) {
-			renderer.changeTextColorRngSeed();
+			renderer.randomize();
 		}
 
 		if (s.t < 0.5f) {
@@ -298,7 +300,7 @@ void MainLoop::update() {
 
 		const auto previousT = s.t;
 		if (updateTAndCheckIfAtMid(s.t)) {
-			renderer.changeTextColorRngSeed();
+			renderer.randomize();
 			game.tryLoadGameLevel(levels, s.levelIndex);
 		}
 
@@ -343,6 +345,7 @@ void MainLoop::update() {
 void MainLoop::propagateSettings(const Settings& settings) {
 	audio.setSoundEffectVolume(settings.audio.soundEffectVolume);
 	renderer.settings = settings.graphics;
+	Window::setFullscreen(settings.graphics.fullscreen);
 }
 
 void MainLoop::switchToState(State currentState, State newState) {
@@ -374,7 +377,7 @@ void MainLoop::stateUpdate(State state) {
 		// These don't inspect the result on purpose. This function should be called from the transition functions and it doesn't make sense to begin a transition while one is already happening.
 		using enum MainLoop::State;
 	case MAIN_MENU: mainMenu.update(renderer); break;
-	case SOUND_SETTINGS: mainMenu.soundSettingsUpdate(renderer); break;
+	case SOUND_SETTINGS: mainMenu.settingsUpdate(renderer); break;
 	case EDITOR: editor.update(renderer); break;
 	case LEVEL_SELECT: levelSelect.update(renderer, levels, gameSave); break;
 		// There should be a level loaded before transitioning into game.

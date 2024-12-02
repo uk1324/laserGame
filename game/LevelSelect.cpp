@@ -7,6 +7,7 @@ LevelSelect::LevelSelect() {
 }
 
 LevelSelect::Result LevelSelect::update(GameRenderer& renderer, const Levels& levels, const GameSave& save) {
+	renderer.renderTilingBackground();
 	Result result = ResultNone();
 	renderer.textColorRng.seed(renderer.textColorRngSeed);
 	auto& r = renderer;
@@ -59,6 +60,6 @@ LevelSelect::Result LevelSelect::update(GameRenderer& renderer, const Levels& le
 	}
 
 	renderer.gfx.drawLines();
-	renderer.renderGameText();
+	renderer.renderGameText(true);
 	return result;
 }

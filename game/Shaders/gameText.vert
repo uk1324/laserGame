@@ -6,20 +6,17 @@ layout(location = 2) in mat3x2 instanceTransform;
 layout(location = 5) in vec2 instanceOffsetInAtlas; 
 layout(location = 6) in vec2 instanceSizeInAtlas; 
 layout(location = 7) in vec3 instanceColor; 
-layout(location = 8) in float instanceRandomValue; 
-layout(location = 9) in float instanceHoverT; 
+layout(location = 8) in float instanceHoverT; 
 
 out vec2 texturePosition; 
 out vec2 atlasMin; 
 out vec2 atlasMax; 
 
 out vec3 color; 
-out float randomValue; 
 out float hoverT; 
 
 void passToFragment() {
     color = instanceColor; 
-    randomValue = instanceRandomValue; 
     hoverT = instanceHoverT; 
 }
 

@@ -9,7 +9,6 @@ shader GameText {
 	};
 	fragInstance = {
 		Vec3 color;
-		float randomValue;
 		float hoverT;
 	};
 	vertOut = {
