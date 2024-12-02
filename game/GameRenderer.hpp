@@ -7,6 +7,7 @@
 #include <game/Shaders/stereographicDiskData.hpp>
 #include <game/Shaders/gameTextData.hpp>
 #include <game/SettingsData.hpp>
+#include <game/ProjectivePolyhedron.hpp>
 #include <random>
 
 struct ColorRng {

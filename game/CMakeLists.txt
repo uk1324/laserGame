@@ -1,4 +1,4 @@
-add_executable(game "main.cpp" "MainLoop.cpp" "Editor.cpp" "EditorEntities.cpp" "GameRenderer.cpp" "Game.cpp"  "Level.cpp" "EditorActions.cpp" "Stereographic.cpp" "FileSelectWidget.cpp"  "EditorGridTool.cpp" "GameUpdate.cpp"  "Circle.cpp" "GameSerialization.cpp" "GrabTools.cpp" "LevelSelect.cpp" "Ui.cpp" "MainMenu.cpp"  "SettingsManager.cpp" "Animation.cpp" "GameUi.cpp" "Levels.cpp" "GameSave.cpp" "Serialization.cpp"  "GameAudio.cpp" "Constants.cpp")
+add_executable(game "main.cpp" "MainLoop.cpp" "Editor.cpp" "EditorEntities.cpp" "GameRenderer.cpp" "Game.cpp"  "Level.cpp" "EditorActions.cpp" "Stereographic.cpp" "FileSelectWidget.cpp"  "EditorGridTool.cpp" "GameUpdate.cpp"  "Circle.cpp" "GameSerialization.cpp" "GrabTools.cpp" "LevelSelect.cpp" "Ui.cpp" "MainMenu.cpp"  "SettingsManager.cpp" "Animation.cpp" "GameUi.cpp" "Levels.cpp" "GameSave.cpp" "Serialization.cpp"  "GameAudio.cpp" "Constants.cpp" "ProjectivePolyhedron.cpp")
 
 target_link_libraries(game PUBLIC engine)
 

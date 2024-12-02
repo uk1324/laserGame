@@ -545,10 +545,10 @@ StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 e
 	if (intersections.size() != 1) {
 		// Don't know what to do here yet.
 		result.add(SegmentEndpoints(endpoint0, endpoint1));
-		Dbg::disk(endpoint0, 0.01f);
+		/*Dbg::disk(endpoint0, 0.01f);
 		Dbg::disk(endpoint1, 0.01f);
 		Dbg::disk(intersections[0], 0.01f, Vec3(1.0f, 0.0f, 0.0f));
-		Dbg::disk(intersections[1], 0.01f, Vec3(1.0f, 0.0f, 0.0f));
+		Dbg::disk(intersections[1], 0.01f, Vec3(1.0f, 0.0f, 0.0f));*/
 		return result;
 	}
 

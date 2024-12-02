@@ -35,12 +35,6 @@ struct EditorGridTool {
 		EllipticIsometry toEllipticIsometry() const;
 	};
 
-	struct EllipticSegment {
-		// Vertex indices
-		i32 endpoints[2];
-		bool connectedThroughHemisphere;
-	};
-
 	bool showGrid = true;
 
 	GridType gridType = GridType::POLAR;
@@ -57,18 +51,14 @@ struct EditorGridTool {
 	// First check if there is a vertex to snap to. If yes then snap, else try to snap to curve.
 	SnapCursorResult snapCursor(Vec2 cursorPos);
 	SnapCursorResult snapCursorToPolarGrid(Vec2 cursorPos);
-	static SnapCursorResult snapCursorToShapeGrid(Vec2 cursorPos, const std::vector<Vec3>& vertices, const std::vector<EllipticSegment>& segments);
+	static SnapCursorResult snapCursorToShapeGrid(Vec2 cursorPos, const std::vector<Vec3>& vertices, const std::vector<ProjectivePolyhedron::Segment>& segments);
 
 	void render(GameRenderer& renderer);
 	void gui();
 
-	static void renderEllipticSegment(GameRenderer& renderer, const EllipticSegment& segment, const std::vector<Vec3>& vertices, Vec3 color);
+	static void renderEllipticSegment(GameRenderer& renderer, const ProjectivePolyhedron::Segment& segment, const std::vector<Vec3>& vertices, Vec3 color);
 
-	std::vector<Vec3> hemiIcosahedronVertices;
-	std::vector<EllipticSegment> hemiIcosahedronSegments;
 	EllipticIsometryInput hemiIcosahedronIsometry;
-	Quat icosahedronTriangleCenterSystemTransformation = Quat::identity;
-	Quat icosahedronVertexCenterSystemTransformation = Quat::identity;
 	enum class IcosahedronCoordinateSystem {
 		VERTEX_CENTER,
 		TRIANGLE_CENTER,
@@ -76,16 +66,12 @@ struct EditorGridTool {
 	} icosahedronCoordinateSystem = IcosahedronCoordinateSystem::VERTEX_CENTER;
 	Quat currentIcosahedronIsometry() const;
 
-	std::vector<Vec3> hemiDodecahedronVertices;
-	std::vector<EllipticSegment> hemiDodecahedronSegments;
 	EllipticIsometryInput hemiDodecahedronIsometry;
 	enum class DodecahedronCoordinateSystem {
 		VERTEX_CENTER,
 		PENTAGON_CENTER,
 		EDGE_CENTER
 	} dodecahedronCoordinateSystem = DodecahedronCoordinateSystem::VERTEX_CENTER;
-	Quat dodecahedronPentagonCenterSystemTransformation = Quat::identity;
-	Quat dodecahedronVertexCenterSystemTransformation = Quat::identity;
 	Quat currentDodecahedronIsometry() const;
 };
 

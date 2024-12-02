@@ -325,6 +325,67 @@ void GameRenderer::renderTilingBackground() {
 		.transformation = Quat(tilingBackground.axis.length(), tilingBackground.axis.normalized()).toMatrix(),
 		.time = elapsed
 	});
+	
+	auto shaderArray = [](const char* name, i32 i) {
+		return name + std::string("[") + std::to_string(i) + "]";
+	};
+
+	auto& p = ProjectivePolyhedron::hemiIcosahedron;
+	for (i32 i = 0; i < p.vertices.size(); i++) {
+		const auto& vertex = p.vertices[i];
+		tilingBackgroundShader.set(shaderArray("vertices", i), toStereographic(vertex));
+	}
+
+	i32 nextVertex = p.vertices.size();
+	auto addVertex = [&](Vec2 v) -> i32 {
+		tilingBackgroundShader.set(shaderArray("vertices", nextVertex), v);
+		nextVertex += 1;
+		return nextVertex;
+	};
+
+	i32 indexCount = 0;
+	for (i32 i = 0; i < p.segments.size(); i++) {
+		const auto& segment = p.segments[i];
+		Vec2 e0 = toStereographic(p.vertices[segment.endpoints[0]]);
+		Vec2 e1 = toStereographic(p.vertices[segment.endpoints[1]]);
+
+		auto addSegment = [&](i32 i0, i32 i1) {
+			tilingBackgroundShader.set(shaderArray("indices", indexCount), i0);
+			indexCount++;
+			tilingBackgroundShader.set(shaderArray("indices", indexCount), i1);
+			indexCount++;
+		};
+
+		i32 i0 = segment.endpoints[0];
+		i32 i1 = segment.endpoints[1];
+
+		if (segment.connectedThroughHemisphere) {
+			const auto stereographicLine = ::stereographicLine(e0, e1);
+			const auto boundaryIntersections = stereographicLineVsCircleIntersection(stereographicLine, Constants::boundary);
+			if (boundaryIntersections.size() == 2) {
+				auto int0 = boundaryIntersections[0];
+				auto int1 = boundaryIntersections[1];
+				const auto e0ToE1Dir = e1 - e0;
+				const auto i1InTheSameDirectionAsE1 = dot(int1, e0ToE1Dir) > 0.0f;
+				if (!i1InTheSameDirectionAsE1) {
+					std::swap(int0, int1);
+				}
+				/*renderer.stereographicSegment(i0, e0, color);
+				renderer.stereographicSegment(i1, e1, color);*/
+				addSegment(i0, addVertex(int0));
+				addSegment(i1, addVertex(int1));
+			}
+
+			/*const auto a0 = addVertex(antipodalPoint(e0));
+			const auto a1 = addVertex(antipodalPoint(e1));
+			addSegment(a0, i1);
+			addSegment(a1, i0);*/
+		} else {
+			addSegment(i0, i1);
+		}
+	}
+	tilingBackgroundShader.set("indexCount", int(indexCount));
+
 	TilingBackgroundInstance instance{};
 	drawInstances(tilingBackgroundVao, gfx.instancesVbo, constView(instance), quad2dPtDrawInstances);
 	glEnable(GL_BLEND);
