@@ -1,60 +1,33 @@
 {
-    "walls": [
-        {
-            "endpoint0": [
-                -1,
-                -8.74228e-08
-            ],
-            "endpoint1": [
-                1,
-                0
-            ],
-            "type": 1
-        },
-        {
-            "endpoint0": [
-                0,
-                0
-            ],
-            "endpoint1": [
-                -4.37114e-08,
-                1
-            ],
-            "type": 1
-        }
-    ],
+    "walls": [],
     "lasers": [
         {
             "position": [
-                -0.353553,
-                0.353553
+                0.5,
+                0
             ],
             "color": [
                 0,
                 0,
                 1
             ],
-            "angle": 0.244979,
-            "positionLocked": true
+            "angle": 0,
+            "positionLocked": false
         }
     ],
-    "mirrors": [
-        {
-            "positionLocked": true,
-            "center": [
-                5.96244e-09,
-                -0.5
-            ],
-            "normalAngle": 1.5708,
-            "wallType": 1,
-            "length": 0.6
-        }
-    ],
+    "mirrors": [],
     "targets": [
         {
             "position": [
-                0.353553,
-                0.353553
+                1.1924881e-08,
+                -1
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                1,
+                0
             ],
             "radius": 0.1
         }

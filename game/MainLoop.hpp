@@ -32,14 +32,14 @@ struct MainLoop {
 
 	enum class State {
 		MAIN_MENU,
-		SOUND_SETTINGS,
+		SETTINGS,
 		GAME, 
 		EDITOR, 
 		LEVEL_SELECT, 
 		TRANSITION_TO_LEVEL,
 		STATELESS_TRANSITION,
 		CONGRATULATIONS,
-	} state = State::MAIN_MENU;
+	} state = State::EDITOR;
 
 	void switchToState(State currentState, State newState);
 	void stateUpdate(State state);

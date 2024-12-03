@@ -95,7 +95,7 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	renderer.render(e, s, false, invalidGameStateAnimationT);
 
 	if (!isEditorPreviewLevelLoaded()) {
-		const auto uiResult = updateUi(renderer, levelComplete);
+		const auto uiResult = updateUi(renderer, audio, levelComplete);
 		if (uiResult.has_value()) {
 			result = *uiResult;
 		}
@@ -104,7 +104,7 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	return result;
 }
 
-std::optional<Game::Result> Game::updateUi(GameRenderer& r, bool levelComplete) {
+std::optional<Game::Result> Game::updateUi(GameRenderer& r, GameAudio& audio, bool levelComplete) {
 	std::optional<Result> result;
 	auto uiCursorPos = Ui::cursorPosUiSpace();
 
@@ -153,7 +153,7 @@ std::optional<Game::Result> Game::updateUi(GameRenderer& r, bool levelComplete) 
 			auto size = Ui::textBoundingRectSize(height, mainMenuButtonText, r.font, r);
 			auto pos = Ui::rectPositionRelativeToCorner(Vec2(-0.5f, 0.5f), size, padding);
 			r.gameTextCentered(pos, height, mainMenuButtonText, mainMenuButton.hoverAnimationT);
-			if (buttonPosSize(pos, size, mainMenuButton.hoverAnimationT, uiCursorPos)) {
+			if (gameButtonPosSize(audio, pos, size, mainMenuButton.hoverAnimationT, uiCursorPos)) {
 				result = ResultGoToMainMenu{};
 			}
 		}
@@ -163,7 +163,7 @@ std::optional<Game::Result> Game::updateUi(GameRenderer& r, bool levelComplete) 
 			auto size = Ui::textBoundingRectSize(height, skipButtonText, r.font, r);
 			auto pos = Ui::rectPositionRelativeToCorner(Vec2(0.5f, 0.5f), size, padding);
 			r.gameTextCentered(pos, height, skipButtonText, skipButton.hoverAnimationT);
-			if (buttonPosSize(pos, size, skipButton.hoverAnimationT, uiCursorPos)) {
+			if (gameButtonPosSize(audio, pos, size, skipButton.hoverAnimationT, uiCursorPos)) {
 				result = ResultSkipLevel{};
 			}
 		}

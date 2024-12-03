@@ -1,17 +1,40 @@
 {
-    "walls": [],
+    "walls": [
+        {
+            "endpoint0": [
+                -1,
+                -8.74228e-08
+            ],
+            "endpoint1": [
+                1,
+                0
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0,
+                0
+            ],
+            "endpoint1": [
+                -4.37114e-08,
+                1
+            ],
+            "type": 1
+        }
+    ],
     "lasers": [
         {
             "position": [
-                -0.7,
-                -6.11959e-08
+                -0.353553,
+                0.353553
             ],
             "color": [
                 0,
                 0,
                 1
             ],
-            "angle": 4.70457,
+            "angle": 0.244979,
             "positionLocked": true
         }
     ],
@@ -19,20 +42,10 @@
         {
             "positionLocked": true,
             "center": [
-                -3.0598e-08,
-                0.7
+                5.96244e-09,
+                -0.5
             ],
-            "normalAngle": 4.37114e-08,
-            "wallType": 1,
-            "length": 0.6
-        },
-        {
-            "positionLocked": true,
-            "center": [
-                0.7,
-                0
-            ],
-            "normalAngle": -1.5708,
+            "normalAngle": 1.5708,
             "wallType": 1,
             "length": 0.6
         }
@@ -40,29 +53,8 @@
     "targets": [
         {
             "position": [
-                -0.4,
-                -3.49691e-08
-            ],
-            "radius": 0.1
-        },
-        {
-            "position": [
-                -1.74846e-08,
-                0.4
-            ],
-            "radius": 0.1
-        },
-        {
-            "position": [
-                0.4,
-                0
-            ],
-            "radius": 0.1
-        },
-        {
-            "position": [
-                4.76995e-09,
-                -0.4
+                0.353553,
+                0.353553
             ],
             "radius": 0.1
         }

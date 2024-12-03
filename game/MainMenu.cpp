@@ -40,51 +40,58 @@ MainMenu::MainMenu() {
 	f32 smallTitleSize = 0.05f;
 	const auto padding = 0.008f;
 
-	{
-		menuUi.titleId0 = menuUi.layout.addBlock(titleSize);
-		menuUi.titleId1 = menuUi.layout.addBlock(titleSize);
-
-		std::string_view buttonNames[]{
-			playButtonText,
-			levelSelectButtonText,
-			editorButtonText,
-			settingsButtonText,
-			exitButtonText,
+	auto makeButton = [](const char* text, Ui::CenteredHorizontalListLayout& layout) {
+		return MainMenu::Button{
+			.id = layout.addBlock(buttonSize),
+			.text = text,
+			.hoverAnimationT = 0.0f,
 		};
-		menuUi.layout.addPadding(padding); // additional padding
-		for (const auto& name : buttonNames) {
-			menuUi.layout.addPadding(padding);
-			addButton(menuUi.buttons, menuUi.layout, name, buttonSize);
-		}
+	};
+
+	{
+		auto& ui = menuUi;
+		ui.titleId0 = ui.layout.addBlock(titleSize);
+		ui.titleId1 = ui.layout.addBlock(titleSize);
+
+		ui.layout.addPadding(padding); // additional padding
+		ui.playButton = makeButton("play", ui.layout);
+		ui.layout.addPadding(padding);
+		ui.levelSelectButton = makeButton("level select", ui.layout);
+		ui.layout.addPadding(padding);
+		ui.editorButton = makeButton("editor", ui.layout);
+		ui.layout.addPadding(padding);
+		ui.settingsButton = makeButton("settings", ui.layout);
+		ui.layout.addPadding(padding);
+		ui.exitButton = makeButton("exit", ui.layout);
 	}
 	{
+		auto& ui = settingsUi;
 		auto sliderInput = [&](std::string_view name) -> SliderInput {
 			return SliderInput{
 				.name = name,
-				.id = settingsUi.layout.addBlock(buttonSize),
+				.id = ui.layout.addBlock(buttonSize),
 			};
 		};
-		settingsUi.titleId = settingsUi.layout.addBlock(smallTitleSize);
+		ui.titleId = ui.layout.addBlock(smallTitleSize);
 		/*soundSettingsUi.masterVolumeSliderIndex = addSliderInput(masterVolumeSliderName);
 		soundSettingsUi.layout.addPadding(padding);*/
 
-		settingsUi.volumeSlider = sliderInput(soundEffectVolumeSliderName);
-		settingsUi.layout.addPadding(padding);
+		ui.volumeSlider = sliderInput(soundEffectVolumeSliderName);
+		ui.layout.addPadding(padding);
 
 		auto toggleButton = [&](const char* text) {
 			return ToggleButton{
-				.id = settingsUi.layout.addBlock(buttonSize),
+				.id = ui.layout.addBlock(buttonSize),
 				.text = text,
 			};
 		};
 
-		settingsUi.drawBackgroundsButton = toggleButton("backgrounds");
-		settingsUi.fullscreenButton = toggleButton("fullscreen");
+		ui.drawBackgroundsButton = toggleButton("backgrounds");
+		ui.fullscreenButton = toggleButton("fullscreen");
 
 		//soundSettingsUi.musicVolumeSliderIndex = addSliderInput(musicVolumeSliderName);
 		//soundSettingsUi.layout.addPadding(padding);
-
-		addButton(settingsUi.buttons, settingsUi.layout, backButtonText, buttonSize);
+		ui.backButton = makeButton("back", ui.layout);
 	}
 	{
 		auto& ui = congratulationsUi;
@@ -95,14 +102,12 @@ MainMenu::MainMenu() {
 		ui.layout.addPadding(padding);
 		ui.layout.addPadding(padding);
 		ui.layout.addPadding(padding);
-		std::string_view buttonNames[]{
-			mainMenuButtonText,
-			levelSelectButtonText,
-		};
-		for (const auto& name : buttonNames) {
-			ui.layout.addPadding(padding);
-			addButton(ui.buttons, ui.layout, name, buttonSize);
-		}
+
+
+		ui.layout.addPadding(padding);
+		ui.mainMenuButton = makeButton("main menu", ui.layout);
+		ui.layout.addPadding(padding);
+		ui.levelSelectButton = makeButton("level select", ui.layout);
 	}
 }
 
@@ -112,66 +117,32 @@ Ui::RectMinMax MainMenu::buttonRect(const GameRenderer& renderer, const Ui::Cent
 	return Ui::centeredTextBoundingRect(pos, block.worldSize(), button.text, renderer.font, renderer);
 }
 
-#include <glfw/include/GLFW/glfw3.h>
+bool MainMenu::button(GameRenderer& renderer, GameAudio& audio, Button& button, Ui::CenteredHorizontalListLayout& layout, Vec2 cursorPos) {
+	const auto rect = buttonRect(renderer, layout, button);	
+	drawButton(renderer, layout, button);
+	return gameButton(audio, rect, button.hoverAnimationT, cursorPos);
+}
 
-MainMenu::Result MainMenu::update(GameRenderer& renderer) {
+#define BUTTON(buttonStruct) button(renderer, audio, buttonStruct, ui.layout, cursorPos)
+
+MainMenu::Result MainMenu::update(GameRenderer& renderer, GameAudio& audio) {
 	uiSceneBegin(renderer);
 
-	static std::optional<Vec2T<i32>> lastSize;
-	static std::optional<Vec2T<i32>> lastPos;
-	auto monitor = glfwGetPrimaryMonitor();
-	GLFWwindow* w = (GLFWwindow*)Window::handle();
-	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-
-	if (Input::isKeyDown(KeyCode::A)) {
-		i32 sizeX;
-		i32 sizeY;
-		i32 posX;
-		i32 posY;
-		glfwGetWindowSize(w, &sizeX, &sizeY);
-		glfwGetWindowPos(w, &posX, &posY);
-		lastSize = Vec2T<i32>(sizeX, sizeY);
-		lastPos = Vec2T<i32>(posX, posY);
-
-		glfwSetWindowMonitor(w, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-	}
-	if (Input::isKeyDown(KeyCode::B)) {
-		glfwSetWindowMonitor(w, NULL, lastPos->x, lastPos->y, lastSize->x, lastSize->y, 0);
-		Window::enableWindowedFullscreen();
-	}
-
 	auto result = Result::NONE;
+	auto& ui = menuUi;
 
-	menuUi.layout.update(renderer.gfx.camera);
-
+	ui.layout.update(renderer.gfx.camera);
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
 
-	for (auto& button : menuUi.buttons) {
-		const auto rect = buttonRect(renderer, menuUi.layout, button);
-		const auto hovered = Ui::isPointInRect(rect, cursorPos);
-		button.update(hovered);
+	drawText(renderer, "Non-eucledian", ui.layout, ui.titleId0);
+	drawText(renderer, "optics", ui.layout, ui.titleId1);
 
-		if (hovered && Input::isMouseButtonDown(MouseButton::LEFT)) {
-			if (button.text == exitButtonText) {
-				Window::close();
-			} else if (button.text == levelSelectButtonText) {
-				result = Result::GO_TO_LEVEL_SELECT;
-			} else if (button.text == settingsButtonText) {
-				result = Result::GO_TO_SOUND_SETTINGS;
-			} else if (button.text == editorButtonText) {
-				result = Result::GO_TO_EDITOR;
-			} else if (button.text == playButtonText) {
-				result = Result::PLAY;
-			}
-		}
-	}
-
-	drawText(renderer, "Non-eucledian", menuUi.layout, menuUi.titleId0);
-	drawText(renderer, "optics", menuUi.layout, menuUi.titleId1);
-	for (const auto& button : menuUi.buttons) {
-		drawButton(renderer, menuUi.layout, button);
-	}
+	if (BUTTON(ui.playButton)) result = Result::PLAY;
+	if (BUTTON(ui.levelSelectButton)) result = Result::GO_TO_LEVEL_SELECT;
+	if (BUTTON(ui.editorButton)) result = Result::GO_TO_EDITOR;
+	if (BUTTON(ui.settingsButton)) result = Result::GO_TO_SETTINGS;
+	if (BUTTON(ui.exitButton)) Window::close();
 
 	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
 	renderer.gfx.drawFilledTriangles();
@@ -180,29 +151,16 @@ MainMenu::Result MainMenu::update(GameRenderer& renderer) {
 	return result;
 }
 
-MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer) {
+MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer, GameAudio& audio) {
 	uiSceneBegin(renderer);
+
+	auto& ui = settingsUi;
 
 	auto result = SettingsResult::NONE;
 
-	settingsUi.layout.update(renderer.gfx.camera);
+	ui.layout.update(renderer.gfx.camera);
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
-
-	for (auto& button : settingsUi.buttons) {
-		const auto rect = buttonRect(renderer, settingsUi.layout, button);
-		const auto hovered = Ui::isPointInRect(rect, cursorPos);
-		button.update(hovered);
-		//Ui::rect(renderer, rect, 0.01f, Color3::WHITE);
-
-		if (Ui::isPointInRect(rect, cursorPos) && Input::isMouseButtonDown(MouseButton::LEFT)) {
-			if (button.text == backButtonText) {
-				result = SettingsResult::GO_BACK;
-			}
-		}
-	}
-
-	drawText(renderer, "settings", settingsUi.layout, settingsUi.titleId);
 	
 	const auto spacingBetween = 0.01f;
 
@@ -230,19 +188,19 @@ MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer) {
 		drawTextAlignedRelativeToCenter(slider.name, block.worldCenter(), sizeY, -1.0f);
 		{
 			// A hacky way to fix text alignment issues.
-			static f32 offset = -0.003f;
+			static f32 offset = -0.007f;
 			//ImGui::SliderFloat("slider offset", &offset, -0.01f, 0.00f);
 
 			const auto sizeY = block.worldSize();
-			Vec2 min = Vec2(renderer.gfx.camera.pos.x + spacingBetween, block.worldPositionBottomY + offset);
+			Vec2 min = Vec2(spacingBetween / renderer.gfx.camera.clipSpaceToWorldSpace()[0][0], block.worldPositionBottomY + offset);
 			Vec2 max = Vec2(0.2f, min.y + sizeY);
 			const auto mid = (min + max) / 2.0f;
 
 			f32 width = sizeY;
 			f32 radius = width / 2.0f;
 
-			const auto sliderMinX = min.x + radius;
-			const auto sliderMaxX = max.x - radius;
+			const auto sliderMinX = min.x + radius / renderer.gfx.camera.clipSpaceToWorldSpace()[0][0];
+			const auto sliderMaxX = max.x - radius / renderer.gfx.camera.clipSpaceToWorldSpace()[0][0];
 			Ui::line(
 				renderer,
 				Vec2(sliderMinX, mid.y),
@@ -309,16 +267,14 @@ MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer) {
 		bool activated = false;
 		if (hovered && Input::isMouseButtonDown(MouseButton::LEFT)) {
 			value = !value;
+			audio.playSoundEffect(audio.uiClickSound);
 			activated = true;
 		}
 		updateConstantSpeedT(button.hoverAnimationT, buttonHoverAnimationDuration, hovered);
 		return activated;
 	};
 
-
-	for (const auto& button : settingsUi.buttons) {
-		drawButton(renderer, settingsUi.layout, button);
-	}
+	drawText(renderer, "settings", settingsUi.layout, settingsUi.titleId);
 
 	bool modified = false;
 	modified |= toggleButton(settings.graphics.drawBackgrounds, settingsUi.drawBackgroundsButton);
@@ -327,6 +283,10 @@ MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer) {
 
 	if (modified) {
 		result = SettingsResult::PROPAGATE_SETTINGS;
+	}
+
+	if (button(renderer, audio, ui.backButton, ui.layout, cursorPos)) {
+		result = SettingsResult::GO_BACK;
 	}
 
 	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
@@ -351,7 +311,7 @@ void MainMenu::uiSceneBegin(GameRenderer& renderer) {
 	renderer.renderTilingBackground();
 }
 
-MainMenu::CongratulationsScreenResult MainMenu::congratulationsScreenUpdate(GameRenderer& renderer) {
+MainMenu::CongratulationsScreenResult MainMenu::congratulationsScreenUpdate(GameRenderer& renderer, GameAudio& audio) {
 	uiSceneBegin(renderer);
 
 	auto result = CongratulationsScreenResult::NONE;
@@ -363,27 +323,13 @@ MainMenu::CongratulationsScreenResult MainMenu::congratulationsScreenUpdate(Game
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
 
-	for (auto& button : ui.buttons) {
-		const auto rect = buttonRect(renderer, ui.layout, button);
-		const auto hovered = Ui::isPointInRect(rect, cursorPos);
-		button.update(hovered);
-
-		if (hovered && Input::isMouseButtonDown(MouseButton::LEFT)) {
-			if (button.text == levelSelectButtonText) {
-				result = CongratulationsScreenResult::GO_TO_LEVEL_SELECT;
-			} else if (button.text == mainMenuButtonText) {
-				result = CongratulationsScreenResult::GO_TO_MAIN_MENU;
-			}
-		}
-	}
-
+	// https://english.stackexchange.com/questions/240468/whats-the-difference-between-you-have-completed-the-task-and-you-com
 	drawText(renderer, "Congratulations", ui.layout, ui.titleId0);
 	drawText(renderer, "you've completed", ui.layout, ui.titleId1);
 	drawText(renderer, "all the levels", ui.layout, ui.titleId2);
-	// https://english.stackexchange.com/questions/240468/whats-the-difference-between-you-have-completed-the-task-and-you-com
-	for (const auto& button : ui.buttons) {
-		drawButton(renderer, ui.layout, button);
-	}
+
+	if (BUTTON(ui.levelSelectButton)) result = CongratulationsScreenResult::GO_TO_LEVEL_SELECT; 
+	if (BUTTON(ui.mainMenuButton)) result = CongratulationsScreenResult::GO_TO_MAIN_MENU;
 
 	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
 	renderer.gfx.drawFilledTriangles();

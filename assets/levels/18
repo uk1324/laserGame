@@ -2,56 +2,23 @@
     "walls": [
         {
             "endpoint0": [
-                -1,
-                -8.742278e-08
+                -0.707107,
+                -0.707107
             ],
             "endpoint1": [
-                1,
-                0
+                0.707107,
+                0.707107
             ],
             "type": 1
         },
         {
             "endpoint0": [
-                -1,
-                -8.742278e-08
+                -0.707107,
+                0.707107
             ],
             "endpoint1": [
-                -4.371139e-08,
-                1
-            ],
-            "type": 1
-        },
-        {
-            "endpoint0": [
-                -4.371139e-08,
-                1
-            ],
-            "endpoint1": [
-                1,
-                0
-            ],
-            "type": 1
-        },
-        {
-            "endpoint0": [
-                2.3849762e-09,
-                -0.2
-            ],
-            "endpoint1": [
-                0,
-                0
-            ],
-            "type": 1
-        },
-        {
-            "endpoint0": [
-                9.539905e-09,
-                -0.8
-            ],
-            "endpoint1": [
-                1.1924881e-08,
-                -1
+                0.707107,
+                -0.707107
             ],
             "type": 1
         }
@@ -59,66 +26,57 @@
     "lasers": [
         {
             "position": [
-                0.3535535,
-                -0.35355327
+                8.34742e-09,
+                -0.7
             ],
             "color": [
                 0,
                 0,
                 1
             ],
-            "angle": -0.78539765,
-            "positionLocked": true
-        },
-        {
-            "position": [
-                -0.35355338,
-                0.35355338
-            ],
-            "color": [
-                0,
-                1,
-                0
-            ],
-            "angle": 2.3561945,
+            "angle": 1.5708,
             "positionLocked": true
         }
     ],
     "targets": [
         {
             "position": [
-                -0.35355332,
-                -0.35355344
+                -0.5,
+                -4.37114e-08
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                0.5,
+                0
             ],
             "radius": 0.1
         }
     ],
-    "triggers": [
+    "portalPairs": [
         {
-            "position": [
-                0.42426407,
-                0.42426407
-            ],
-            "color": [
-                0,
-                1,
-                0.5
-            ],
-            "index": 0
+            "portal0": {
+                "center": [
+                    0.46194,
+                    0.191342
+                ],
+                "positionLocked": false,
+                "normalAngle": -1.1781,
+                "rotationLocked": false,
+                "wallType": 2
+            },
+            "portal1": {
+                "center": [
+                    -0.46194,
+                    0.191342
+                ],
+                "positionLocked": false,
+                "normalAngle": -1.9635,
+                "rotationLocked": false,
+                "wallType": 2
+            }
         }
     ],
-    "doors": [
-        {
-            "endpoint0": [
-                9.539905e-09,
-                -0.8
-            ],
-            "endpoint1": [
-                2.3849762e-09,
-                -0.2
-            ],
-            "triggerIndex": 0,
-            "openByDefault": false
-        }
-    ]
+    "triggers": []
 }

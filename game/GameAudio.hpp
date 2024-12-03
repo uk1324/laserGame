@@ -35,6 +35,7 @@ struct GameAudio {
 	AudioBuffer targetOnSound;
 	AudioBuffer doorOpenSound;
 	AudioBuffer errorSound;
+	AudioBuffer uiClickSound;
 
 	SoundSource doorOpeningSource;
 

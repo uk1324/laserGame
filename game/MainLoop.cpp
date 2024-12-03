@@ -119,7 +119,7 @@ void MainLoop::update() {
 		using enum State;
 
 	case MAIN_MENU: {
-		const auto result = mainMenu.update(renderer);
+		const auto result = mainMenu.update(renderer, audio);
 		
 		switch (result) {
 			using enum MainMenu::Result;
@@ -134,8 +134,8 @@ void MainLoop::update() {
 			break;
 		}
 
-		case GO_TO_SOUND_SETTINGS:
-			doBasicTransition(State::SOUND_SETTINGS);
+		case GO_TO_SETTINGS:
+			doBasicTransition(State::SETTINGS);
 			break;
 
 		case GO_TO_LEVEL_SELECT:
@@ -152,8 +152,8 @@ void MainLoop::update() {
 		break;
 	}
 
-	case SOUND_SETTINGS: {
-		const auto result = mainMenu.settingsUpdate(renderer);
+	case SETTINGS: {
+		const auto result = mainMenu.settingsUpdate(renderer, audio);
 		switch (result) {
 			using enum MainMenu::SettingsResult;
 		case GO_BACK:
@@ -262,7 +262,7 @@ void MainLoop::update() {
 		
 
 	case LEVEL_SELECT: {
-		const auto result = levelSelect.update(renderer, levels, gameSave);
+		const auto result = levelSelect.update(renderer, audio, levels, gameSave);
 		std::visit(overloaded{
 			[](const LevelSelect::ResultNone&) {},
 			[&](const LevelSelect::ResultGoToLevel& r) {
@@ -319,7 +319,7 @@ void MainLoop::update() {
 	}
 
 	case CONGRATULATIONS: {
-		const auto result = mainMenu.congratulationsScreenUpdate(renderer);
+		const auto result = mainMenu.congratulationsScreenUpdate(renderer, audio);
 		switch (result) {
 			using enum MainMenu::CongratulationsScreenResult;
 
@@ -376,13 +376,13 @@ void MainLoop::stateUpdate(State state) {
 	switch (state) {
 		// These don't inspect the result on purpose. This function should be called from the transition functions and it doesn't make sense to begin a transition while one is already happening.
 		using enum MainLoop::State;
-	case MAIN_MENU: mainMenu.update(renderer); break;
-	case SOUND_SETTINGS: mainMenu.settingsUpdate(renderer); break;
+	case MAIN_MENU: mainMenu.update(renderer, audio); break;
+	case SETTINGS: mainMenu.settingsUpdate(renderer, audio); break;
 	case EDITOR: editor.update(renderer); break;
-	case LEVEL_SELECT: levelSelect.update(renderer, levels, gameSave); break;
+	case LEVEL_SELECT: levelSelect.update(renderer, audio, levels, gameSave); break;
 		// There should be a level loaded before transitioning into game.
 	case GAME: game.update(renderer, audio); break;
-	case CONGRATULATIONS: mainMenu.congratulationsScreenUpdate(renderer); break;
+	case CONGRATULATIONS: mainMenu.congratulationsScreenUpdate(renderer, audio); break;
 
 		// It doesn't make sense to transition from or into these states.
 	case TRANSITION_TO_LEVEL:

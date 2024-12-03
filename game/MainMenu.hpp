@@ -1,6 +1,7 @@
 #pragma once
 
 #include <game/Ui.hpp>
+#include <game/GameAudio.hpp>
 #include <game/SettingsData.hpp>
 #include <variant>
 
@@ -21,6 +22,8 @@ struct MainMenu {
 		void update(bool hovered);
 	};
 
+	static bool button(GameRenderer& renderer, GameAudio& audio, Button& button, Ui::CenteredHorizontalListLayout& layout, Vec2 cursorPos);
+
 	static Ui::RectMinMax buttonRect(const GameRenderer& renderer, const Ui::CenteredHorizontalListLayout& layout, const Button& button);
 
 	struct SliderInput {
@@ -32,7 +35,7 @@ struct MainMenu {
 	enum class Result {
 		NONE,
 		GO_TO_LEVEL_SELECT,
-		GO_TO_SOUND_SETTINGS,
+		GO_TO_SETTINGS,
 		GO_TO_EDITOR,
 		PLAY,
 	};
@@ -43,12 +46,12 @@ struct MainMenu {
 		NONE,
 	};
 
-	Result update(GameRenderer& renderer);
-	SettingsResult settingsUpdate(GameRenderer& renderer);
+	Result update(GameRenderer& renderer, GameAudio& audio);
+	SettingsResult settingsUpdate(GameRenderer& renderer, GameAudio& audio);
 
-	void drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id, f32 hoverT = 0.0f);
+	static void drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id, f32 hoverT = 0.0f);
 
-	void drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button);
+	static void drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button);
 
 	void uiSceneBegin(GameRenderer& renderer);
 
@@ -56,7 +59,12 @@ struct MainMenu {
 		Ui::CenteredHorizontalListLayout layout;
 		i32 titleId0 = INVALID;
 		i32 titleId1 = INVALID;
-		std::vector<Button> buttons;
+
+		Button playButton;
+		Button levelSelectButton;
+		Button editorButton;
+		Button settingsButton;
+		Button exitButton;
 	} menuUi;
 
 	struct ToggleButton {
@@ -68,13 +76,14 @@ struct MainMenu {
 	struct SettingsUi {
 		Ui::CenteredHorizontalListLayout layout;
 		i32 titleId = INVALID;
-		std::vector<Button> buttons;
 
 		SliderInput volumeSlider;
 		i32 soundEffectVolumeSliderIndex = INVALID;
 		ToggleButton drawBackgroundsButton;
 		ToggleButton fullscreenButton;
 		//i32 musicVolumeSliderIndex = INVALID;
+
+		Button backButton;
 
 		struct GrabbedSlider {
 			i32 index;
@@ -88,7 +97,9 @@ struct MainMenu {
 		i32 titleId0 = INVALID;
 		i32 titleId1 = INVALID;
 		i32 titleId2 = INVALID;
-		std::vector<Button> buttons;
+
+		Button mainMenuButton;
+		Button levelSelectButton;
 	} congratulationsUi;
 	enum class CongratulationsScreenResult {
 		NONE,
@@ -96,7 +107,7 @@ struct MainMenu {
 		GO_TO_LEVEL_SELECT
 	};
 
-	CongratulationsScreenResult congratulationsScreenUpdate(GameRenderer& renderer);
+	CongratulationsScreenResult congratulationsScreenUpdate(GameRenderer& renderer, GameAudio& audio);
 
 	ColorRng rng;
 };

@@ -1,44 +1,51 @@
 {
-    "walls": [],
     "lasers": [
         {
             "position": [
-                1.07324e-08,
-                -0.9
+                -0.2,
+                -1.7484556e-08
             ],
             "color": [
                 0,
                 0,
                 1
             ],
-            "angle": 1.5708,
+            "angle": 1.2055966,
             "positionLocked": true
-        }
-    ],
-    "mirrors": [
+        },
         {
-            "positionLocked": true,
-            "center": [
-                -1.74846e-08,
-                0.4
+            "position": [
+                0.2,
+                0
             ],
-            "normalAngle": 1.5708,
-            "wallType": 1,
-            "length": 0.6
+            "color": [
+                0,
+                1,
+                0
+            ],
+            "angle": 1.9359962,
+            "positionLocked": true
         }
     ],
     "targets": [
         {
             "position": [
-                -0.9,
-                -7.86805e-08
+                -0.7,
+                -6.119594e-08
             ],
             "radius": 0.1
         },
         {
             "position": [
-                0.9,
-                0
+                5.9624403e-09,
+                -0.5
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                0.44999996,
+                0.7794229
             ],
             "radius": 0.1
         }

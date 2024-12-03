@@ -1,4 +1,5 @@
 #include <game/LevelSelect.hpp>
+#include <imgui/imgui.h>
 
 LevelSelect::LevelSelect() {
 	for (i32 i = 0; i < squareCountY * squareCountX; i++) {
@@ -6,15 +7,15 @@ LevelSelect::LevelSelect() {
 	}
 }
 
-LevelSelect::Result LevelSelect::update(GameRenderer& renderer, const Levels& levels, const GameSave& save) {
+LevelSelect::Result LevelSelect::update(GameRenderer& renderer, GameAudio& audio, const Levels& levels, const GameSave& save) {
 	renderer.renderTilingBackground();
 	Result result = ResultNone();
 	renderer.textColorRng.seed(renderer.textColorRngSeed);
 	auto& r = renderer;
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
-
-	const auto boxHeight = 0.7f;
+	static f32 boxHeight = 0.87f;
+	//ImGui::SliderFloat("boxHeight", &boxHeight, 0.7f, 1.0f);
 	const auto squareSizeY = boxHeight / squareCountY;
 	const auto squareSize = Ui::equalSizeReativeToY(r, squareSizeY);
 	const auto boxWidth = Ui::ySizeToXSize(r, boxHeight) * f32(squareCountX) / f32(squareCountY);
@@ -31,7 +32,7 @@ LevelSelect::Result LevelSelect::update(GameRenderer& renderer, const Levels& le
 			const auto index = yi * squareCountX + xi;
 			auto& hoverT = buttons[index].hoverAnimationT;
 
-			if (buttonPosSize(squarePos, squareSize, hoverT, cursorPos)) {
+			if (gameButtonPosSize(audio, squarePos, squareSize, hoverT, cursorPos)) {
 				result = ResultGoToLevel{
 					.index = index
 				};
@@ -52,7 +53,7 @@ LevelSelect::Result LevelSelect::update(GameRenderer& renderer, const Levels& le
 		const auto size = Ui::textBoundingRectSize(height, backButtonText, renderer.font, renderer);
 		const auto pos = Ui::rectPositionRelativeToCorner(Vec2(-0.5f, 0.5f), size, Ui::equalSizeReativeToX(renderer, 0.01f));
 
-		if (buttonPosSize(pos, size, backButton.hoverAnimationT, cursorPos)) {
+		if (gameButtonPosSize(audio, pos, size, backButton.hoverAnimationT, cursorPos)) {
 			result = ResultGoBack();
 		}
 

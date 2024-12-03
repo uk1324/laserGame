@@ -18,6 +18,7 @@ GameAudio::GameAudio()
 	, doorOpenSound(SOUND("door.ogg"))
 	// https://pixabay.com/sound-effects/error-message-182475/
 	, errorSound(SOUND("error.ogg"))
+	, uiClickSound(SOUND("click.ogg"))
 	, doorOpeningSource(SoundSource{ .source = AudioSource::generate() })
 {
 
