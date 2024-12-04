@@ -37,6 +37,9 @@ int main(int argc, char** argv) {
 		copy_file(executablePath, gameOutputPath / ("laser game" + executablePath.extension().string()), copy_options::overwrite_existing);
 
 		for (const auto& dirEntry : std::filesystem::directory_iterator("./assets/levels")) {
+			if (dirEntry.is_directory()) {
+				continue;
+			}
 			const auto& inPath = dirEntry.path();
 			const auto json = tryLoadJsonFromFile(inPath.string());
 			if (!json.has_value()) {
@@ -51,6 +54,7 @@ int main(int argc, char** argv) {
 			// minifying json
 			Json::print(file, *json);
 		}
+		copy("./assets/sound", gameOutputPath / "assets/sound", copy_options::recursive | copy_options::overwrite_existing);
 		
 	}
 	catch (const filesystem_error& e) {

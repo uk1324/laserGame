@@ -300,19 +300,30 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 				if (dot(laserTangentAtHitPoint, laserDirection) > 0.0f) {
 					laserTangentAtHitPoint = -laserTangentAtHitPoint;
 				}
-				//Dbg::line(hit.point, hit.point + laserTangentAtHitPoint * 0.1f, 0.02f, Color3::RED);
+				Dbg::line(hit.point, hit.point + laserTangentAtHitPoint * 0.1f, 0.02f, Color3::RED);
 
 				auto normalAtHitPoint = stereographicLineNormalAt(hit.line, hit.point);
 				if (dot(normalAtHitPoint, laserTangentAtHitPoint) < 0.0f) {
 					normalAtHitPoint = -normalAtHitPoint;
 				}
-				//Dbg::line(hit.point, hit.point + normalAtHitPoint * 0.1f, 0.01f);
+				Dbg::line(hit.point, hit.point + normalAtHitPoint * 0.1f, 0.01f);
 
-				auto hitOnNormalSide = [&normalAtHitPoint, &hit](f32 hitObjectNormalAngle) {
-					bool result = dot(Vec2::oriented(hitObjectNormalAngle), normalAtHitPoint) > 0.0f;
-					if (hit.objectMirrored) {
-						result = !result;
+				auto normalAngle = [](f32 normalAngle, Vec2 pointWithNormalAngle, StereographicLine lineWithNormalAngleAtPoint, bool isMirrored) {
+					if (isMirrored) {
+						// Mirrors the angle by calculating the difference of the normals. You can think of the hit.line as a full circle.
+						const auto diff = stereographicLineNormalAt(lineWithNormalAngleAtPoint, pointWithNormalAngle).angle() - stereographicLineNormalAt(lineWithNormalAngleAtPoint, antipodalPoint(pointWithNormalAngle)).angle();
+						normalAngle -= diff;
+						normalAngle += PI<f32>;
+						return normalAngle;
+					} else {
+						return normalAngle;
 					}
+				};
+
+				auto hitOnNormalSide = [&normalAtHitPoint, &hit, &normalAngle](f32 hitObjectNormalAngle, Vec2 center) {
+					hitObjectNormalAngle = normalAngle(hitObjectNormalAngle, center, hit.line, hit.objectMirrored);
+					Dbg::line(hit.point, hit.point + Vec2::oriented(hitObjectNormalAngle) * 0.1f, 0.01f, Color3::MAGENTA);
+					bool result = dot(Vec2::oriented(hitObjectNormalAngle), normalAtHitPoint) > 0.0f;
 					return result;
 				};
 
@@ -360,7 +371,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 						CHECK_NOT_REACHED();
 						return HitResult::END;
 					}
-					const auto hitHappenedOnNormalSide = hitOnNormalSide(mirror->normalAngle);
+					const auto hitHappenedOnNormalSide = hitOnNormalSide(mirror->normalAngle, mirror->center);
 					if (!hitHappenedOnNormalSide) {
 						switch (mirror->wallType) {
 						case EditorMirrorWallType::REFLECTING:
@@ -381,7 +392,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 						return HitResult::END;
 					}
 					const auto inPortal = portalPair->portals[hit.index];
-					const auto hitHappenedOnNormalSide = hitOnNormalSide(inPortal.normalAngle);
+					const auto hitHappenedOnNormalSide = hitOnNormalSide(inPortal.normalAngle, inPortal.center);
 					if (!hitHappenedOnNormalSide) {
 						switch (inPortal.wallType) {
 						case EditorPortalWallType::PORTAL:
@@ -399,11 +410,27 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 					const auto outPortalEndpoints = outPortal.endpoints();
 					const auto outPortalLine = stereographicLine(outPortalEndpoints[0], outPortalEndpoints[1]);
 
-					auto dist = stereographicDistance(inPortal.center, hit.point);
-					if (dot(hit.point - inPortal.center, Vec2::oriented(inPortal.normalAngle + PI<f32> / 2.0f)) > 0.0f) {
+					const auto inPortalNormalAngle = normalAngle(inPortal.normalAngle, inPortal.center, inPortalLine, hit.objectMirrored);
+
+					const auto inPortalCenter = hit.objectMirrored ? antipodalPoint(inPortal.center) : inPortal.center;
+					auto dist = stereographicDistance(inPortalCenter, hit.point);
+
+					// Choose the positive and negative directions of distance. The normal of the portal rotated by 90deg is the negative direction.
+					if (dot(hit.point - inPortalCenter, Vec2::oriented(inPortalNormalAngle + PI<f32> / 2.0f)) > 0.0f) {
 						dist *= -1.0f;
 					}
+					// If the object is rotated the mirror normal is rotated so the positive direction is switched.
+					if (hit.objectMirrored) {
+						dist *= -1.0f;
+					}
+
 					laserPosition = moveOnStereographicGeodesic(outPortal.center, outPortal.normalAngle + PI<f32> / 2.0f, dist);
+					bool outMirrored = false;
+					// If the out point is out of the boundary the make it antipodal.
+					if (laserPosition.length() >= Constants::boundary.radius + 0.001f) {
+						outMirrored = true;
+						laserPosition = antipodalPoint(laserPosition);
+					}
 
 					//auto normalAtHitpoint = stereographicLineNormalAt(inPortalLine, hitPoint);
 
@@ -415,12 +442,14 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 					//	normalAtHitpoint = -normalAtHitpoint;
 					//}
 
+					const auto outPortalNormalAngle = normalAngle(outPortal.normalAngle, outPortal.center, outPortalLine, outMirrored);
+
 					auto outPortalNormalAtOutPoint = stereographicLineNormalAt(outPortalLine, laserPosition);
-					if (dot(outPortalNormalAtOutPoint, Vec2::oriented(outPortal.normalAngle)) > 0.0f) {
+					if (dot(outPortalNormalAtOutPoint, Vec2::oriented(outPortalNormalAngle)) > 0.0f) {
 						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
 					}
 
-					if (dot(normalAtHitPoint, Vec2::oriented(inPortal.normalAngle)) > 0.0f) {
+					if (dot(normalAtHitPoint, Vec2::oriented(inPortalNormalAngle)) > 0.0f) {
 						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
 					}
 
@@ -428,7 +457,16 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 					auto laserDirectionAngle =
 						laserTangentAtHitPoint.angle() - normalAtHitPoint.angle()
 						+ outPortalNormalAtOutPoint.angle();
+					/*if (outMirrored) {
+						laserDirectionAngle += PI<f32>;
+					}*/
 					laserDirection = Vec2::oriented(laserDirectionAngle);
+					if (hit.objectMirrored) {
+						laserDirection = laserDirection.reflectedAroundNormal(outPortalNormalAtOutPoint);
+					}
+					if (outMirrored) {
+						laserDirection = laserDirection.reflectedAroundNormal(outPortalNormalAtOutPoint);
+					}
 
 					hitOnLastIteration = EditorEntity{ hit.id, outPortalIndex };
 					return HitResult::CONTINUE;
@@ -498,6 +536,7 @@ void GameState::update(GameEntities& e, bool objectsInValidState) {
 			auto doubleIntersectionCheck = [](const Hit& hit, std::optional<f32> secondClosestDistance) {
 				// If the closest hit is to close to the laser position sometimes bugs happen.
 				if (hit.distance < 0.001f) {
+					// TODO: Why is this false?
 					return false;
 				}
 

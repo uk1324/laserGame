@@ -10,8 +10,8 @@
                 0,
                 1
             ],
-            "angle": 1.2055966,
-            "positionLocked": true
+            "angle": 1.2055969,
+            "positionLocked": false
         },
         {
             "position": [
@@ -24,7 +24,7 @@
                 0
             ],
             "angle": 1.9359962,
-            "positionLocked": true
+            "positionLocked": false
         }
     ],
     "targets": [

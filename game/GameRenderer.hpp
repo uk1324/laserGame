@@ -26,8 +26,8 @@ struct GameRenderer {
 	static GameRenderer make();
 
 	//static constexpr Vec3 absorbingColor = Color3::WHITE / 5.0f;
-	static constexpr Vec3 absorbingColor = Vec3(37, 31, 46) / 256.0f;
-	static constexpr Vec3 reflectingColor = Color3::WHITE / 1.0f;
+	static Vec3 absorbingColor;
+	static Vec3 reflectingColor;
 
 	static Vec3 wallColor(EditorWallType type);
 

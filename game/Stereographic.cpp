@@ -561,7 +561,8 @@ StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 e
 		Dbg::disk(pointOnBoundary, 0.01f);*/
 		result.add(SegmentEndpoints(pointInside, pointOnBoundary));
 	};
-
+	
+	// TODO: Code in game update relies on the order these are added. First the segment inside next the one wrapped around.
 	if (insideBoundary0) {
 		addSegmentExtendedOutOfBoundary(endpoint0, intersections[0]);
 		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint1), -intersections[0]);

@@ -39,10 +39,12 @@ struct MainLoop {
 		TRANSITION_TO_LEVEL,
 		STATELESS_TRANSITION,
 		CONGRATULATIONS,
-	} state = State::EDITOR;
+	} state = State::MAIN_MENU;
+
+	void previewEditorLevelInGame();
 
 	void switchToState(State currentState, State newState);
-	void stateUpdate(State state);
+	void stateUpdate(State stateToUpdate);
 
 	struct TransitionToLevelState {
 		State startState;
@@ -57,6 +59,13 @@ struct MainLoop {
 		State startState;
 		State endState;
 	} statelessTransition;
+
+	using TransitionState = std::variant<TransitionToLevelState, StatelessTransitionState>;
+
+	// Quueuing transition, because the transitions are long and the player can click a new button before the transition is finished. This played a sound effect, but did nothing.
+	std::optional<TransitionState> queuedUpTransition;
+
+	bool isTransitioning() const;
 
 	void doBasicTransition(State endState);
 };

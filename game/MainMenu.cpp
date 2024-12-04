@@ -73,11 +73,13 @@ MainMenu::MainMenu() {
 			};
 		};
 		ui.titleId = ui.layout.addBlock(smallTitleSize);
+		ui.layout.addPadding(padding * 2.0f);
 		/*soundSettingsUi.masterVolumeSliderIndex = addSliderInput(masterVolumeSliderName);
 		soundSettingsUi.layout.addPadding(padding);*/
 
-		ui.volumeSlider = sliderInput(soundEffectVolumeSliderName);
-		ui.layout.addPadding(padding);
+		ui.soundEffectVolumeSlider = sliderInput("sfx volume");
+		ui.musicVolumeSlider = sliderInput("music volume");
+		/*ui.layout.addPadding(padding);*/
 
 		auto toggleButton = [&](const char* text) {
 			return ToggleButton{
@@ -91,6 +93,7 @@ MainMenu::MainMenu() {
 
 		//soundSettingsUi.musicVolumeSliderIndex = addSliderInput(musicVolumeSliderName);
 		//soundSettingsUi.layout.addPadding(padding);
+		ui.layout.addPadding(padding * 2.0f);
 		ui.backButton = makeButton("back", ui.layout);
 	}
 	{
@@ -135,7 +138,7 @@ MainMenu::Result MainMenu::update(GameRenderer& renderer, GameAudio& audio) {
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
 
-	drawText(renderer, "Non-eucledian", ui.layout, ui.titleId0);
+	drawText(renderer, "Non-euclidean", ui.layout, ui.titleId0);
 	drawText(renderer, "optics", ui.layout, ui.titleId1);
 
 	if (BUTTON(ui.playButton)) result = Result::PLAY;
@@ -183,7 +186,7 @@ MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer, GameAu
 	};
 
 	auto slider = [&](f32& value, SliderInput& slider, i32 index) {
-		const auto& block = settingsUi.layout.blocks[slider.id];
+		const auto& block = ui.layout.blocks[slider.id];
 		const auto sizeY = block.worldSize();
 		drawTextAlignedRelativeToCenter(slider.name, block.worldCenter(), sizeY, -1.0f);
 		{
@@ -223,31 +226,31 @@ MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer, GameAu
 
 			if (cursorPos.distanceTo(diskPos) < diskRadius &&
 				Input::isMouseButtonDown(MouseButton::LEFT) &&
-				!settingsUi.grabbedSlider.has_value()) {
+				!ui.grabbedSlider.has_value()) {
 
-				settingsUi.grabbedSlider = SettingsUi::GrabbedSlider{
+				ui.grabbedSlider = SettingsUi::GrabbedSlider{
 					.index = index,
 					.grabOffset = diskPos - cursorPos,
 				};
 			}
 
 			bool active = false;
-			if (Input::isMouseButtonHeld(MouseButton::LEFT) && settingsUi.grabbedSlider.has_value()) {
-				const auto offset = cursorPos.x - sliderMinX + settingsUi.grabbedSlider->grabOffset.x;
+			if (Input::isMouseButtonHeld(MouseButton::LEFT) && ui.grabbedSlider.has_value() && ui.grabbedSlider->index == index) {
+				const auto offset = cursorPos.x - sliderMinX + ui.grabbedSlider->grabOffset.x;
 				value = offset / (sliderMaxX - sliderMinX);
 				value = std::clamp(value, 0.0f, 1.0f);
 				active = true;
 			}
 
-			if (Input::isMouseButtonUp(MouseButton::LEFT) && settingsUi.grabbedSlider.has_value()) {
-				settingsUi.grabbedSlider = std::nullopt;
+			if (Input::isMouseButtonUp(MouseButton::LEFT) && ui.grabbedSlider.has_value()) {
+				ui.grabbedSlider = std::nullopt;
 			}
 			return active;
 		}
 	};
 
 	auto toggleButton = [&](bool& value, ToggleButton& button) {
-		const auto& block = settingsUi.layout.blocks[button.id];
+		const auto& block = ui.layout.blocks[button.id];
 		const auto sizeY = block.worldSize();
 		const auto text = value ? "on" : "off";
 		const auto color = value ? Color3::GREEN : Color3::RED;
@@ -274,12 +277,13 @@ MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer, GameAu
 		return activated;
 	};
 
-	drawText(renderer, "settings", settingsUi.layout, settingsUi.titleId);
+	drawText(renderer, "settings", ui.layout, ui.titleId);
 
 	bool modified = false;
-	modified |= toggleButton(settings.graphics.drawBackgrounds, settingsUi.drawBackgroundsButton);
-	modified |= toggleButton(settings.graphics.fullscreen, settingsUi.fullscreenButton);
-	modified |= slider(settings.audio.soundEffectVolume, settingsUi.volumeSlider, 0);
+	modified |= toggleButton(settings.graphics.drawBackgrounds, ui.drawBackgroundsButton);
+	modified |= toggleButton(settings.graphics.fullscreen, ui.fullscreenButton);
+	modified |= slider(settings.audio.soundEffectVolume, ui.soundEffectVolumeSlider, 0);
+	modified |= slider(settings.audio.musicVolume, ui.musicVolumeSlider, 1);
 
 	if (modified) {
 		result = SettingsResult::PROPAGATE_SETTINGS;

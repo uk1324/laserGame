@@ -16,6 +16,7 @@
 #include <gfx2d/Quad2dPt.hpp>
 #include <game/Paths.hpp>
 #include <gfx2d/DbgGfx2d.hpp>
+#include <imgui/imgui.h>
 
 #define MAKE_VAO(Type) \
 	createInstancingVao<Type##Shader>(gfx.quad2dPtVbo, gfx.quad2dPtIbo, gfx.instancesVbo)
@@ -64,8 +65,8 @@ void GameRenderer::multicoloredSegment(const std::array<Vec2, 2>& endpoints, f32
 
 void GameRenderer::wall(Vec2 e0, Vec2 e1, Vec3 color, bool editor) {
 	if (editor) {
-		gfx.disk(e0, grabbableCircleRadius, Color3::RED);
-		gfx.disk(e1, grabbableCircleRadius, Color3::RED);
+		gfx.disk(e0, grabbableCircleRadius, Color3::YELLOW);
+		gfx.disk(e1, grabbableCircleRadius, Color3::YELLOW);
 	}
 
 	stereographicSegment(e0, e1, color);
@@ -140,7 +141,7 @@ void GameRenderer::renderClear() {
 }
 
 void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 invalidGameStateAnimationT) {
-
+	//ImGui::ColorEdit3("absorbing color", absorbingColor.data());
 	glEnable(GL_STENCIL_TEST);
 	glClear(GL_STENCIL_BUFFER_BIT);
 	{
@@ -195,8 +196,8 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 		}
 
 		if (editor) {
-			gfx.disk(door->endpoints[0], grabbableCircleRadius, Color3::RED);
-			gfx.disk(door->endpoints[1], grabbableCircleRadius, Color3::RED);
+			gfx.disk(door->endpoints[0], grabbableCircleRadius, Color3::YELLOW);
+			gfx.disk(door->endpoints[1], grabbableCircleRadius, Color3::YELLOW);
 		}
 
 		const auto segments = door->segments();
@@ -525,3 +526,8 @@ Vec3 ColorRng::colorRandomHue(f32 s, f32 v) {
 	}
 	return Color3::fromHsv(h, s, v);
 }
+
+
+//Vec3 GameRenderer::absorbingColor = Vec3(37, 31, 46) / 256.0f;
+Vec3 GameRenderer::absorbingColor = Color3::WHITE / 1.0f;
+Vec3 GameRenderer::reflectingColor = Vec3(93) / 256.0f;

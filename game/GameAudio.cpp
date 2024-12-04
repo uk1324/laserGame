@@ -12,12 +12,14 @@ GameAudio::GameAudio()
 	// completetask_0
 	//: levelCompleteSound(SOUND("complete.ogg"))
 	// https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes swosh-30 changed pitch and length by 50%
-	: transitionSwooshSound(SOUND("swoosh.ogg")) 
+	: musicStream(AudioFileStream::make())
+	, transitionSwooshSound(SOUND("swoosh.ogg")) 
 	// https://opengameart.org/content/ui-sounds
 	, targetOnSound(SOUND("on.ogg"))
 	, doorOpenSound(SOUND("door.ogg"))
 	// https://pixabay.com/sound-effects/error-message-182475/
 	, errorSound(SOUND("error.ogg"))
+	// https://opengameart.org/content/zippo-click-sound
 	, uiClickSound(SOUND("click.ogg"))
 	, doorOpeningSource(SoundSource{ .source = AudioSource::generate() })
 {
@@ -33,6 +35,10 @@ GameAudio::GameAudio()
 	for (auto& source : soundEffectSourcePool) {
 		soundEffectSources.push_back(&source);
 	}
+
+	musicStream.useFile(SOUNDS_PATH "Synthwave 421k.ogg");
+	musicStream.loop = true;
+	musicStream.play();
 
 	soundEffectSources.push_back(&doorOpeningSource);
 
@@ -51,6 +57,10 @@ GameAudio::GameAudio()
 //	}
 //	musicStream.update();
 //}
+
+void GameAudio::update() {
+	musicStream.update();
+}
 
 void GameAudio::playSoundEffect(const AudioBuffer& buffer, f32 pitch) {
 	play(soundEffectSourcePool, buffer, soundEffectVolume, pitch);
@@ -112,4 +122,8 @@ void GameAudio::unpauseSoundEffects() {
 void GameAudio::setSoundEffectSourceVolume(SoundSource& source, f32 value) {
 	source.volume = value;
 	source.source.setGain(masterVolume * soundEffectVolume * value);
+}
+
+void GameAudio::setMusicVolume(f32 value) {
+	musicStream.source.setGain(value * 0.25f);
 }

@@ -84,12 +84,6 @@ MainLoop::MainLoop()
 #include <game/GameSerialization.hpp>
 
 void MainLoop::update() {
-	auto previewEditorLevelInGame = [this]() {
-		switchToState(state, State::GAME);
-		const auto level = saveGameLevelToJson(editor.e);
-		game.tryLoadEditorPreviewLevel(level);
-	};
-
 	if (Input::isKeyDown(KeyCode::TAB)) {
 		switch (state) {
 			using enum State;
@@ -109,13 +103,80 @@ void MainLoop::update() {
 		}
 	}
 
+	audio.update();
+
 	renderer.gfx.camera.aspectRatio = Window::aspectRatio();
 	glClear(GL_COLOR_BUFFER_BIT);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glViewport(0, 0, GLsizei(Window::size().x), GLsizei(Window::size().y));
 
+	stateUpdate(state);
+	ShaderManager::update();
+	renderer.gfx.drawDebug();
+}
+
+void MainLoop::propagateSettings(const Settings& settings) {
+	audio.setSoundEffectVolume(settings.audio.soundEffectVolume);
+	audio.setMusicVolume(settings.audio.musicVolume);
+	renderer.settings = settings.graphics;
+	Window::setFullscreen(settings.graphics.fullscreen);
+}
+
+void MainLoop::previewEditorLevelInGame() {
+	switchToState(state, State::GAME);
+	const auto level = saveGameLevelToJson(editor.e);
+	game.tryLoadEditorPreviewLevel(level);
+}
+
+void MainLoop::switchToState(State currentState, State newState) {
+	switch (currentState) {
+		using enum State;
+	case GAME:
+		game.onSwitchFromGame(audio);
+		break;
+
+	default:
+		break;
+	}
+
+	state = newState;
+
 	switch (state) {
+		using enum State;
+	case GAME:
+		game.onSwitchToGame(audio);
+		break;
+
+	default:
+		break;
+	}
+}
+
+void MainLoop::stateUpdate(State stateToUpdate) {
+	auto switchOutOfTransition = [this](State currentState, State newState) {
+		// This is kinda hacky, because it transitions to the new state just to trigger the onSwitchTo and onSwitchFrom actions just to transition back.
+		switchToState(currentState, newState);
+
+		if (queuedUpTransition.has_value()) {
+			std::visit(overloaded{
+				[&](const StatelessTransitionState& transition) {
+					statelessTransition = transition;
+					statelessTransition.startState = state;
+					state = State::STATELESS_TRANSITION;
+				},
+				[&](const TransitionToLevelState& transition) {
+					transitionToLevel = transition;
+					transitionToLevel.startState = state;
+					state = State::TRANSITION_TO_LEVEL;
+				}
+			}, *queuedUpTransition);
+			queuedUpTransition = std::nullopt;
+		}
+		
+	};
+
+	switch (stateToUpdate) {
 		using enum State;
 
 	case MAIN_MENU: {
@@ -274,12 +335,14 @@ void MainLoop::update() {
 		}, result);
 		break;
 	}
-		
+	
+	// Not sure if I should set queuedUpTransition = std::nullopt. Not doing it would probably just introduce more cases to handle that would need really fast actions to even trigger. For example when transitioning from level select to level then if you click on one level then on another it would probably be nice to have the transition be done to the second level clicked. With the current implementation it would probably just go to the level first clicked and the transition to the second level clicked.
 	case STATELESS_TRANSITION: {
 		auto& s = statelessTransition;
 
 		if (updateTAndCheckIfAtMid(s.t)) {
 			renderer.randomize();
+			queuedUpTransition = std::nullopt;
 		}
 
 		if (s.t < 0.5f) {
@@ -289,7 +352,7 @@ void MainLoop::update() {
 		}
 
 		if (s.t >= 1.0f) {
-			switchToState(s.startState, s.endState);
+			switchOutOfTransition(s.startState, s.endState);
 		}
 		renderFadingTransition(renderer, s.t);
 		break;
@@ -302,16 +365,17 @@ void MainLoop::update() {
 		if (updateTAndCheckIfAtMid(s.t)) {
 			renderer.randomize();
 			game.tryLoadGameLevel(levels, s.levelIndex);
+			queuedUpTransition = std::nullopt;
 		}
 
 		if (s.t < mid) {
 			stateUpdate(s.startState);
 		} else {
-			game.update(renderer, audio);
+			stateUpdate(State::GAME);
 		}
 
 		if (s.t >= 1.0f) {
-			switchToState(s.startState, State::GAME);
+			switchOutOfTransition(s.startState, State::GAME);
 		}
 		updateTransition(renderer, audio, previousT, s.t, s.transitionEffect);
 		renderTransition(renderer, s.t, s.transitionEffect);
@@ -338,74 +402,37 @@ void MainLoop::update() {
 	}
 
 	}
-	ShaderManager::update();
-	renderer.gfx.drawDebug();
-}
-
-void MainLoop::propagateSettings(const Settings& settings) {
-	audio.setSoundEffectVolume(settings.audio.soundEffectVolume);
-	renderer.settings = settings.graphics;
-	Window::setFullscreen(settings.graphics.fullscreen);
-}
-
-void MainLoop::switchToState(State currentState, State newState) {
-	switch (currentState) {
-		using enum State;
-	case GAME:
-		game.onSwitchFromGame(audio);
-		break;
-
-	default:
-		break;
-	}
-
-	state = newState;
-
-	switch (state) {
-		using enum State;
-	case GAME:
-		game.onSwitchToGame(audio);
-		break;
-
-	default:
-		break;
-	}
-}
-
-void MainLoop::stateUpdate(State state) {
-	switch (state) {
-		// These don't inspect the result on purpose. This function should be called from the transition functions and it doesn't make sense to begin a transition while one is already happening.
-		using enum MainLoop::State;
-	case MAIN_MENU: mainMenu.update(renderer, audio); break;
-	case SETTINGS: mainMenu.settingsUpdate(renderer, audio); break;
-	case EDITOR: editor.update(renderer); break;
-	case LEVEL_SELECT: levelSelect.update(renderer, audio, levels, gameSave); break;
-		// There should be a level loaded before transitioning into game.
-	case GAME: game.update(renderer, audio); break;
-	case CONGRATULATIONS: mainMenu.congratulationsScreenUpdate(renderer, audio); break;
-
-		// It doesn't make sense to transition from or into these states.
-	case TRANSITION_TO_LEVEL:
-	case STATELESS_TRANSITION:
-		CHECK_NOT_REACHED(); break;
-	}
 }
 
 void MainLoop::doTransitionToLevel(i32 levelIndex, TransitionEffectType transitionEffect) {
-	transitionToLevel = TransitionToLevelState{
+	const auto transition = TransitionToLevelState{
 		.startState = state,
 		.t = 0.0f,
 		.levelIndex = levelIndex,
 		.transitionEffect = transitionEffect,
 	};
+	if (isTransitioning()) {
+		queuedUpTransition = transition;
+		return;
+	}
+	transitionToLevel = transition;
 	state = State::TRANSITION_TO_LEVEL;
 }
 
+bool MainLoop::isTransitioning() const {
+	return state == State::TRANSITION_TO_LEVEL || state == State::STATELESS_TRANSITION;
+}
+
 void MainLoop::doBasicTransition(State endState) {
-	statelessTransition = StatelessTransitionState{
+	const auto transition = StatelessTransitionState{
 		.t = 0.0f,
 		.startState = state,
 		.endState = endState
 	};
+	if (isTransitioning()) {
+		queuedUpTransition = transition;
+		return;
+	}
+	statelessTransition = transition;
 	state = State::STATELESS_TRANSITION;
 }

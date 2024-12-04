@@ -1,5 +1,17 @@
 {
-    "walls": [],
+    "walls": [
+        {
+            "endpoint0": [
+                -0.96592575,
+                -0.2588193
+            ],
+            "endpoint1": [
+                -0.9659259,
+                0.25881892
+            ],
+            "type": 1
+        }
+    ],
     "lasers": [
         {
             "position": [
@@ -11,7 +23,7 @@
                 0,
                 1
             ],
-            "angle": 1.1920929e-07,
+            "angle": 3.1415927,
             "positionLocked": true
         }
     ],
@@ -21,6 +33,16 @@
             "center": [
                 -0.2,
                 -1.7484556e-08
+            ],
+            "normalAngle": 1.5707964,
+            "wallType": 0,
+            "length": 0.6
+        },
+        {
+            "positionLocked": true,
+            "center": [
+                0.2,
+                0
             ],
             "normalAngle": 1.5707964,
             "wallType": 0,
@@ -83,18 +105,6 @@
             "endpoint1": [
                 -4.371139e-08,
                 1
-            ],
-            "triggerIndex": 0,
-            "openByDefault": false
-        },
-        {
-            "endpoint0": [
-                -0.9807853,
-                0.19509031
-            ],
-            "endpoint1": [
-                -0.98078525,
-                -0.19509049
             ],
             "triggerIndex": 0,
             "openByDefault": false

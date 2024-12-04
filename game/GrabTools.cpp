@@ -1,6 +1,7 @@
 #include "GrabTools.hpp"
 #include <engine/Input/Input.hpp>
 #include <game/Constants.hpp>
+#include <gfx2d/DbgGfx2d.hpp>
 #include <engine/Math/Constants.hpp>
 #include <array>
 
@@ -95,11 +96,16 @@ void LaserGrabTool::update(LaserArray& lasers, std::optional<EditorActions&> act
 		return;
 	}
 
+	//for (const auto& laser : lasers) {
+	//	const auto arrowhead = laserArrowhead(laser.entity);
+	//	Dbg::disk(arrowhead.tip, Constants::endpointGrabPointRadius);
+	//}
+
 	if (Input::isMouseButtonDown(MouseButton::LEFT) && !grabbed.has_value()) {
 		for (const auto& laser : lasers) {
 			const auto arrowhead = laserArrowhead(laser.entity);
-			auto updateGrabbed = [&](Vec2 p, f32 distance, LaserGrabTool::LaserPart part) {
-				if (distance > Constants::endpointGrabPointRadius) {
+			auto updateGrabbed = [&](Vec2 p, bool isGrabbed, LaserGrabTool::LaserPart part) {
+				if (!isGrabbed) {
 					return;
 				}
 
@@ -112,11 +118,14 @@ void LaserGrabTool::update(LaserArray& lasers, std::optional<EditorActions&> act
 				cursorCaptured = true;
 			};
 
-			updateGrabbed(arrowhead.tip, arrowhead.distanceTo(cursorPos), LaserGrabTool::LaserPart::DIRECTION);
 
+			updateGrabbed(arrowhead.tip, arrowhead.tip.distanceTo(cursorPos) <= Constants::endpointGrabPointRadius, LaserGrabTool::LaserPart::DIRECTION);
+
+
+			//arrowhead.tip
 			const auto positionLocked = enforceConstraints && laser->positionLocked;
 			if (!positionLocked && !cursorCaptured) {
-				updateGrabbed(laser->position, distance(laser->position, cursorPos), LaserGrabTool::LaserPart::ORIGIN);
+				updateGrabbed(laser->position, distance(laser->position, cursorPos) <= Constants::endpointGrabPointRadius, LaserGrabTool::LaserPart::ORIGIN);
 			}
 		}
 	}

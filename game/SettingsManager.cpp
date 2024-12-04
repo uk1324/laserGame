@@ -31,7 +31,7 @@ Settings SettingsManager::defaultSettings = Settings{
 	.audio = {
 		//.masterVolume = 0.5f,
 		.soundEffectVolume = 0.5f,
-		//.musicVolume = 0.5f,
+		.musicVolume = 0.5f,
 	},
 	.graphics = {
 		.drawBackgrounds = true,

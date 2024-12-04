@@ -1,5 +1,6 @@
 struct [[Json]] SettingsAudio {
 	float soundEffectVolume;
+	float musicVolume = `0.5f`;
 }
 
 struct [[Json]] SettingsGraphics {

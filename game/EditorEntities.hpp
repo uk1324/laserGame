@@ -49,7 +49,7 @@ using LaserArray = EntityArray<EditorLaser, EditorLaser::DefaultInitialize>;
 void editorLaserColorCombo(Vec3& color);
 struct LaserGrabPoint {
 	// The rendering code uses that visual point and the grabbing code uses the actual point. The difference isn't too big so it isn't very noticible that a different point is grabbed. Might be possible to it so that the actual is grabbed like in mirrors for example. Not sure if there will be any issues, because lasers will use eucledian distance instead of stereographic distance.
-	Vec2 point;
+	//Vec2 point;
 	Vec2 visualPoint;
 	Vec2 visualTangent;
 };
@@ -57,7 +57,7 @@ struct LaserGrabPoint {
 LaserGrabPoint laserDirectionGrabPoint(const EditorLaser& laser);
 
 struct LaserArrowhead {
-	Vec2 actualTip;
+	//Vec2 actualTip;
 	Vec2 tip;
 	Vec2 ears[2];
 

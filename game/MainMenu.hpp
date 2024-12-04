@@ -77,8 +77,8 @@ struct MainMenu {
 		Ui::CenteredHorizontalListLayout layout;
 		i32 titleId = INVALID;
 
-		SliderInput volumeSlider;
-		i32 soundEffectVolumeSliderIndex = INVALID;
+		SliderInput soundEffectVolumeSlider;
+		SliderInput musicVolumeSlider;
 		ToggleButton drawBackgroundsButton;
 		ToggleButton fullscreenButton;
 		//i32 musicVolumeSliderIndex = INVALID;

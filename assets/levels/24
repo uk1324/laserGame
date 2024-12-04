@@ -50,7 +50,7 @@
             "length": 0.6
         },
         {
-            "positionLocked": true,
+            "positionLocked": false,
             "center": [
                 -0.3061465,
                 -0.73910373

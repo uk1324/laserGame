@@ -256,7 +256,7 @@ LaserGrabPoint laserDirectionGrabPoint(const EditorLaser& laser) {
 	const auto line = stereographicLine(endpoint0, laser.position);
 	if (line.type == StereographicLine::Type::LINE) {
 		return LaserGrabPoint{
-			.point = actualGrabPoint,
+			//.point = actualGrabPoint,
 			.visualPoint = actualGrabPoint,
 			.visualTangent = laserDirection
 		};
@@ -272,7 +272,7 @@ LaserGrabPoint laserDirectionGrabPoint(const EditorLaser& laser) {
 	const auto tangentAtGrabPoint = normalAtGrabPoint.rotBy90deg() * ((arcLength > 0.0f) ? -1.0f : 1.0f);
 
 	return LaserGrabPoint{
-		.point = actualGrabPoint,
+		//.point = actualGrabPoint,
 		.visualPoint = line.circle.center + normalAtGrabPoint * line.circle.radius,
 		.visualTangent = tangentAtGrabPoint
 	};
@@ -284,7 +284,7 @@ LaserArrowhead laserArrowhead(const EditorLaser& laser) {
 	const auto ear0 = tip.visualPoint + rotation * tip.visualTangent * 0.03f;
 	const auto ear1 = tip.visualPoint + rotation.inversed() * tip.visualTangent * 0.03f;
 	return LaserArrowhead{
-		.actualTip = tip.point,
+		//.actualTip = tip.point,
 		.tip = tip.visualPoint,
 		.ears = { ear0, ear1 },
 	};
