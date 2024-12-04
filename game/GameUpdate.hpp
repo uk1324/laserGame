@@ -3,7 +3,7 @@
 #include <game/EditorEntities.hpp>
 
 struct GameState {
-	void update(GameEntities& e, bool objectsInValidState);
+	void update(GameEntities& e);
 
 	struct Segment {
 		Vec2 endpoints[2];

@@ -24,8 +24,9 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	mirrorGrabTool.update(e.mirrors, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
 	portalGrabTool.update(e.portalPairs, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
 
+	// s should update before checking if objects are in valid state, because s snaps objects back into the boundary. 
+	s.update(e);
 	const auto objectsInValidState = areObjectsInValidState();
-	s.update(e, objectsInValidState);
 	
 	bool allTargetsActivated = true;
 	for (const auto& target : e.targets) {
@@ -197,12 +198,18 @@ bool Game::areObjectsInValidState() {
 	std::vector<StereographicSegment> movableObjects;
 	for (const auto& mirror : e.mirrors) {
 		const auto endpoints = mirror->calculateEndpoints();
-		movableObjects.push_back(StereographicSegment(endpoints[0], endpoints[1]));
+		const auto segments = splitStereographicSegment(endpoints[0], endpoints[1]);
+		for (const auto& segment : segments) {
+			movableObjects.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
+		}
 	}
 	for (const auto& portalPair : e.portalPairs) {
 		for (const auto& portal : portalPair->portals) {
 			const auto endpoints = portal.endpoints();
-			movableObjects.push_back(StereographicSegment(endpoints[0], endpoints[1]));
+			const auto segments = splitStereographicSegment(endpoints[0], endpoints[1]);
+			for (const auto& segment : segments) {
+				movableObjects.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
+			}
 		}
 	}
 	std::vector<StereographicSegment> staticObjects;

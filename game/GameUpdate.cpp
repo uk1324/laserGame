@@ -19,7 +19,7 @@ Vec2 snapPositionsOutsideBoundary(Vec2 v) {
 	return v;
 }
 
-void GameState::update(GameEntities& e, bool objectsInValidState) {
+void GameState::update(GameEntities& e) {
 	anyTargetsTurnedOn = false;
 
 	for (auto laser : e.lasers) {

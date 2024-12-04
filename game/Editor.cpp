@@ -349,7 +349,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 		updateSelectedTool();
 	}
 
-	s.update(e, true);
+	s.update(e);
 
 	renderer.renderClear();
 
