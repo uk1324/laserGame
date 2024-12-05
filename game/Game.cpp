@@ -7,7 +7,6 @@
 #include <engine/Input/Input.hpp>
 
 Game::Game() {
-	tryLoadLevel("./generated/test");
 }
 
 Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {

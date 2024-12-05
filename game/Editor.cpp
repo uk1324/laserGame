@@ -141,11 +141,17 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 			"modify locked cells\0"
 		);
 
+		ImGui::TextDisabled("(?)");
+		ImGui::SetItemTooltip("You can modify existing entities by selecting them using the select tool.");
+
 		ImGui::SeparatorText("tool settings");
 		switch (selectedTool) {
 			using enum Tool;
 
 		case SELECT:
+			ImGui::TextDisabled("(?)");
+			ImGui::SetItemTooltip("Click on an entity to select it.\nPress the delete key to remove the selected entity.");
+			//ImGui::Text("no entity selected");
 			if (selectTool.selectedEntity == std::nullopt) {
 				ImGui::Text("no entity selected");
 				break;

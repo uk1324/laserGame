@@ -12,6 +12,7 @@
 
 Vec2 snapPositionsOutsideBoundary(Vec2 v) {
 	const auto length = v.length();
+	//const auto maxAllowedLength = Constants::boundary.radius - 0.001f;
 	const auto maxAllowedLength = Constants::boundary.radius;
 	if (length > maxAllowedLength) {
 		v *= maxAllowedLength / length;
@@ -100,6 +101,7 @@ void GameState::update(GameEntities& e) {
 				EditorEntityId id;
 				i32 index;
 				bool objectMirrored;
+				bool wrappedAround;
 			};
 			std::optional<Hit> closest;
 			std::optional<f32> secondClosestDistance;
@@ -151,7 +153,7 @@ void GameState::update(GameEntities& e) {
 							if (closest.has_value()) {
 								secondClosestDistance = closest->distance;
 							}
-							closest = Hit{ intersection, distance, line, id, index, objectMirrored };
+							closest = Hit{ intersection, distance, line, id, index, objectMirrored, false };
 						} else if (!secondClosestDistance.has_value()) {
 							secondClosestToWrappedAroundDistance = distance;
 						}
@@ -168,7 +170,8 @@ void GameState::update(GameEntities& e) {
 								line,
 								id,
 								index,
-								objectMirrored
+								objectMirrored,
+								true
 							};
 						} else if (!secondClosestToWrappedAroundDistance.has_value()) {
 							secondClosestToWrappedAroundDistance = distanceToWrappedAround;
@@ -296,17 +299,63 @@ void GameState::update(GameEntities& e) {
 			};
 
 			auto processHit = [&](const Hit& hit) -> HitResult {
+				const Vec2 laserOrigin = hit.wrappedAround ? boundaryIntersectionWrappedAround : laserPosition;
+
+				Vec2 hitObjectNormalAtHitPoint = Vec2(0.0f);
+				if (hit.line.type == StereographicLine::Type::CIRCLE) {
+					auto& circle = hit.line.circle;
+					// Not sure if I should handle the equality case.
+
+					hitObjectNormalAtHitPoint = (hit.point - circle.center).normalized(); // pointing outside of circle
+
+					if (const auto insideCircle = circle.center.distanceTo(laserOrigin) < circle.radius) {
+						hitObjectNormalAtHitPoint = -hitObjectNormalAtHitPoint;
+					}
+				} else {
+					hitObjectNormalAtHitPoint = hit.line.lineNormal;
+					const auto fromHitPointToOrigin = hit.point - laserOrigin;
+					if (dot(fromHitPointToOrigin, hitObjectNormalAtHitPoint) < 0.0f) {
+						hitObjectNormalAtHitPoint = -hitObjectNormalAtHitPoint;
+					}
+				}
+
+				// Put the tangent on the same side as the normal.
 				auto laserTangentAtHitPoint = stereographicLineNormalAt(laserLine, hit.point).rotBy90deg();
-				if (dot(laserTangentAtHitPoint, laserDirection) > 0.0f) {
+				if (dot(hitObjectNormalAtHitPoint, laserTangentAtHitPoint) < 0.0f) {
 					laserTangentAtHitPoint = -laserTangentAtHitPoint;
 				}
-				Dbg::line(hit.point, hit.point + laserTangentAtHitPoint * 0.1f, 0.02f, Color3::RED);
 
-				auto normalAtHitPoint = stereographicLineNormalAt(hit.line, hit.point);
-				if (dot(normalAtHitPoint, laserTangentAtHitPoint) < 0.0f) {
-					normalAtHitPoint = -normalAtHitPoint;
-				}
-				Dbg::line(hit.point, hit.point + normalAtHitPoint * 0.1f, 0.01f);
+				/*auto laserTangentAtHitPoint = stereographicLineNormalAt(laserLine, hit.point).rotBy90deg();
+				Dbg::disk(hit.point + laserTangentAtHitPoint * 0.05f, 0.01f, Color3::YELLOW);
+				if (hit.wrappedAround) {
+					if (distance(hit.point + laserTangentAtHitPoint * 0.05f, laserPosition) < distance(hit.point, laserPosition)) {
+						laserTangentAtHitPoint = -laserTangentAtHitPoint;
+					}
+				} else {
+					if (distance(hit.point + laserTangentAtHitPoint * 0.05f, laserPosition) > distance(hit.point, laserPosition)) {
+						laserTangentAtHitPoint = -laserTangentAtHitPoint;
+					}
+				}*/
+				//if (distance(hit.point + laserTangentAtHitPoint * 0.05f, laserPosition) > distance(hit.point, laserPosition)) {
+				//	/*if (!hit.wrappedAround) {
+				//	}*/
+				//	laserTangentAtHitPoint = -laserTangentAtHitPoint;
+
+				//} else {
+				//	/*if (hit.wrappedAround) {
+				//		laserTangentAtHitPoint = -laserTangentAtHitPoint;
+				//	}*/
+				//}
+				/*if (dot(laserTangentAtHitPoint, laserDirection) > 0.0f) {
+					laserTangentAtHitPoint = -laserTangentAtHitPoint;
+				}*/
+				//Dbg::line(hit.point, hit.point + laserTangentAtHitPoint * 0.1f, 0.02f, Color3::RED);
+
+				//auto normalAtHitPoint = stereographicLineNormalAt(hit.line, hit.point);
+				//if (dot(normalAtHitPoint, laserTangentAtHitPoint) < 0.0f) {
+				//	normalAtHitPoint = -normalAtHitPoint;
+				//}
+				Dbg::line(hit.point, hit.point + hitObjectNormalAtHitPoint * 0.1f, 0.01f);
 
 				auto normalAngle = [](f32 normalAngle, Vec2 pointWithNormalAngle, StereographicLine lineWithNormalAngleAtPoint, bool isMirrored) {
 					if (isMirrored) {
@@ -320,10 +369,10 @@ void GameState::update(GameEntities& e) {
 					}
 				};
 
-				auto hitOnNormalSide = [&normalAtHitPoint, &hit, &normalAngle](f32 hitObjectNormalAngle, Vec2 center) {
+				auto hitOnNormalSide = [&hitObjectNormalAtHitPoint, &hit, &normalAngle](f32 hitObjectNormalAngle, Vec2 center) {
 					hitObjectNormalAngle = normalAngle(hitObjectNormalAngle, center, hit.line, hit.objectMirrored);
 					Dbg::line(hit.point, hit.point + Vec2::oriented(hitObjectNormalAngle) * 0.1f, 0.01f, Color3::MAGENTA);
-					bool result = dot(Vec2::oriented(hitObjectNormalAngle), normalAtHitPoint) > 0.0f;
+					bool result = dot(Vec2::oriented(hitObjectNormalAngle), hitObjectNormalAtHitPoint) > 0.0f;
 					return result;
 				};
 
@@ -334,7 +383,7 @@ void GameState::update(GameEntities& e) {
 					///*Dbg::circleArc(laserDirection.angle(), normalAtHitPoint.angle(), hit.point, 0.05f, 0.01f, Color3::RED);*/
 					//Dbg::circleArc(r0.min, r0.max, hit.point, r / 2.0f, 0.01f / 2.0f, Color3::RED);
 
-					laserDirection = laserTangentAtHitPoint.reflectedAroundNormal(normalAtHitPoint);
+					laserDirection = laserTangentAtHitPoint.reflectedAroundNormal(hitObjectNormalAtHitPoint);
 
 					//const auto r1 = angleRangeBetweenPointsOnCircle(Vec2(0.0f), laserDirection, normalAtHitPoint);
 					///*Dbg::circleArc(laserDirection.angle(), normalAtHitPoint.angle(), hit.point, 0.05f, 0.01f, Color3::RED);*/
@@ -449,13 +498,13 @@ void GameState::update(GameEntities& e) {
 						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
 					}
 
-					if (dot(normalAtHitPoint, Vec2::oriented(inPortalNormalAngle)) > 0.0f) {
+					if (dot(hitObjectNormalAtHitPoint, Vec2::oriented(inPortalNormalAngle)) > 0.0f) {
 						outPortalNormalAtOutPoint = -outPortalNormalAtOutPoint;
 					}
 
 					// The angle the laser makes with the input mirror normal is the same as the one it makes with the output portal normal.
 					auto laserDirectionAngle =
-						laserTangentAtHitPoint.angle() - normalAtHitPoint.angle()
+						laserTangentAtHitPoint.angle() - hitObjectNormalAtHitPoint.angle()
 						+ outPortalNormalAtOutPoint.angle();
 					/*if (outMirrored) {
 						laserDirectionAngle += PI<f32>;
@@ -597,6 +646,7 @@ void GameState::update(GameEntities& e) {
 					break;
 				}
 			} else if (closestToWrappedAround.has_value()) {
+				Dbg::disk(closestToWrappedAround->point, 0.01f, Color3::CYAN);
 				processLaserSegmentEndpoints(laserPosition, boundaryIntersection);
 				processLaserSegmentEndpoints(boundaryIntersectionWrappedAround, closestToWrappedAround->point);
 				//const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };
