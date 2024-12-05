@@ -50,8 +50,9 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 		timeForWhichAllTasksHaveBeenCompleted > 0.5f &&
 		!isEditorPreviewLevelLoaded();
 
+	//ImGui::Text("valid state %d %d", objectsInValidState, !previousFrameInvalidState);
 	if (!objectsInValidState && !previousFrameInvalidState && timeSincePlayedInvalidState > 0.1f) {
-		timeSincePlayedLevelComplete = 0.0f;
+		//timeSincePlayedInvalidState = 0.0f;
 		audio.playSoundEffect(audio.errorSound);
 	}
 	timeSincePlayedInvalidState += Constants::dt;
@@ -223,7 +224,8 @@ bool Game::areObjectsInValidState() {
 	}
 
 	auto collision = [](const StereographicSegment& a, const StereographicSegment& b) {
-		return stereographicSegmentVsStereographicSegmentIntersection(a, b).size() > 0;
+		// Epsilon added, because there was a bug when a wall was on the boundary and for example a mirror went through it then sometimes the collisions would not get detected.
+		return stereographicSegmentVsStereographicSegmentIntersection(a, b, 0.001f).size() > 0;
 	};
 	for (i32 i = 0; i < i32(movableObjects.size()) - 1; i++) {
 		const auto& a = movableObjects[i];
@@ -307,7 +309,7 @@ bool Game::tryLoadGameLevel(const Levels& levels, LevelIndex levelIndex) {
 		currentLevel = std::nullopt;
 		return false;
 	}
-	if (tryLoadLevel(info->path)) {
+	if (tryLoadLevel(info->path())) {
 		currentLevel = levelIndex;
 		return true;
 	}

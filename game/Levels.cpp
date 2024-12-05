@@ -1,10 +1,11 @@
 #include <game/Levels.hpp>
 #include "Levels.hpp"
+#include  <game/WorkingDirectory.hpp>
 
 Levels::Levels() {
 #define A(levelName) \
 	levels.push_back(LevelInfo{ \
-		.path = "assets/levels/" levelName, \
+		.workingDirectoryPath = "assets/levels/" levelName, \
 		.name = levelName, \
 	});
 
@@ -42,4 +43,8 @@ std::optional<const LevelInfo&> Levels::tryGetLevelInfo(LevelIndex index) const 
 		return std::nullopt;
 	}
 	return levels[index];
+}
+
+std::string LevelInfo::path() const {
+	return (executableWorkingDirectory / workingDirectoryPath).string();
 }

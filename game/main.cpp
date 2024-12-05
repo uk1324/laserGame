@@ -1,15 +1,21 @@
 #include <engine/Engine.hpp>
 #include <engine/EngineUpdateLoop.hpp>
 #include <game/MainLoop.hpp>
+#include <game/WorkingDirectory.hpp>
 #include <game/Paths.hpp>
 #include <engine/Audio/Audio.hpp>
 
 int main() {
+	executableWorkingDirectory = std::filesystem::current_path();
+
+	const auto iniPath =(executableWorkingDirectory / "cached/imgui.ini").string();
+
  	Engine::initAll(Window::Settings{
 		.maximized = true,
 		.multisamplingSamplesPerPixel = 16
-	}, FONT_PATH);
+	}, FONT_PATH, iniPath.c_str());
 	Audio::init();
+
 
 	EngineUpdateLoop updateLoop(60.0f);
 	MainLoop mainLoop;

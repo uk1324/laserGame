@@ -313,7 +313,7 @@ void GameState::update(GameEntities& e) {
 					}
 				} else {
 					hitObjectNormalAtHitPoint = hit.line.lineNormal;
-					const auto fromHitPointToOrigin = hit.point - laserOrigin;
+					const auto fromHitPointToOrigin = laserOrigin - hit.point;
 					if (dot(fromHitPointToOrigin, hitObjectNormalAtHitPoint) < 0.0f) {
 						hitObjectNormalAtHitPoint = -hitObjectNormalAtHitPoint;
 					}
@@ -324,6 +324,7 @@ void GameState::update(GameEntities& e) {
 				if (dot(hitObjectNormalAtHitPoint, laserTangentAtHitPoint) < 0.0f) {
 					laserTangentAtHitPoint = -laserTangentAtHitPoint;
 				}
+				Dbg::line(hit.point, hit.point + laserTangentAtHitPoint * 0.1f, 0.01f, Color3::RED);
 
 				/*auto laserTangentAtHitPoint = stereographicLineNormalAt(laserLine, hit.point).rotBy90deg();
 				Dbg::disk(hit.point + laserTangentAtHitPoint * 0.05f, 0.01f, Color3::YELLOW);
@@ -545,6 +546,7 @@ void GameState::update(GameEntities& e) {
 				for (const auto& center : centers) {
 					const auto circle = stereographicCircle(center, radius);
 					const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], circle);
+					/*const auto intersections = stereographicSegmentVsCircleIntersection(stereographicLine(segment.endpoints[0], segment.endpoints[1]), segment.endpoints[0], segment.endpoints[1], circle);*/
 					if (intersections.size() > 0) {
 						return true;
 					}
@@ -580,13 +582,13 @@ void GameState::update(GameEntities& e) {
 			};
 
 			// Double intersections can cause bugs. 
-			// If you have a corner then there is no real way to define a reflection and it probably doesn't really matter if a laser end there.
+			// If you have a corner then there is no real way to define a reflection and it probably doesn't really ma tter if a laser end there.
 			// A bigger issue is configurations like crosses made out of mirrors. Then If you point right at the intersection of 2 lines then if you process only one line intersection the laser will reflect and go through the other. One option would be to process the 2 reflections sequentially, but it probably doesn't matter much. Technically only one of the walls needs to be a mirror.
 			auto doubleIntersectionCheck = [](const Hit& hit, std::optional<f32> secondClosestDistance) {
 				// If the closest hit is to close to the laser position sometimes bugs happen.
 				if (hit.distance < 0.001f) {
-					// TODO: Why is this false?
-					return false;
+					// There was a bug where there was a wall mirror on the boundary and a laser hit it wrapped around. This kinda fixes the bug, but also ends the laser where it shouldn't really end. When designing a level to deal with this issue could just create the wall on both sides.
+					//return true;
 				}
 
 				if (!secondClosestDistance.has_value()) {
@@ -623,6 +625,21 @@ void GameState::update(GameEntities& e) {
 			};
 
 			auto processLaserSegmentEndpoints = [&](Vec2 e0, Vec2 e1) {
+				auto projectOntoLine = [&](Vec2 p) {
+					if (laserLine.type == StereographicLine::Type::CIRCLE) {
+						const auto& circle = laserLine.circle;
+						p -= circle.center;
+						p = p.normalized();
+						p *= circle.radius;
+						p += circle.center;
+					} else {
+						p -= dot(laserLine.lineNormal, p) * laserLine.lineNormal;
+					}
+					return p;
+				};
+				e0 = projectOntoLine(e0);
+				e1 = projectOntoLine(e1);
+
 				const auto nearlyAntipodal = areNearlyAntipodal(e0, e1);
 				if (!nearlyAntipodal) {
 					const auto s = Segment{ e0, e1, laser->color };
@@ -697,6 +714,7 @@ void GameState::update(GameEntities& e) {
 					processLaserSegment(s1);
 				}*/
 			}
+			//Dbg::line(laserPosition, laserPosition + laserDirection * 0.1f, 0.01f, Color3::YELLOW);
 		}
 	}
 

@@ -51,11 +51,19 @@ struct EditorActionDestroyEntity : EditorAction {
 	EditorEntityId id;
 };
 
-struct EditorActionModifiySelection : EditorAction {
-	EditorActionModifiySelection(std::optional<EditorEntityId> oldSelection, std::optional<EditorEntityId> newSelection);
+struct EditorSelected {
+	EditorSelected(EditorEntityId id, EditorEntity entityStateAtSelection, bool modifiedUsingGui = false);
 
-	std::optional<EditorEntityId> oldSelection;
-	std::optional<EditorEntityId> newSelection;
+	EditorEntityId id;
+	EditorEntity entityStateAtSelection;
+	bool modifiedUsingGui;
+};
+
+struct EditorActionModifiySelection : EditorAction {
+	EditorActionModifiySelection(std::optional<EditorSelected> oldSelection, std::optional<EditorSelected> newSelection);
+
+	std::optional<EditorSelected> oldSelection;
+	std::optional<EditorSelected> newSelection;
 };
 
 struct EditorActionModifyLockedCells : EditorAction {

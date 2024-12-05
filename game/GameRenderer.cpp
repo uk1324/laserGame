@@ -380,6 +380,11 @@ void GameRenderer::renderStereographicSegmentsComplex() {
 }
 
 void GameRenderer::stereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, Vec3 color0, Vec3 color1, f32 width) {
+	const auto dist = endpoint0.distanceTo(endpoint1);
+	if (dist < 0.001f) {
+		return;
+	}
+
 	if (abs(endpoint0.length() - 1.0f) < 0.001f && abs(endpoint1.length() - 1.0f) < 0.001f && (endpoint0 + endpoint1).length() < 0.001f) {
 		addStereographicSegmentComplex(endpoint0, Vec2(0.0f), color0, color1, width);
 		addStereographicSegmentComplex(endpoint1, Vec2(0.0f), color0, color1, width);

@@ -2,13 +2,18 @@
 
 #include <vector>
 #include <optional>
+#include <filesystem>
+#include <string>
 #include <RefOptional.hpp>
 #include <Types.hpp>
 
 using LevelIndex = i32;
 
+struct Levels;
+
 struct LevelInfo {
-	const char* path;
+	const char* workingDirectoryPath;
+	std::string path() const;
 	const char* name;
 };
 

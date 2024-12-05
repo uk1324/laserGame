@@ -329,7 +329,7 @@ MainMenu::CongratulationsScreenResult MainMenu::congratulationsScreenUpdate(Game
 
 	// https://english.stackexchange.com/questions/240468/whats-the-difference-between-you-have-completed-the-task-and-you-com
 	drawText(renderer, "Congratulations", ui.layout, ui.titleId0);
-	drawText(renderer, "you've completed", ui.layout, ui.titleId1);
+	drawText(renderer, "you completed", ui.layout, ui.titleId1);
 	drawText(renderer, "all the levels", ui.layout, ui.titleId2);
 
 	if (BUTTON(ui.levelSelectButton)) result = CongratulationsScreenResult::GO_TO_LEVEL_SELECT; 

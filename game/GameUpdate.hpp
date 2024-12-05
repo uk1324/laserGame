@@ -20,7 +20,8 @@ struct GameState {
 	};
 	static std::optional<TriggerInfo> triggerInfo(TriggerArray& triggers, i32 triggerIndex);
 
-	i32 maxReflections = 32;
+	//i32 maxReflections = 32;
+	i32 maxReflections = 100;
 
 	Vec2 focus[2]{ Vec2(0.2f, 0.0f), Vec2(-0.2f, 0.0f) };
 	f32 eccentricity = 0.1f;

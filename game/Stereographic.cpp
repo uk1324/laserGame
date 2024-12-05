@@ -481,19 +481,19 @@ StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const Stereographic
 	//return result;
 }
 
-bool intersectionsOnSegment(Vec2 e0, Vec2 e1, Vec2 i) {
-	const auto dir = e1 - e0;
+bool intersectionsOnSegment(Vec2 e0, Vec2 e1, Vec2 i, f32 epsilon = 0.0f) {
+	const auto dir = (e1 - e0).normalized();
 	const auto along = dot(i, dir);
-	return along > dot(e0, dir) && along < dot(e1, dir);
+	return along > dot(e0, dir) - epsilon && along < dot(e1, dir) + epsilon;
 }
 
-StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const StereographicSegment& a, const StereographicSegment& b) {
+StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const StereographicSegment& a, const StereographicSegment& b, f32 epsilon) {
 	const auto intersections = stereographicLineVsStereographicLineIntersection(a.line, b.line);
 
 	StaticList<Vec2, 2> result;
 	for (const auto& intersection : intersections) {
-		if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection) &&
-			intersectionsOnSegment(b.endpoints[0], b.endpoints[1], intersection)) {
+		if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection, epsilon) &&
+			intersectionsOnSegment(b.endpoints[0], b.endpoints[1], intersection, epsilon)) {
 			result.add(intersection);
 		}
 	}

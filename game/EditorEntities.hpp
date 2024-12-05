@@ -25,6 +25,8 @@ struct EditorWall {
 		EditorWall operator()();
 	};
 
+	bool operator==(const EditorWall&) const = default;
+
 	Vec2 endpoints[2];
 	EditorWallType type;
 };
@@ -35,6 +37,8 @@ struct EditorLaser {
 	struct DefaultInitialize {
 		EditorLaser operator()();
 	};
+
+	bool operator==(const EditorLaser&) const = default;
 
 	Vec2 position;
 	f32 angle;
@@ -79,6 +83,8 @@ struct EditorMirror {
 		EditorMirror operator()();
 	};
 
+	bool operator==(const EditorMirror&) const = default;
+
 	EditorMirror(Vec2 center, f32 normalAngle, f32 length, bool positionLocked, EditorMirrorWallType wallType);
 
 	Vec2 center;
@@ -100,6 +106,8 @@ struct EditorTarget {
 	struct DefaultInitialize {
 		EditorTarget operator()();
 	};
+
+	bool operator==(const EditorTarget&) const = default;
 
 	Circle calculateCircle() const;
 
@@ -128,6 +136,8 @@ struct EditorPortal {
 	bool positionLocked;
 	bool rotationLocked;
 
+	bool operator==(const EditorPortal&) const = default;
+
 	static constexpr auto defaultLength = 0.6f;
 
 	std::array<Vec2, 2> endpoints() const;
@@ -137,6 +147,8 @@ struct EditorPortalPair {
 	struct DefaultInitialize {
 		EditorPortalPair operator()();
 	};
+	bool operator==(const EditorPortalPair&) const = default;
+
 	EditorPortal portals[2];
 };
 
@@ -154,6 +166,8 @@ struct EditorTrigger {
 	struct DefaultInitialize {
 		EditorTrigger operator()();
 	};
+
+	bool operator==(const EditorTrigger&) const = default;
 
 	Vec2 position;
 	Vec3 color;
@@ -182,6 +196,8 @@ struct EditorDoor {
 		EditorDoor operator()();
 	};
 
+	bool operator==(const EditorDoor&) const = default;
+
 	Vec2 endpoints[2];
 	i32 triggerIndex;
 	bool openByDefault;
@@ -201,6 +217,29 @@ enum class EditorEntityType {
 	PORTAL_PAIR,
 	TRIGGER,
 	DOOR,
+};
+
+struct EditorEntity {
+	explicit EditorEntity(EditorWall wall);
+	explicit EditorEntity(EditorLaser laser);
+	explicit EditorEntity(EditorMirror mirror);
+	explicit EditorEntity(EditorTarget target);
+	explicit EditorEntity(EditorPortalPair portalPair);
+	explicit EditorEntity(EditorTrigger trigger);
+	explicit EditorEntity(EditorDoor door);
+
+	bool operator==(const EditorEntity& other);
+
+	union {
+		EditorWall wall;
+		EditorLaser laser;
+		EditorMirror mirror;
+		EditorTarget target;
+		EditorPortalPair portalPair;
+		EditorTrigger trigger;
+		EditorDoor door;
+	};
+	EditorEntityType type;
 };
 
 struct EditorEntityId {

@@ -125,5 +125,6 @@ void GameAudio::setSoundEffectSourceVolume(SoundSource& source, f32 value) {
 }
 
 void GameAudio::setMusicVolume(f32 value) {
-	musicStream.source.setGain(value * 0.25f);
+	//musicStream.source.setGain(value * 0.25f);
+	musicStream.source.setGain(value * 0.15f);
 }

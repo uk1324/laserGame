@@ -126,9 +126,11 @@ struct Editor {
 	Tool selectedTool = Tool::WALL;
 
 	struct SelectTool {
-		std::optional<EditorEntityId> selectedEntity;
+		std::optional<EditorSelected> selected;
 	} selectTool;
 	void selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
+
+	void saveSelectedEntityIfModified();
 
 	struct WallCreateTool {
 		WallLikeEntityCreateTool tool;

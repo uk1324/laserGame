@@ -438,3 +438,48 @@ bool LockedCells::CellBounds::containsPoint(Vec2 v) const {
 	const auto r = v.length();
 	return a >= minA && a <= maxA && r >= minR && r <= maxR;
 }
+
+EditorEntity::EditorEntity(EditorWall wall)
+	: wall(wall)
+	, type(EditorEntityType::WALL) {}
+
+EditorEntity::EditorEntity(EditorLaser laser)
+	: laser(laser)
+	, type(EditorEntityType::LASER) {}
+
+EditorEntity::EditorEntity(EditorMirror mirror)
+	: mirror(mirror)
+	, type(EditorEntityType::MIRROR) {}
+
+EditorEntity::EditorEntity(EditorTarget target) 
+	: target(target)
+	, type(EditorEntityType::TARGET) {}
+
+EditorEntity::EditorEntity(EditorPortalPair portalPair)
+	: portalPair(portalPair)
+	, type(EditorEntityType::PORTAL_PAIR) {}
+
+EditorEntity::EditorEntity(EditorTrigger trigger)
+	: trigger(trigger)
+	, type(EditorEntityType::TRIGGER) {}
+
+EditorEntity::EditorEntity(EditorDoor door)
+	: door(door)
+	, type(EditorEntityType::DOOR) {}
+
+bool EditorEntity::operator==(const EditorEntity& other) {
+	if (type != other.type) {
+		return false;
+	}
+	switch (other.type) {
+		using enum EditorEntityType;
+		case WALL: return wall == other.wall;
+		case LASER: return laser == other.laser;
+		case MIRROR: return mirror == other.mirror;
+		case TARGET: return target == other.target;
+		case PORTAL_PAIR: return portalPair == other.portalPair;
+		case TRIGGER: return trigger == other.trigger;
+		case DOOR: return door == other.door;
+	}
+	return false;
+}

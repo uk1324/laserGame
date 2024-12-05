@@ -93,7 +93,7 @@ EditorActionDestroyEntity::EditorActionDestroyEntity(EditorEntityId id)
     , id(id) {
 }
 
-EditorActionModifiySelection::EditorActionModifiySelection(std::optional<EditorEntityId> oldSelection, std::optional<EditorEntityId> newSelection) 
+EditorActionModifiySelection::EditorActionModifiySelection(std::optional<EditorSelected> oldSelection, std::optional<EditorSelected> newSelection)
     : EditorAction(EditorActionType::MODIFY_SELECTION)
     , oldSelection(oldSelection)
     , newSelection(newSelection) {}
@@ -102,3 +102,8 @@ EditorActionModifyLockedCells::EditorActionModifyLockedCells(bool added, i32 ind
     : EditorAction(EditorActionType::MODIFY_LOCKED_CELLS) 
     , added(added)
     , index(index) {}
+
+EditorSelected::EditorSelected(EditorEntityId id, EditorEntity entityStateAtSelection, bool modifiedUsingGui)
+    : id(id)
+    , entityStateAtSelection(entityStateAtSelection)
+    , modifiedUsingGui(modifiedUsingGui) {}

@@ -1,6 +1,7 @@
 #include "SettingsManager.hpp"
 #include <JsonFileIo.hpp>
 #include <filesystem>
+#include <game/WorkingDirectory.hpp>
 #include <fstream>
 
 const auto settingsPath = "cached/settings.json";
@@ -20,7 +21,7 @@ void SettingsManager::tryLoadSettings() {
 
 void SettingsManager::trySaveSettings() {
 	// TODO: Maybe move the saving to a worker thread.
-	std::filesystem::create_directory("./cached");
+	std::filesystem::create_directory(executableWorkingDirectory / "./cached");
 	const auto jsonSettings = toJson(settings);
 	std::ofstream file(settingsPath);
 	Json::print(file, jsonSettings);
