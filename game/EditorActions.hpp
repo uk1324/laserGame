@@ -18,6 +18,8 @@ enum class EditorActionType {
 	MODIFY_LOCKED_CELLS
 };
 
+const char* editorActionTypeToString(EditorActionType type);
+
 struct EditorAction {
 	EditorAction(EditorActionType type);
 
@@ -52,11 +54,10 @@ struct EditorActionDestroyEntity : EditorAction {
 };
 
 struct EditorSelected {
-	EditorSelected(EditorEntityId id, EditorEntity entityStateAtSelection, bool modifiedUsingGui = false);
+	EditorSelected(EditorEntityId id, EditorEntity entityStateAtSelection);
 
 	EditorEntityId id;
 	EditorEntity entityStateAtSelection;
-	bool modifiedUsingGui;
 };
 
 struct EditorActionModifiySelection : EditorAction {
@@ -95,7 +96,7 @@ struct EditorActions {
 	void beginMultiAction();
 	void endMultiAction();
 
-	void add(EditorAction* action);
+	void add(EditorAction* action, bool saveSelection = true);
 	template<typename Entity, typename ModifyAction>
 	void addModifyAction(
 		EntityArray<Entity, typename Entity::DefaultInitialize>& entities,

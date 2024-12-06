@@ -162,11 +162,15 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 
 			case EditorEntityType::WALL: {
 				auto entity = e.walls.get(selectedId.wall());
+				auto old = *entity;
 				if (!entity.has_value()) {
 					break;
 				}
 				// TODO: Should this add an modify action?
 				wallTypeCombo("type", entity->type);
+				if (old != *entity) {
+					selectTool.modifiedUsingGui |= true;
+				}
 				break;
 			}
 
@@ -178,34 +182,43 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 				}
 				editorLaserColorCombo(laser->color);
 				ImGui::Checkbox("position locked", &laser->positionLocked);
-				if (old != *laser) {
-					selectTool.selected->modifiedUsingGui |= true;
+				if (*laser != old) {
+					selectTool.modifiedUsingGui |= true;
 				}
 				break;
 			}
 
 			case EditorEntityType::MIRROR: {
 				auto mirror = e.mirrors.get(selectedId.mirror());
+				auto old = *mirror;
 				if (!mirror.has_value()) {
 					break;
 				}
 				editorMirrorLengthInput(mirror->length);
 				ImGui::Checkbox("position locked", &mirror->positionLocked);
 				editorMirrorWallTypeInput(mirror->wallType);
+				if (*mirror != old) {
+					selectTool.modifiedUsingGui |= true;
+				}
 				break;
 			}
 
 			case EditorEntityType::TARGET: {
 				auto target = e.targets.get(selectedId.target());
+				auto old = *target;
 				if (!target.has_value()) {
 					break;
 				}
 				editorTargetRadiusInput(target->radius);
+				if (*target != old) {
+					selectTool.modifiedUsingGui |= true;
+				}
 				break;
 			}
 
 			case EditorEntityType::PORTAL_PAIR: {
 				auto portalPair = e.portalPairs.get(selectedId.portalPair());
+				auto old = *portalPair;
 				if (!portalPair.has_value()) {
 					break;
 				}
@@ -220,26 +233,37 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 				for (auto& portal : portalPair->portals) {
 					portalGui(portal);
 				}
+				if (*portalPair != old) {
+					selectTool.modifiedUsingGui |= true;
+				}
 				break;
 			}
 
 			case EditorEntityType::TRIGGER: {
 				auto trigger = e.triggers.get(selectedId.trigger());
+				auto old = *trigger;
 				if (!trigger.has_value()) {
 					break;
 				}
 				editorTriggerColorCombo(trigger->color);
 				editorTriggerIndexInput("index", trigger->index);
+				if (*trigger != old) {
+					selectTool.modifiedUsingGui |= true;
+				}
 				break;
 			}
 
 			case EditorEntityType::DOOR: {
 				auto door = e.doors.get(selectedId.door());
+				auto old = *door;
 				if (!door.has_value()) {
 					break;
 				}
 				editorTriggerIndexInput("trigger index", door->triggerIndex);
 				ImGui::Checkbox("open by default", &door->openByDefault);
+				if (old != *door) {
+					selectTool.modifiedUsingGui |= true;
+				}
 				break;
 			}
 				
@@ -299,6 +323,32 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 		ImGui::InputInt("max reflections", &s.maxReflections);
 		//s.maxReflections = std::clamp(s.maxReflections, 0, 100);
 		s.maxReflections = std::clamp(s.maxReflections, 0, 300);
+
+		{
+			ImGui::Separator();
+			i32 lastDoneMin = 0;
+			i32 lastDoneMax = 0;
+
+			for (i32 i = 0; i < actions.actions.size(); i++) {
+				lastDoneMax = lastDoneMin + actions.actions[i].subActionCount;
+				if (i == actions.lastDoneAction) {
+					break;
+				}
+				lastDoneMin += actions.actions[i].subActionCount;
+			}
+
+			for (i32 i = 0; i < actions.actionStack.size(); i++) {
+				auto& action = actions.actionStack[i];
+				auto& r = actions.actions[actions.lastDoneAction];
+				i32 actionStackIndex = 0;
+				
+				if (i >= lastDoneMin && i < lastDoneMax) {
+					ImGui::Text(">");
+					ImGui::SameLine();
+				}
+				ImGui::Text(editorActionTypeToString(action->type));
+			}
+		}
 
 		ImGui::End();
 	}
@@ -395,7 +445,9 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 void Editor::undoRedoUpdate() {
 	if (Input::isKeyHeld(KeyCode::LEFT_CONTROL)) {
 		if (Input::isKeyDownWithAutoRepeat(KeyCode::Z)) {
-			saveSelectedEntityIfModified();
+			if (selectTool.modifiedUsingGui) {
+				saveSelectedEntityIfModified();
+			}
 			if (actions.lastDoneAction >= 0 && actions.lastDoneAction < actions.actions.size()) {
 				const auto offset = actions.actionIndexToStackStartOffset(actions.lastDoneAction);
 				for (i64 i = offset - 1 + actions.actions[actions.lastDoneAction].subActionCount; i >= offset; i--) {
@@ -405,7 +457,7 @@ void Editor::undoRedoUpdate() {
 			}
 
 		} else if (Input::isKeyDownWithAutoRepeat(KeyCode::Y)) {
-			saveSelectedEntityIfModified();
+			//saveSelectedEntityIfModified();
 			if (actions.lastDoneAction >= -1 && actions.lastDoneAction < actions.actions.size() - 1) {
 				actions.lastDoneAction++;
 				const auto offset = actions.actionIndexToStackStartOffset(actions.lastDoneAction);
@@ -598,8 +650,8 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		deactivateEntity(selectTool.selected->id);
 		actions.beginMultiAction();
 		{
-			actions.add(new EditorActionDestroyEntity(selectTool.selected->id));
-			actions.add(new EditorActionModifiySelection(selectTool.selected, std::nullopt));
+			actions.add(new EditorActionDestroyEntity(selectTool.selected->id), false);
+			actions.add(new EditorActionModifiySelection(selectTool.selected, std::nullopt), false);
 			selectTool.selected = std::nullopt;
 		}
 		actions.endMultiAction();
@@ -609,7 +661,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		return;
 	}
 
-	const auto oldSelection = selectTool.selected;
+	//const auto oldSelection = selectTool.selected;
 
 	auto areIdsEqual = [](const std::optional<EditorSelected>& a, const std::optional<EditorSelected>& b) {
 		if (!a.has_value() && !b.has_value()) {
@@ -623,10 +675,12 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		return a->id == b->id;
 	};
 
+	std::optional<EditorSelected> newSelection;
+
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		for (const auto& wall : e.walls) {
 			if (eucledianDistanceToStereographicSegment(wall->endpoints[0], wall->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
-				selectTool.selected = EditorSelected(EditorEntityId(wall.id), EditorEntity(wall.entity));
+				newSelection = EditorSelected(EditorEntityId(wall.id), EditorEntity(wall.entity));
 				goto selectedEntity;
 			}
 		}
@@ -635,21 +689,21 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			const auto endpoints = mirror->calculateEndpoints();
 			const auto dist = eucledianDistanceToStereographicSegment(endpoints[0], endpoints[1], cursorPos);
 			if (dist < Constants::endpointGrabPointRadius) {
-				selectTool.selected = EditorSelected(EditorEntityId(mirror.id), EditorEntity(mirror.entity));
+				newSelection = EditorSelected(EditorEntityId(mirror.id), EditorEntity(mirror.entity));
 				goto selectedEntity;
 			}
 		}
 
 		for (const auto& laser : e.lasers) {
 			if (distance(laser->position, cursorPos) < Constants::endpointGrabPointRadius) {
-				selectTool.selected = EditorSelected(EditorEntityId(laser.id), EditorEntity(laser.entity));
+				newSelection = EditorSelected(EditorEntityId(laser.id), EditorEntity(laser.entity));
 				goto selectedEntity;
 			}
 		}
 
 		for (const auto& target : e.targets) {
 			if (isOrbUnderCursor(target->position, target->radius, cursorPos)) {
-				selectTool.selected = EditorSelected(EditorEntityId(target.id), EditorEntity(target.entity));
+				newSelection = EditorSelected(EditorEntityId(target.id), EditorEntity(target.entity));
 				goto selectedEntity;
 			}
 		}
@@ -659,7 +713,7 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 				const auto endpoints = portal.endpoints();
 				const auto dist = eucledianDistanceToStereographicSegment(endpoints[0], endpoints[1], cursorPos);
 				if (dist < Constants::endpointGrabPointRadius) {
-					selectTool.selected = EditorSelected(EditorEntityId(portalPair.id), EditorEntity(portalPair.entity));
+					newSelection = EditorSelected(EditorEntityId(portalPair.id), EditorEntity(portalPair.entity));
 					goto selectedEntity;
 				}
 			}
@@ -668,43 +722,44 @@ void Editor::selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		for (const auto& trigger : e.triggers) {
 			const auto circle = trigger->circle();
 			if (isOrbUnderCursor(trigger->position, trigger->defaultRadius, cursorPos)) {
-				selectTool.selected = EditorSelected(EditorEntityId(trigger.id), EditorEntity(trigger.entity));
+				newSelection = EditorSelected(EditorEntityId(trigger.id), EditorEntity(trigger.entity));
 				goto selectedEntity;
 			}
 		}
 
 		for (const auto& door : e.doors) {
 			if (eucledianDistanceToStereographicSegment(door->endpoints[0], door->endpoints[1], cursorPos) < Constants::endpointGrabPointRadius) {
-				selectTool.selected = EditorSelected(EditorEntityId(door.id), EditorEntity(door.entity));
+				newSelection = EditorSelected(EditorEntityId(door.id), EditorEntity(door.entity));
 				goto selectedEntity;
 			}
 		}
 
-	} else if (Input::isMouseButtonDown(MouseButton::RIGHT) && selectTool.selected != std::nullopt) {
+	} 
+	// I think it might be possible to bug out modifiedUsingGui using this and I don't really use it. Probably just setting modifiedUsingGui = false would prevent it.
+	/*else if (Input::isMouseButtonDown(MouseButton::RIGHT) && selectTool.selected != std::nullopt) {
 		actions.beginMultiAction();
 		{
-			actions.add(new EditorActionModifiySelection(selectTool.selected, std::nullopt));
+			actions.add(new EditorActionModifiySelection(selectTool.selected, std::nullopt), false);
 			saveSelectedEntityIfModified();
 		}
 		actions.endMultiAction();
 		selectTool.selected = std::nullopt;
-	}
+	}*/
 
 	selectedEntity:;
-	if (!areIdsEqual(selectTool.selected, oldSelection)) {
+	if (newSelection.has_value() && !areIdsEqual(selectTool.selected, newSelection)) {
 		cursorCaptured = true;
 		actions.beginMultiAction();
 		{
-			actions.add(new EditorActionModifiySelection(oldSelection, selectTool.selected));
+			const auto oldSelection = selectTool.selected;
+			actions.add(new EditorActionModifiySelection(oldSelection, newSelection), true);
+			selectTool.selected = newSelection;
 			if (oldSelection.has_value()) {
 				saveSelectedEntityIfModified();
 			}
 		}
 		actions.endMultiAction();
 	} 
-	if (selectTool.selected.has_value() && oldSelection.has_value() && selectTool.selected->id == oldSelection->id) {
-		selectTool.selected->modifiedUsingGui = oldSelection->modifiedUsingGui;
-	}
 }
 
 void Editor::saveSelectedEntityIfModified() {
@@ -712,16 +767,14 @@ void Editor::saveSelectedEntityIfModified() {
 		return;
 	}
 	auto selected = *selectTool.selected;
-	
-	if (!selected.modifiedUsingGui) {
-		return;
-	}
 
 	const auto& id = selected.id;
 	if (selected.id.type != selected.entityStateAtSelection.type) {
 		CHECK_NOT_REACHED();
 		return;
 	}
+
+	selectTool.modifiedUsingGui = false;
 
 #define ADD(lowerName, UpperName, arrayName) \
 	{ \
@@ -737,14 +790,12 @@ void Editor::saveSelectedEntityIfModified() {
 		} \
 		const auto oldSelection = selected; \
 		selectTool.selected->entityStateAtSelection = EditorEntity(*entity); \
-		selectTool.selected->modifiedUsingGui = false; \
 		actions.beginMultiAction(); \
-		actions.add(new EditorActionModify##UpperName(entityId, std::move(old), std::move(*entity))); \
-		actions.add(new EditorActionModifiySelection(oldSelection, selectTool.selected)); \
+		actions.add(new EditorActionModifiySelection(oldSelection, selectTool.selected), false); \
+		actions.add(new EditorActionModify##UpperName(entityId, std::move(old), std::move(*entity)), false); \
 		actions.endMultiAction(); \
 		break; \
 	}
-
 	switch (selected.id.type) {
 		using enum EditorEntityType;
 

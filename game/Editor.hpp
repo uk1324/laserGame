@@ -127,6 +127,7 @@ struct Editor {
 
 	struct SelectTool {
 		std::optional<EditorSelected> selected;
+		bool modifiedUsingGui = false;
 	} selectTool;
 	void selectToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 
