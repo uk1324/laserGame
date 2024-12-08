@@ -38,6 +38,7 @@ struct MainMenu {
 		GO_TO_SETTINGS,
 		GO_TO_EDITOR,
 		PLAY,
+		GO_TO_HOW_TO_PLAY,
 	};
 
 	enum class SettingsResult {
@@ -50,6 +51,7 @@ struct MainMenu {
 	SettingsResult settingsUpdate(GameRenderer& renderer, GameAudio& audio);
 
 	static void drawText(GameRenderer& r, std::string_view text, const Ui::CenteredHorizontalListLayout& layout, i32 id, f32 hoverT = 0.0f);
+	static void drawTextColored(GameRenderer& r, const ColoredText& text, const Ui::CenteredHorizontalListLayout& layout, i32 id, f32 hoverT = 0.0f);
 
 	static void drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button);
 
@@ -61,6 +63,7 @@ struct MainMenu {
 		i32 titleId1 = INVALID;
 
 		Button playButton;
+		Button howToPlayButton;
 		Button levelSelectButton;
 		Button editorButton;
 		Button settingsButton;
@@ -108,6 +111,24 @@ struct MainMenu {
 	};
 
 	CongratulationsScreenResult congratulationsScreenUpdate(GameRenderer& renderer, GameAudio& audio);
+
+	struct HowToPlayScreenUi {
+		Ui::CenteredHorizontalListLayout layout;
+		i32 textId00;
+		i32 textId01;
+		i32 textId10;
+		i32 textId11;
+		// Grab yellow objects by holding down left click.
+		// Hit all the magenta circles using a laser to complete a level.
+		Button backButton;
+	} howToPlayUi;
+
+	enum class HowToPlayScreenResult {
+		NONE,
+		BACK
+	};
+
+	HowToPlayScreenResult howToPlayScreenUpdate(GameRenderer& renderer, GameAudio& audio);
 
 	ColorRng rng;
 };

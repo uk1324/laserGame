@@ -456,6 +456,22 @@ void GameRenderer::gameText(Vec2 bottomLeftPosition, float maxHeight, std::strin
 	}
 }
 
+void GameRenderer::gameTextColored(Vec2 bottomLeftPosition, float maxHeight, const ColoredText& text, f32 hoverT) {
+	const auto toUiSpace = Mat3x2::scale(Vec2(2.0f)) * gfx.camera.worldToCameraToNdc();
+
+	TextRenderInfoIterator iterator(font, bottomLeftPosition, toUiSpace, maxHeight, text.chars.c_str(), Constants::additionalTextSpacing);
+	for (auto info = iterator.next(); info.has_value(); info = iterator.next()) {
+		Vec3 c = text.colors[info->indexInText];
+		gameTextInstances.push_back(GameTextInstance{
+			.transform = info->transform,
+			.offsetInAtlas = info->offsetInAtlas,
+			.sizeInAtlas = info->sizeInAtlas,
+			.color = c,
+			.hoverT = hoverT
+		});
+	}
+}
+
 Vec2 textCenteredPosition(const Font& font, Vec2 center, f32 maxHeight, std::string_view text) {
 	const auto info = font.textInfo(maxHeight, text, Constants::additionalTextSpacing);
 	Vec2 position = center;
@@ -467,6 +483,11 @@ Vec2 textCenteredPosition(const Font& font, Vec2 center, f32 maxHeight, std::str
 void GameRenderer::gameTextCentered(Vec2 position, float maxHeight, std::string_view text, f32 hoverT, std::optional<Vec3> color) {
 	position = Ui::posToWorldSpace(*this, position) / 2.0f;
 	gameText(textCenteredPosition(font, position, maxHeight, text), maxHeight, text, hoverT, color);
+}
+
+void GameRenderer::gameTextColoredCentered(Vec2 position, float maxHeight, const ColoredText& text, f32 hoverT) {
+	position = Ui::posToWorldSpace(*this, position) / 2.0f;
+	gameTextColored(textCenteredPosition(font, position, maxHeight, text.chars.c_str()), maxHeight, text, hoverT);
 }
 
 #include <imgui/imgui.h>
@@ -536,3 +557,15 @@ Vec3 ColorRng::colorRandomHue(f32 s, f32 v) {
 //Vec3 GameRenderer::absorbingColor = Vec3(37, 31, 46) / 256.0f;
 Vec3 GameRenderer::absorbingColor = Color3::WHITE / 1.0f;
 Vec3 GameRenderer::reflectingColor = Vec3(93) / 256.0f;
+
+void ColoredText::clear() {
+	chars.clear();
+	colors.clear();
+}
+
+void ColoredText::add(std::string_view text, Vec3 color) {
+	for (auto& c : text) {
+		chars.push_back(c);
+		colors.push_back(color);
+	}
+}

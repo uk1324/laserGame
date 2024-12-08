@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
 
 	const path executablePath(executablePathString);
 
-	const auto gameOutputPath = outputPath / "laser game";
+	const auto gameOutputPath = outputPath / "Non-Euclidean optics";
 
 	auto copyDirRecursive = [&](const char* dir) {
 		copy("./platformer/assets", gameOutputPath / "assets", copy_options::recursive | copy_options::overwrite_existing);
@@ -32,9 +32,9 @@ int main(int argc, char** argv) {
 		create_directories(gameOutputPath / "assets/fonts");
 		copy("./engine/assets/fonts/RobotoMono-Regular.ttf", gameOutputPath / "assets/fonts/RobotoMono-Regular.ttf", copy_options::overwrite_existing);
 		copy("./assets/fonts/Tektur-Regular.ttf", gameOutputPath / "assets/fonts/Tektur-Regular.ttf", copy_options::overwrite_existing);
-		copy("./engine/dependencies/freetype.dll", gameOutputPath / "freetype.dll", copy_options::overwrite_existing);
+		copy("./engine/dependencies/freetypeRelease.dll", gameOutputPath / "freetype.dll", copy_options::overwrite_existing);
 		copy_file("./OpenAL32.dll", gameOutputPath / "OpenAL32.dll", copy_options::overwrite_existing);
-		copy_file(executablePath, gameOutputPath / ("laser game" + executablePath.extension().string()), copy_options::overwrite_existing);
+		copy_file(executablePath, gameOutputPath / ("Non-Euclidean optics" + executablePath.extension().string()), copy_options::overwrite_existing);
 
 		for (const auto& dirEntry : std::filesystem::directory_iterator("./assets/levels")) {
 			if (dirEntry.is_directory()) {

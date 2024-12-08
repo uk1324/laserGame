@@ -39,7 +39,8 @@ struct MainLoop {
 		TRANSITION_TO_LEVEL,
 		STATELESS_TRANSITION,
 		CONGRATULATIONS,
-	} state = State::EDITOR;
+		HOW_TO_PLAY,
+	} state = State::MAIN_MENU;
 
 	void previewEditorLevelInGame();
 

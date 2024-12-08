@@ -56,6 +56,8 @@ MainMenu::MainMenu() {
 		ui.layout.addPadding(padding); // additional padding
 		ui.playButton = makeButton("play", ui.layout);
 		ui.layout.addPadding(padding);
+		ui.howToPlayButton = makeButton("how to play", ui.layout);
+		ui.layout.addPadding(padding);
 		ui.levelSelectButton = makeButton("level select", ui.layout);
 		ui.layout.addPadding(padding);
 		ui.editorButton = makeButton("editor", ui.layout);
@@ -112,6 +114,17 @@ MainMenu::MainMenu() {
 		ui.layout.addPadding(padding);
 		ui.levelSelectButton = makeButton("level select", ui.layout);
 	}
+
+	{
+		auto& ui = howToPlayUi;
+		ui.textId00 = ui.layout.addBlock(buttonSize);
+		ui.textId01 = ui.layout.addBlock(buttonSize);
+		ui.layout.addPadding(padding * 3.0f);
+		ui.textId10 = ui.layout.addBlock(buttonSize);
+		ui.textId11 = ui.layout.addBlock(buttonSize);
+		ui.layout.addPadding(padding * 3.0f);
+		ui.backButton = makeButton("back", ui.layout);
+	}
 }
 
 Ui::RectMinMax MainMenu::buttonRect(const GameRenderer& renderer, const Ui::CenteredHorizontalListLayout& layout, const Button& button) {
@@ -138,10 +151,11 @@ MainMenu::Result MainMenu::update(GameRenderer& renderer, GameAudio& audio) {
 
 	const auto cursorPos = Ui::cursorPosUiSpace();
 
-	drawText(renderer, "Non-euclidean", ui.layout, ui.titleId0);
+	drawText(renderer, "Non-Euclidean", ui.layout, ui.titleId0);
 	drawText(renderer, "optics", ui.layout, ui.titleId1);
 
 	if (BUTTON(ui.playButton)) result = Result::PLAY;
+	if (BUTTON(ui.howToPlayButton)) result = Result::GO_TO_HOW_TO_PLAY;
 	if (BUTTON(ui.levelSelectButton)) result = Result::GO_TO_LEVEL_SELECT;
 	if (BUTTON(ui.editorButton)) result = Result::GO_TO_EDITOR;
 	if (BUTTON(ui.settingsButton)) result = Result::GO_TO_SETTINGS;
@@ -306,6 +320,12 @@ void MainMenu::drawText(GameRenderer& r, std::string_view text, const Ui::Center
 	r.gameTextCentered(center, block.worldSize(), text, hoverT);
 }
 
+void MainMenu::drawTextColored(GameRenderer& r, const ColoredText& text, const Ui::CenteredHorizontalListLayout& layout, i32 id, f32 hoverT) {
+	auto& block = layout.blocks[id];
+	const auto center = Vec2(r.gfx.camera.pos.x, block.worldCenter());
+	r.gameTextColoredCentered(center, block.worldSize(), text, hoverT);
+}
+
 void MainMenu::drawButton(GameRenderer& r, const Ui::CenteredHorizontalListLayout& layout, const Button& button) {
 	drawText(r, button.text, layout, button.id, button.hoverAnimationT);
 }
@@ -334,6 +354,56 @@ MainMenu::CongratulationsScreenResult MainMenu::congratulationsScreenUpdate(Game
 
 	if (BUTTON(ui.levelSelectButton)) result = CongratulationsScreenResult::GO_TO_LEVEL_SELECT; 
 	if (BUTTON(ui.mainMenuButton)) result = CongratulationsScreenResult::GO_TO_MAIN_MENU;
+
+	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
+	renderer.gfx.drawFilledTriangles();
+	renderer.gfx.drawLines();
+	renderer.renderGameText(true);
+	return result;
+}
+
+MainMenu::HowToPlayScreenResult MainMenu::howToPlayScreenUpdate(GameRenderer& renderer, GameAudio& audio) {
+	uiSceneBegin(renderer);
+
+	auto result = HowToPlayScreenResult::NONE;
+
+	auto& ui = howToPlayUi;
+
+	ui.layout.update(renderer.gfx.camera);
+
+
+	const auto cursorPos = Ui::cursorPosUiSpace();
+
+	// https://english.stackexchange.com/questions/240468/whats-the-difference-between-you-have-completed-the-task-and-you-com
+	ColoredText text;
+	// Grab yellow objects by holding down left click.
+	{
+		
+		text.add("Grab ");
+		text.add("yellow", Color3::YELLOW);
+		text.add(" objects");
+		drawTextColored(renderer, text, ui.layout, ui.textId00);
+		text.clear();
+	}
+	{
+		text.add("by holding down left click.");
+		drawTextColored(renderer, text, ui.layout, ui.textId01);
+		text.clear();
+	}
+	// Hit all the purple orbs with a laser to complete a level.
+	{
+		text.add("Hit all the ");
+		text.add("purple", Color3::MAGENTA / 2.0f);
+		text.add(" orbs");
+		drawTextColored(renderer, text, ui.layout, ui.textId10);
+		text.clear();
+	}
+	{
+		text.add("with a laser to complete a level.");
+		drawTextColored(renderer, text, ui.layout, ui.textId11);
+	}
+
+	if (BUTTON(ui.backButton)) result = HowToPlayScreenResult::BACK;
 
 	renderer.gfx.fontRenderer.render(renderer.font, renderer.gfx.instancesVbo);
 	renderer.gfx.drawFilledTriangles();

@@ -204,7 +204,12 @@ void MainLoop::stateUpdate(State stateToUpdate) {
 			break;
 
 		case GO_TO_EDITOR:
-			state = State::EDITOR;
+			//state = State::EDITOR;
+			switchToState(state, State::EDITOR);
+			break;
+
+		case GO_TO_HOW_TO_PLAY:
+			doBasicTransition(HOW_TO_PLAY);
 			break;
 
 		case NONE:
@@ -395,6 +400,19 @@ void MainLoop::stateUpdate(State stateToUpdate) {
 			break;
 
 		case GO_TO_MAIN_MENU:
+			doBasicTransition(State::MAIN_MENU);
+			break;
+		}
+		break;
+	}
+
+	case HOW_TO_PLAY: {
+		const auto result = mainMenu.howToPlayScreenUpdate(renderer, audio);
+		switch (result) {
+			using enum MainMenu::HowToPlayScreenResult;
+		case NONE:
+			break;
+		case BACK:
 			doBasicTransition(State::MAIN_MENU);
 			break;
 		}

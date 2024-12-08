@@ -24,7 +24,7 @@ add_custom_command(TARGET game POST_BUILD
 if (WIN32)
 	target_link_libraries(game PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../engine/dependencies/freetype.lib")
 else()
-	target_link_libraries(game PUBLIC freetype)
+	target_link_libraries(game PUBLIC freetypeStaticRelease)
 endif()
 
 # enumerator 'identifier' in switch of enum 'enumeration' is not handled

@@ -20,6 +20,15 @@ struct ColorRng {
 	std::uniform_real_distribution<f32> dist;
 };
 
+struct ColoredText {
+	std::string chars;
+	std::vector<Vec3> colors;
+
+	void clear();
+
+	void add(std::string_view text, Vec3 color = Color3::WHITE);
+};
+
 const auto grabbableCircleRadius = 0.015f;
 
 struct GameRenderer {
@@ -83,12 +92,24 @@ struct GameRenderer {
 		f32 hoverT = 0.0f,
 		std::optional<Vec3> color = std::nullopt);
 
+	void gameTextColored(
+		Vec2 bottomLeftPosition,
+		float maxHeight,
+		const ColoredText& colored,
+		f32 hoverT = 0.0f);
+
 	void gameTextCentered(
 		Vec2 position,
 		float maxHeight,
 		std::string_view text,
 		f32 hoverT = 0.0f,
 		std::optional<Vec3> color = std::nullopt);
+
+	void gameTextColoredCentered(
+		Vec2 position,
+		float maxHeight,
+		const ColoredText& colored,
+		f32 hoverT = 0.0f);
 
 	void renderGameText(bool useAdditiveBlending);
 

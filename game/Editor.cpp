@@ -324,7 +324,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 		//s.maxReflections = std::clamp(s.maxReflections, 0, 100);
 		s.maxReflections = std::clamp(s.maxReflections, 0, 300);
 
-		{
+		/*{
 			ImGui::Separator();
 			i32 lastDoneMin = 0;
 			i32 lastDoneMax = 0;
@@ -348,7 +348,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 				}
 				ImGui::Text(editorActionTypeToString(action->type));
 			}
-		}
+		}*/
 
 		ImGui::End();
 	}

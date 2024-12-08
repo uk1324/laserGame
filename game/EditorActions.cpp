@@ -135,4 +135,5 @@ const char* editorActionTypeToString(EditorActionType type) {
     case MODIFY_SELECTION: return "modify selection";
     case MODIFY_LOCKED_CELLS: return "modify locked cells";
     }
+    return "";
 }
