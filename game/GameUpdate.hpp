@@ -3,6 +3,7 @@
 #include <game/EditorEntities.hpp>
 
 struct GameState {
+	void snapObjectPositionsInsideBoundary(GameEntities& e);
 	void update(GameEntities& e);
 
 	struct Segment {

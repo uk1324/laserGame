@@ -140,7 +140,7 @@ void GameRenderer::renderClear() {
 
 }
 
-void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 invalidGameStateAnimationT) {
+void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 invalidGameStateAnimationT, std::optional<f32> movementDirectionAngle) {
 	//ImGui::ColorEdit3("absorbing color", absorbingColor.data());
 	glEnable(GL_STENCIL_TEST);
 	glClear(GL_STENCIL_BUFFER_BIT);
@@ -285,6 +285,18 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 		const auto tipColor = movablePartColor(laser->rotationLocked);
 		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[0], 0.01f, tipColor);
 		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[1], 0.01f, tipColor);
+	}
+
+	if (movementDirectionAngle.has_value()) {
+		const auto color = Color3::CYAN;
+		f32 earRotation = PI<f32> / 4.0f + PI<f32>;
+		const auto earLenth = 0.05f;
+		const auto arrowEnd = Vec2::oriented(*movementDirectionAngle) * 0.05f;
+		const auto width = 0.01f;
+		gfx.lineTriangulated(-arrowEnd, arrowEnd, width, color);
+
+		gfx.lineTriangulated(arrowEnd, arrowEnd + Vec2::oriented(*movementDirectionAngle + earRotation) * earLenth, 0.01f, color);
+		gfx.lineTriangulated(arrowEnd, arrowEnd + Vec2::oriented(*movementDirectionAngle - earRotation) * earLenth, 0.01f, color);
 	}
 
 	gfx.drawFilledTriangles();

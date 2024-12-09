@@ -20,36 +20,34 @@ Vec2 snapPositionsOutsideBoundary(Vec2 v) {
 	return v;
 }
 
-void GameState::update(GameEntities& e) {
-	anyTargetsTurnedOn = false;
-
-	//for (auto laser : e.lasers) {
-	//	laser->position = snapPositionsOutsideBoundary(laser->position);
-	//}
-	//for (auto mirror : e.mirrors) {
-	//	mirror->center = snapPositionsOutsideBoundary(mirror->center);
-	//}
-	//for (auto portalPair : e.portalPairs) {
-	//	for (auto& portal : portalPair->portals) {
-	//		portal.center = snapPositionsOutsideBoundary(portal.center);
-	//	}
-	//}
-	//for (auto wall : e.walls) {
-	//	for (auto& endpoint : wall->endpoints) {
-	//		endpoint = snapPositionsOutsideBoundary(endpoint);
-	//	}
-	//}
-	//for (auto door : e.doors) {
-	//	for (auto& endpoint : door->endpoints) {
-	//		endpoint = snapPositionsOutsideBoundary(endpoint);
-	//	}
-	//}
-	//for (auto target : e.targets) {
-	//	target->position = snapPositionsOutsideBoundary(target->position);
-	//}
-	//for (auto trigger : e.triggers) {
-	//	trigger->position = snapPositionsOutsideBoundary(trigger->position);
-	//}
+void GameState::snapObjectPositionsInsideBoundary(GameEntities& e) {
+	for (auto laser : e.lasers) {
+		laser->position = snapPositionsOutsideBoundary(laser->position);
+	}
+	for (auto mirror : e.mirrors) {
+		mirror->center = snapPositionsOutsideBoundary(mirror->center);
+	}
+	for (auto portalPair : e.portalPairs) {
+		for (auto& portal : portalPair->portals) {
+			portal.center = snapPositionsOutsideBoundary(portal.center);
+		}
+	}
+	for (auto wall : e.walls) {
+		for (auto& endpoint : wall->endpoints) {
+			endpoint = snapPositionsOutsideBoundary(endpoint);
+		}
+	}
+	for (auto door : e.doors) {
+		for (auto& endpoint : door->endpoints) {
+			endpoint = snapPositionsOutsideBoundary(endpoint);
+		}
+	}
+	for (auto target : e.targets) {
+		target->position = snapPositionsOutsideBoundary(target->position);
+	}
+	for (auto trigger : e.triggers) {
+		trigger->position = snapPositionsOutsideBoundary(trigger->position);
+	}
 
 	for (auto target : e.targets) {
 		target->activated = false;
@@ -57,6 +55,12 @@ void GameState::update(GameEntities& e) {
 	for (auto trigger : e.triggers) {
 		trigger->activated = false;
 	}
+}
+
+void GameState::update(GameEntities& e) {
+	anyTargetsTurnedOn = false;
+
+	
 	laserSegmentsToDraw.clear();
 
 	for (const auto& laser : e.lasers) {

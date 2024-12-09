@@ -413,6 +413,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 		updateSelectedTool();
 	}
 
+	s.snapObjectPositionsInsideBoundary(e);
 	s.update(e);
 
 	renderer.renderClear();
@@ -434,7 +435,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 	case MODIFY_LOCKED_CELLS: modifyLockedCellsToolRender(renderer, cursorPos, cursorCaptured);
 	}
 
-	renderer.render(e, s, true, 0.0f);
+	renderer.render(e, s, true, 0.0f, std::nullopt);
 
 	if (snappedCursor) {
 		renderer.gfx.disk(cursorPos, 0.01f, Color3::WHITE);

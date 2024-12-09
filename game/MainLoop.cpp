@@ -430,7 +430,7 @@ void MainLoop::atTransitionMidpoint(State curretState, State newState) {
 	switch (newState) {
 		using enum State;
 	case GAME:
-		game.transormationDirectionAngle = 0.0f;
+		game.transormationDirectionAngle = PI<f32> / 2.0f;
 		game.accumulatedTransformation = Quat::identity;
 		break;
 

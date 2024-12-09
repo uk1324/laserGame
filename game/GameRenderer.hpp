@@ -52,7 +52,7 @@ struct GameRenderer {
 	static constexpr Vec4 lockedCellColor = Vec4(Color3::WHITE / 2.0f, 0.5f);
 
 	void renderClear();
-	void render(GameEntities& e, const GameState& s, bool editor, f32 invalidGameStateAnimationT);
+	void render(GameEntities& e, const GameState& s, bool editor, f32 invalidGameStateAnimationT, std::optional<f32> movementDirectionAngle);
 
 	void renderBackground();
 	void renderTilingBackground();

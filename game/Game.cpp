@@ -24,9 +24,9 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	mirrorGrabTool.update(e.mirrors, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
 	portalGrabTool.update(e.portalPairs, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
 
+	s.snapObjectPositionsInsideBoundary(e);
 	{
 		const auto direction = Vec2::oriented(transormationDirectionAngle);
-		Dbg::line(Vec2(0.0f), direction * 0.1f, 0.01f, Color3::CYAN);
 		const auto rotationSpeed = TAU<f32> *1.5f;
 		const auto da = rotationSpeed * Constants::dt;
 		if (Input::isKeyHeld(KeyCode::A)) {
@@ -203,7 +203,7 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	previousFrameInvalidState = !objectsInValidState;
 
 	renderer.renderClear();
-	renderer.render(e, s, false, invalidGameStateAnimationT);
+	renderer.render(e, s, false, invalidGameStateAnimationT, transormationDirectionAngle);
 
 	if (!isEditorPreviewLevelLoaded()) {
 		const auto uiResult = updateUi(renderer, audio, levelComplete);
