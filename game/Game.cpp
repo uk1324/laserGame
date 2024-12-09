@@ -5,6 +5,7 @@
 #include <game/Animation.hpp>
 #include <imgui/imgui.h>
 #include <engine/Input/Input.hpp>
+#include <gfx2d/DbgGfx2d.hpp>
 
 Game::Game() {
 }
@@ -22,6 +23,116 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	laserGrabTool.update(e.lasers, std::nullopt, cursorPos, cursorCaptured, cursorExact, enforceConstrains);
 	mirrorGrabTool.update(e.mirrors, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
 	portalGrabTool.update(e.portalPairs, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
+
+	{
+		const auto direction = Vec2::oriented(transormationDirectionAngle);
+		Dbg::line(Vec2(0.0f), direction * 0.1f, 0.01f, Color3::CYAN);
+		const auto rotationSpeed = TAU<f32> *1.5f;
+		const auto da = rotationSpeed * Constants::dt;
+		if (Input::isKeyHeld(KeyCode::A)) {
+			transormationDirectionAngle += da;
+		}
+		if (Input::isKeyHeld(KeyCode::D)) {
+			transormationDirectionAngle -= da;
+		}
+		const auto movementSpeed = 2.0f;
+		auto movement = [&direction](f32 speed) {
+			return Quat(speed * Constants::dt, cross(Vec3(0.0f, 0.0f, 1.0f), Vec3(direction.x, direction.y, 0.0f)));
+		};
+
+		std::optional<Quat> transformationChange;
+		if (Input::isKeyHeld(KeyCode::W)) {
+			transformationChange = movement(movementSpeed);
+		}
+		if (Input::isKeyHeld(KeyCode::S)) {
+			transformationChange = movement(-movementSpeed);
+		}
+		if (transformationChange.has_value()) {
+			accumulatedTransformation = *transformationChange * accumulatedTransformation;
+			accumulatedTransformation = accumulatedTransformation.normalized();
+		}
+
+		auto applyTransformation = [](Vec2 v, Quat transformation) {
+			return toStereographic(transformation * fromStereographic(v));
+		};
+
+		auto transformWallLikeObject = [&applyTransformation](const Vec2* initialEndpoints, Vec2* endpoints, Quat transformation) {
+			bool bothOutside = true;
+			for (i32 i = 0; i < 2; i++) {
+				endpoints[i] = applyTransformation(initialEndpoints[i], transformation);
+				bothOutside &= endpoints[i].length() > Constants::boundary.radius;
+			}
+			if (bothOutside) {
+				for (i32 i = 0; i < 2; i++) {
+					auto& endpoint = endpoints[i];
+					endpoint = antipodalPoint(endpoint);
+				}
+			}
+		};
+
+		for (auto wall : e.walls) {
+			transformWallLikeObject(wall->initialEndpoints, wall->endpoints, accumulatedTransformation);
+		}
+
+		for (auto door : e.doors) {
+			transformWallLikeObject(door->initialEndpoints, door->endpoints, accumulatedTransformation);
+		}
+
+		for (auto trigger : e.triggers) {
+			trigger->position = applyTransformation(trigger->initialPosition, accumulatedTransformation);
+		}
+
+		for (auto target : e.targets) {
+			target->position = applyTransformation(target->initialPosition, accumulatedTransformation);
+		}
+
+		auto transformWithNormalAngle = [&applyTransformation](Vec2& position, f32& normalAngle, Quat transformation) {
+			const auto tangentAngle = normalAngle + PI<f32> / 2.0f;
+			const auto secondPoint = moveOnStereographicGeodesic(position, tangentAngle, 0.1f);
+
+			const auto initialLine = stereographicLine(position, secondPoint);
+
+			auto newPosition = applyTransformation(position, transformation);
+
+			bool flipped = false;
+			if (newPosition.length() > Constants::boundary.radius) {
+				flipped = true;
+				newPosition = antipodalPoint(newPosition);
+			}
+			const auto newSecondPoint = applyTransformation(secondPoint, transformation);
+
+			const auto newLine = stereographicLine(newPosition, newSecondPoint);
+
+			auto newNormal = stereographicLineNormalAt(newLine, newPosition);
+
+			const Vec2 pointOnNormalSide = position + Vec2::oriented(normalAngle) * 0.1f;
+			Vec2 newPointOnNormalSide = applyTransformation(pointOnNormalSide, transformation);
+			if (flipped) {
+				newPointOnNormalSide = antipodalPoint(newPointOnNormalSide);
+			}
+			if (dot(newNormal, newPointOnNormalSide - newPosition) < 0.0f) {
+				newNormal = -newNormal;
+			}
+			position = newPosition;
+			normalAngle = newNormal.angle();
+		};
+
+		if (transformationChange.has_value()) {
+			for (auto mirror : e.mirrors) {
+				transformWithNormalAngle(mirror->center, mirror->normalAngle, *transformationChange);
+			}
+			for (auto portalPair : e.portalPairs) {
+				for (auto& portal : portalPair->portals) {
+					transformWithNormalAngle(portal.center, portal.normalAngle, *transformationChange);
+				}
+			}
+			for (auto laser : e.lasers) {
+				// Don't know why this works with a tangent angle without modifications. 
+				// It breaks if you try to add and subtruct pi/2 when you move into the boundary.
+				transformWithNormalAngle(laser->position, laser->angle, *transformationChange);
+			}
+		}
+	}
 
 	// s should update before checking if objects are in valid state, because s snaps objects back into the boundary. 
 	s.update(e);

@@ -146,6 +146,7 @@ void MainLoop::switchToState(State currentState, State newState) {
 		using enum State;
 	case GAME:
 		game.onSwitchToGame(audio);
+		atTransitionMidpoint(currentState, State::GAME);
 		break;
 
 	default:
@@ -348,6 +349,7 @@ void MainLoop::stateUpdate(State stateToUpdate) {
 		if (updateTAndCheckIfAtMid(s.t)) {
 			renderer.randomize();
 			queuedUpTransition = std::nullopt;
+			atTransitionMidpoint(s.startState, s.endState);
 		}
 
 		if (s.t < 0.5f) {
@@ -366,9 +368,11 @@ void MainLoop::stateUpdate(State stateToUpdate) {
 	case TRANSITION_TO_LEVEL: {
 		auto& s = transitionToLevel;
 
+		const auto endState = State::GAME;
 		const auto previousT = s.t;
 		if (updateTAndCheckIfAtMid(s.t)) {
 			renderer.randomize();
+			atTransitionMidpoint(s.startState, endState);
 			game.tryLoadGameLevel(levels, s.levelIndex);
 			queuedUpTransition = std::nullopt;
 		}
@@ -376,11 +380,11 @@ void MainLoop::stateUpdate(State stateToUpdate) {
 		if (s.t < mid) {
 			stateUpdate(s.startState);
 		} else {
-			stateUpdate(State::GAME);
+			stateUpdate(endState);
 		}
 
 		if (s.t >= 1.0f) {
-			switchOutOfTransition(s.startState, State::GAME);
+			switchOutOfTransition(s.startState, endState);
 		}
 		updateTransition(renderer, audio, previousT, s.t, s.transitionEffect);
 		renderTransition(renderer, s.t, s.transitionEffect);
@@ -419,6 +423,19 @@ void MainLoop::stateUpdate(State stateToUpdate) {
 		break;
 	}
 
+	}
+}
+
+void MainLoop::atTransitionMidpoint(State curretState, State newState) {
+	switch (newState) {
+		using enum State;
+	case GAME:
+		game.transormationDirectionAngle = 0.0f;
+		game.accumulatedTransformation = Quat::identity;
+		break;
+
+	default:
+		break;
 	}
 }
 

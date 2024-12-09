@@ -47,6 +47,8 @@ struct MainLoop {
 	void switchToState(State currentState, State newState);
 	void stateUpdate(State stateToUpdate);
 
+	void atTransitionMidpoint(State curretState, State newState);
+
 	struct TransitionToLevelState {
 		State startState;
 		f32 t = 0.0f;

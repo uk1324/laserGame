@@ -53,4 +53,7 @@ struct Game {
 
 	f32 goToNextLevelButtonActiveT = 0.0f;
 	f32 goToNextLevelButtonHoverT = 0.0f;
+
+	Quat accumulatedTransformation = Quat::identity;
+	f32 transormationDirectionAngle = 0.0f;
 };

@@ -15,9 +15,9 @@ out vec4 fragColor;
 
 void main() {
     // When the outer hemisphere becomes the shorter segment the endpoints of lines wrap around which casues small parts of the wrapped around endpoint to be renderer (I think not sure). This happens for example if one endpoint is one the boundary.
-    if (dot(worldPosition, worldPosition) > 1.0)  {
-        return;
-    }
+//    if (dot(worldPosition, worldPosition) > 1.0)  {
+//        return;
+//    }
     // @Performance: many things like the plane can be computed in the vertex shader
 
     Plane plane = greatCirclePlane(fromStereographic(endpoint0), fromStereographic(endpoint1));
