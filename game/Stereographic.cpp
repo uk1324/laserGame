@@ -40,7 +40,7 @@ Vec2 toStereographic(Vec3 p) {
 
 Vec3 fromStereographic(Vec2 p) {
 	const auto d = p.x * p.x + p.y * p.y + 1.0f;
-	return Vec3(2.0f * p.x, 2.0f * p.y, -1.0f + p.x * p.x + p.y * p.y) / d;
+	return (Vec3(2.0f * p.x, 2.0f * p.y, -1.0f + p.x * p.x + p.y * p.y) / d).normalized();
 }
 
 // The angle is such that when stereographically projected it equal the plane angle.
@@ -133,6 +133,7 @@ Circle stereographicLineOld(Vec2 p0, Vec2 p1) {
 }
 
 bool nearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2) {
+	// https://math.stackexchange.com/questions/405966/if-i-have-three-points-is-there-an-easy-way-to-tell-if-they-are-collinear
 	// https://stackoverflow.com/questions/65396833/testing-three-points-for-collinearity-in-a-numerically-robust-way
 	const auto l0 = p0.distanceTo(p1);
 	const auto l1 = p0.distanceTo(p2);
@@ -145,29 +146,46 @@ bool nearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2) {
 
 StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
 	Vec2 p2(0.0f);
-	// The antipodal point of (0, 0) is infinity so this tries to prevent the antipodal point being set to zero.
+	// The antipodal point of (0, 0) is infinity so this tries to prevent the antipodal point being set to zero by choosing the one that is further from zero.
 	if (p0.lengthSq() > p1.lengthSq()) {
 		p2 = antipodalPoint(p0);
 	} else {
 		p2 = antipodalPoint(p1);
 	}
 
-	// https://math.stackexchange.com/questions/405966/if-i-have-three-points-is-there-an-easy-way-to-tell-if-they-are-collinear
 
-	//const auto longestSide
-	// 
-	//const auto nearlyColinear = abs((p1.y - p0.y) * (p2.x - p1.x) - (p2.y - p1.y) * (p1.x - p0.x)) < 0.001f;
-	//const auto line = Line(p0, p1);
-	///*const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.0001f;*/
-	///*const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.001f;*/
-	//const auto goesThroughOrigin = distance(line, Vec2(0.0f)) < 0.005f;
 	if (nearlyColinear(p0, p1, p2)) {
-		/*Dbg::disk(p0, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
-		Dbg::disk(p1, 0.01f, Vec3(1.0f, 0.0f, 0.0f));
-		Dbg::disk(p2, 0.01f, Vec3(1.0f, 0.0f, 0.0f));*/
 		return StereographicLine((p0 - p1).rotBy90deg().normalized());
 	}
 	return stereographicLineOld(p0, p1);
+}
+
+#include <gfx2d/DbgGfx2d.hpp>
+
+bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine, f32 epsilon) {
+	if (line.type == StereographicLine::Type::CIRCLE) {
+		auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
+		// arcLength = radius * angle
+		// angle = arcLength / radius.
+		const auto angleEpsilon = epsilon / line.circle.radius;
+		// I found a bug and the epsilon break thing even more for some reason. The level is just a chaotic laser. Not sure why it passes through. It shouldn't happen in normal gameplay so I won't bother with it for now.
+		angleRange.min -= angleEpsilon;
+		angleRange.max += angleEpsilon;
+		// TODO: Maybe clamp if min switches to max.
+
+		return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle());
+	} else {
+		const auto lineDirection = (endpoint1 - endpoint0).normalized();
+		if (lineDirection == Vec2(0.0f)) {
+			return false;
+		}
+		const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
+		const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
+		//const auto dAlong0 = dot(lineDirection, endpoint0);
+		//const auto dAlong1 = dot(lineDirection, endpoint1);
+		const auto intersectionDAlong = dot(lineDirection, pointThatLiesOnLine);
+		return intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1;
+	}
 }
 
 /*
@@ -196,41 +214,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 	vec3 col = vec3(smoothstep(0.05, 0.06, a));
 	fragColor = vec4(col, 1.0);
 }
-
 */
-
-#include <gfx2d/DbgGfx2d.hpp>
-
-bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine, f32 epsilon) {
-	if (line.type == StereographicLine::Type::CIRCLE) {
-		auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
-		// arcLength = radius * angle
-		// angle = arcLength / radius.
-		const auto angleEpsilon = epsilon / line.circle.radius;
-		// I found a bug and the epsilon break thing even more for some reason. The level is just a chaotic laser. Not sure why it passes through. It shouldn't happen in normal gameplay so I won't bother with it for now.
-		angleRange.min -= angleEpsilon;
-		angleRange.max += angleEpsilon;
-		// TODO: Maybe clamp if min switches to max.
-
-		return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle());
-
-		//const auto lineDirection = (endpoint1 - endpoint0).normalized();
-		//const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
-		//const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
-		//const auto intersectionDAlong = dot(lineDirection, pointThatLiesOnLine);
-		//const auto test = intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1;
-
-		//return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle()) || test;
-	} else {
-		const auto lineDirection = (endpoint1 - endpoint0).normalized();
-		const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
-		const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
-		//const auto dAlong0 = dot(lineDirection, endpoint0);
-		//const auto dAlong1 = dot(lineDirection, endpoint1);
-		const auto intersectionDAlong = dot(lineDirection, pointThatLiesOnLine);
-		return intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1;
-	}
-}
 
 f32 circularArcDistance(Vec2 p, Circle circle, AngleRange angleRange) {
 	if (angleRange.isInRange((p - circle.center).angle())) {

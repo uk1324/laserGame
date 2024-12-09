@@ -5,6 +5,7 @@
 struct GameState {
 	void snapObjectPositionsInsideBoundary(GameEntities& e);
 	void update(GameEntities& e);
+	void laserUpdate(EditorLaser& laser, GameEntities& e);
 
 	struct Segment {
 		Vec2 endpoints[2];
