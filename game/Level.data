@@ -13,6 +13,7 @@ struct [[Json]] LevelLaser {
 	float angle;
 	Vec3 color;
 	bool positionLocked = `false`;
+	bool rotationLocked = `false`;
 }
 
 enum [[Json]] LevelMirrorWallType {

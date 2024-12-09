@@ -44,6 +44,7 @@ struct EditorLaser {
 	f32 angle;
 	Vec3 color;
 	bool positionLocked;
+	bool rotationLocked;
 
 	static constexpr ColorEntry defaultColor{ Color3::BLUE, "blue" };
 	//static constexpr ColorEntry defaultColor{ Color3::CYAN, "cyan" };

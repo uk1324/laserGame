@@ -182,6 +182,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 				}
 				editorLaserColorCombo(laser->color);
 				ImGui::Checkbox("position locked", &laser->positionLocked);
+				ImGui::Checkbox("rotation locked", &laser->rotationLocked);
 				if (*laser != old) {
 					selectTool.modifiedUsingGui |= true;
 				}
@@ -281,6 +282,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 		case LASER:
 			editorLaserColorCombo(laserCreateTool.laserColor);
 			ImGui::Checkbox("position locked", &laserCreateTool.laserPositionLocked);
+			ImGui::Checkbox("rotation locked", &laserCreateTool.laserRotationLocked);
 			break;
 
 		case MIRROR:
@@ -1041,7 +1043,8 @@ void Editor::laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 			.position = cursorPos, 
 			.angle = 0.0f, 
 			.color = laserCreateTool.laserColor,
-			.positionLocked = laserCreateTool.laserPositionLocked
+			.positionLocked = laserCreateTool.laserPositionLocked,
+			.rotationLocked = laserCreateTool.laserRotationLocked
 		};
 		actions.add(new EditorActionCreateEntity(EditorEntityId(ent.id)));
 		cursorCaptured = true;

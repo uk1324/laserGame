@@ -156,6 +156,7 @@ struct Editor {
 	struct LaserCreateTool {
 		Vec3 laserColor = EditorLaser::defaultColor.color;
 		bool laserPositionLocked = true;
+		bool laserRotationLocked = false;
 	} laserCreateTool;
 	void laserCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured);
 

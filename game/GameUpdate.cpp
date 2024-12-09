@@ -324,7 +324,7 @@ void GameState::update(GameEntities& e) {
 				if (dot(hitObjectNormalAtHitPoint, laserTangentAtHitPoint) < 0.0f) {
 					laserTangentAtHitPoint = -laserTangentAtHitPoint;
 				}
-				Dbg::line(hit.point, hit.point + laserTangentAtHitPoint * 0.1f, 0.01f, Color3::RED);
+				//Dbg::line(hit.point, hit.point + laserTangentAtHitPoint * 0.1f, 0.01f, Color3::RED);
 
 				/*auto laserTangentAtHitPoint = stereographicLineNormalAt(laserLine, hit.point).rotBy90deg();
 				Dbg::disk(hit.point + laserTangentAtHitPoint * 0.05f, 0.01f, Color3::YELLOW);
@@ -356,7 +356,7 @@ void GameState::update(GameEntities& e) {
 				//if (dot(normalAtHitPoint, laserTangentAtHitPoint) < 0.0f) {
 				//	normalAtHitPoint = -normalAtHitPoint;
 				//}
-				Dbg::line(hit.point, hit.point + hitObjectNormalAtHitPoint * 0.1f, 0.01f);
+				//Dbg::line(hit.point, hit.point + hitObjectNormalAtHitPoint * 0.1f, 0.01f);
 
 				auto normalAngle = [](f32 normalAngle, Vec2 pointWithNormalAngle, StereographicLine lineWithNormalAngleAtPoint, bool isMirrored) {
 					if (isMirrored) {
@@ -372,7 +372,7 @@ void GameState::update(GameEntities& e) {
 
 				auto hitOnNormalSide = [&hitObjectNormalAtHitPoint, &hit, &normalAngle](f32 hitObjectNormalAngle, Vec2 center) {
 					hitObjectNormalAngle = normalAngle(hitObjectNormalAngle, center, hit.line, hit.objectMirrored);
-					Dbg::line(hit.point, hit.point + Vec2::oriented(hitObjectNormalAngle) * 0.1f, 0.01f, Color3::MAGENTA);
+					//Dbg::line(hit.point, hit.point + Vec2::oriented(hitObjectNormalAngle) * 0.1f, 0.01f, Color3::MAGENTA);
 					bool result = dot(Vec2::oriented(hitObjectNormalAngle), hitObjectNormalAtHitPoint) > 0.0f;
 					return result;
 				};
@@ -663,7 +663,7 @@ void GameState::update(GameEntities& e) {
 					break;
 				}
 			} else if (closestToWrappedAround.has_value()) {
-				Dbg::disk(closestToWrappedAround->point, 0.01f, Color3::CYAN);
+				//Dbg::disk(closestToWrappedAround->point, 0.01f, Color3::CYAN);
 				processLaserSegmentEndpoints(laserPosition, boundaryIntersection);
 				processLaserSegmentEndpoints(boundaryIntersectionWrappedAround, closestToWrappedAround->point);
 				//const auto s0 = Segment{ laserPosition, boundaryIntersection, laser->color };

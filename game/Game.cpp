@@ -65,16 +65,14 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 
 	updateConstantSpeedT(invalidGameStateAnimationT, 0.2f, !objectsInValidState);
 
-	f32 doorOpeningT = 0.0f;
+	f32 maxDoorOpeningVolume = 0.0f;
 	for (const auto& door : e.doors) {
-		doorOpeningT = std::max(door->openingT, doorOpeningT);
-	}
+		//doorOpeningT = std::max(door->openingT, doorOpeningT);
 
-	{
 		static f32 riseAndFallLength = 0.4f;
 		//ImGui::SliderFloat("riseAndFallLength", &riseAndFallLength, 0.0f, 0.5f);
 		f32 volume;
-		const auto t = doorOpeningT;
+		const auto t = door->openingT;
 		if (t < riseAndFallLength) {
 			volume = smoothstep(lerp(0.0f, 1.0f, t / riseAndFallLength));
 		} else if (t < 1.0f - riseAndFallLength) {
@@ -82,8 +80,9 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 		} else {
 			volume = smoothstep(lerp(1.0f, 0.0f, (t - (1.0f - riseAndFallLength)) / riseAndFallLength));
 		}
-		audio.setSoundEffectSourceVolume(audio.doorOpeningSource, volume);
+		maxDoorOpeningVolume = std::max(volume, maxDoorOpeningVolume);
 	}
+	audio.setSoundEffectSourceVolume(audio.doorOpeningSource, maxDoorOpeningVolume);
 
 	if (s.anyTargetsTurnedOn) {
 		audio.playSoundEffect(audio.targetOnSound);

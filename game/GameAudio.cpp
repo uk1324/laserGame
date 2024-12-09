@@ -59,6 +59,16 @@ GameAudio::GameAudio()
 //}
 
 void GameAudio::update() {
+	{
+		/*ALint streamState;
+		AL_TRY(alGetSourcei(doorOpeningSource.source.handle(), AL_SOURCE_STATE, &streamState));
+		if (streamState != AL_PLAYING) {
+			std::cout << "stream starved";
+			doorOpeningSource.source.play();
+			return;
+		}*/
+	}
+
 	musicStream.update();
 }
 

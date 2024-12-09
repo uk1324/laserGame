@@ -1,0 +1,352 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                -1,
+                -8.742278e-08
+            ],
+            "endpoint1": [
+                1.1924881e-08,
+                -1
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                1.1924881e-08,
+                -1
+            ],
+            "endpoint1": [
+                1,
+                0
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                -0.28284267,
+                -0.28284276
+            ],
+            "endpoint1": [
+                0.28284281,
+                -0.2828426
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                -0.70710665,
+                -0.7071069
+            ],
+            "endpoint1": [
+                -0.28284267,
+                -0.28284276
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.28284281,
+                -0.2828426
+            ],
+            "endpoint1": [
+                0.707107,
+                -0.70710653
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                -0.56568545,
+                0.56568545
+            ],
+            "endpoint1": [
+                -0.35355338,
+                0.35355338
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.35355338,
+                0.35355338
+            ],
+            "endpoint1": [
+                0.56568545,
+                0.56568545
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                -0.3061465,
+                -0.73910373
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 4.31969,
+            "positionLocked": true,
+            "rotationLocked": false
+        },
+        {
+            "position": [
+                9.539905e-09,
+                -0.8
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": -1.5707964,
+            "positionLocked": true,
+            "rotationLocked": false
+        },
+        {
+            "position": [
+                0.3061469,
+                -0.73910356
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": -1.1780971,
+            "positionLocked": true,
+            "rotationLocked": false
+        },
+        {
+            "position": [
+                -0.64671564,
+                -0.26787838
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.8072749,
+            "positionLocked": true,
+            "rotationLocked": true
+        },
+        {
+            "position": [
+                0.6467157,
+                -0.26787838
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.3189365,
+            "positionLocked": true,
+            "rotationLocked": true
+        },
+        {
+            "position": [
+                -8.742278e-09,
+                0.2
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": -1.5707961,
+            "positionLocked": true,
+            "rotationLocked": true
+        },
+        {
+            "position": [
+                -0.19134176,
+                0.46193975
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.16706,
+            "positionLocked": true,
+            "rotationLocked": true
+        },
+        {
+            "position": [
+                0.19134171,
+                0.46193975
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.9745328,
+            "positionLocked": true,
+            "rotationLocked": true
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                2.3849762e-09,
+                -0.2
+            ],
+            "radius": 0.1
+        }
+    ],
+    "triggers": [
+        {
+            "position": [
+                -0.22960989,
+                -0.55432785
+            ],
+            "color": [
+                0,
+                1,
+                0.5
+            ],
+            "index": 0
+        },
+        {
+            "position": [
+                7.1549286e-09,
+                -0.6
+            ],
+            "color": [
+                0,
+                0.5,
+                1
+            ],
+            "index": 1
+        },
+        {
+            "position": [
+                0.22961017,
+                -0.55432767
+            ],
+            "color": [
+                1,
+                0,
+                0.5
+            ],
+            "index": 2
+        },
+        {
+            "position": [
+                -0.6467157,
+                0.2678783
+            ],
+            "color": [
+                0.5,
+                1,
+                0
+            ],
+            "index": 3
+        },
+        {
+            "position": [
+                0.64671564,
+                0.2678784
+            ],
+            "color": [
+                0,
+                0.75,
+                1
+            ],
+            "index": 4
+        },
+        {
+            "position": [
+                -3.4969112e-08,
+                0.8
+            ],
+            "color": [
+                1,
+                1,
+                0.25
+            ],
+            "index": 5
+        }
+    ],
+    "doors": [
+        {
+            "endpoint0": [
+                -0.2,
+                -1.7484556e-08
+            ],
+            "endpoint1": [
+                0.2,
+                0
+            ],
+            "triggerIndex": 3,
+            "openByDefault": false
+        },
+        {
+            "endpoint0": [
+                -0.8,
+                -6.9938224e-08
+            ],
+            "endpoint1": [
+                -0.5,
+                -4.371139e-08
+            ],
+            "triggerIndex": 0,
+            "openByDefault": false
+        },
+        {
+            "endpoint0": [
+                0.8,
+                0
+            ],
+            "endpoint1": [
+                0.5,
+                0
+            ],
+            "triggerIndex": 5,
+            "openByDefault": true
+        },
+        {
+            "endpoint0": [
+                -0.1847759,
+                -0.076536685
+            ],
+            "endpoint1": [
+                0.18477592,
+                -0.076536685
+            ],
+            "triggerIndex": 4,
+            "openByDefault": false
+        },
+        {
+            "endpoint0": [
+                -0.26787844,
+                0.64671564
+            ],
+            "endpoint1": [
+                -3.059797e-08,
+                0.7
+            ],
+            "triggerIndex": 1,
+            "openByDefault": false
+        },
+        {
+            "endpoint0": [
+                -3.059797e-08,
+                0.7
+            ],
+            "endpoint1": [
+                0.26787838,
+                0.64671564
+            ],
+            "triggerIndex": 2,
+            "openByDefault": true
+        }
+    ]
+}

@@ -42,7 +42,8 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 				.position = laser->position,
 				.angle = laser->angle,
 				.color = laser->color,
-				.positionLocked = laser->positionLocked
+				.positionLocked = laser->positionLocked,
+				.rotationLocked = laser->rotationLocked,
 			};
 			jsonLasers.push_back(toJson(levelLaser));
 		}
@@ -198,6 +199,7 @@ bool tryLoadGameLevelFromJson(GameEntities& e, const Json::Value& json) {
 					.angle = levelLaser.angle,
 					.color = levelLaser.color,
 					.positionLocked = levelLaser.positionLocked,
+					.rotationLocked = levelLaser.rotationLocked,
 				};
 			}
 		}

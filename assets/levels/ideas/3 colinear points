@@ -1,0 +1,140 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                -0.19134156,
+                -0.46193984
+            ],
+            "endpoint1": [
+                -0.3444148,
+                -0.8314917
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.1913418,
+                -0.46193972
+            ],
+            "endpoint1": [
+                0.34441525,
+                -0.8314915
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.34441525,
+                -0.8314915
+            ],
+            "endpoint1": [
+                -0.3444148,
+                -0.8314917
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                -1.4570463e-08,
+                0.33333334
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.5707964,
+            "positionLocked": false,
+            "rotationLocked": false
+        }
+    ],
+    "mirrors": [
+        {
+            "positionLocked": false,
+            "center": [
+                -2.549831e-08,
+                0.5833333
+            ],
+            "normalAngle": 1.5707964,
+            "wallType": 1,
+            "length": 0.6
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                -0.6,
+                -5.2453668e-08
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                0.6,
+                0
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                8.347416e-09,
+                -0.7
+            ],
+            "radius": 0.1
+        }
+    ],
+    "triggers": [
+        {
+            "position": [
+                0,
+                0
+            ],
+            "color": [
+                0,
+                1,
+                0.5
+            ],
+            "index": 0
+        },
+        {
+            "position": [
+                9.937401e-10,
+                -0.083333336
+            ],
+            "color": [
+                0,
+                1,
+                0.5
+            ],
+            "index": 0
+        },
+        {
+            "position": [
+                -3.6426158e-09,
+                0.083333336
+            ],
+            "color": [
+                0,
+                1,
+                0.5
+            ],
+            "index": 0
+        }
+    ],
+    "doors": [
+        {
+            "endpoint0": [
+                -0.19134156,
+                -0.46193984
+            ],
+            "endpoint1": [
+                0.1913418,
+                -0.46193972
+            ],
+            "triggerIndex": 0,
+            "openByDefault": true
+        }
+    ]
+}

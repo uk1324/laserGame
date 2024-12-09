@@ -19,7 +19,9 @@ EditorLaser EditorLaser::DefaultInitialize::operator()() {
 	return EditorLaser{
 		.position = Vec2(0.0f),
 		.angle = 0.0f,
-		.color = Vec3(0.123f)
+		.color = Vec3(0.123f),
+		.positionLocked = false,
+		.rotationLocked = false
 	};
 }
 
@@ -323,10 +325,15 @@ void editorTargetRadiusInput(f32& radius) {
 }
 
 void editorTriggerColorCombo(Vec3& color) {
+	// https://en.wikipedia.org/wiki/Secondary_color
 	ColorEntry entries[]{
 		EditorTrigger::defaultColor,
 		{ Vec3(0.0f, 0.5f, 1.0f), "azure"},
-		{ Vec3(1.0f, 0.0f, 0.5f), "rose"}
+		{ Vec3(1.0f, 0.0f, 0.5f), "rose"},
+		{ Vec3(0.5f, 1.0f, 0.0f), "chartreuse"},
+		{ Vec3(0.0f, 0.75f, 1.0f), "sky blue"},
+		{ Vec3(0.5f, 1.0f, 0.0f), "lime"},
+		{ Vec3(1.0f, 0.0f, 0.25f), "crimson"},
 	};
 	colorCombo("color", constView(entries), EditorLaser::defaultColor, color);
 }

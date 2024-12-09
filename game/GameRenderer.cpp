@@ -282,8 +282,9 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 		gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
 		const auto arrowhead = laserArrowhead(laser.entity);
 		/*renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));*/
-		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[0], 0.01f, movablePartColor(false));
-		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[1], 0.01f, movablePartColor(false));
+		const auto tipColor = movablePartColor(laser->rotationLocked);
+		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[0], 0.01f, tipColor);
+		gfx.lineTriangulated(arrowhead.tip, arrowhead.ears[1], 0.01f, tipColor);
 	}
 
 	gfx.drawFilledTriangles();
