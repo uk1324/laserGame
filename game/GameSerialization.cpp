@@ -185,6 +185,7 @@ bool tryLoadGameLevelFromJson(GameEntities& e, const Json::Value& json) {
 
 				wall.entity = EditorWall{
 					.endpoints = { levelWall.endpoint0, levelWall.endpoint1 },
+					.initialEndpoints = { levelWall.endpoint0, levelWall.endpoint1 },
 					.type = levelWallTypeToWallType(levelWall.type)
 				};
 			}
@@ -227,6 +228,7 @@ bool tryLoadGameLevelFromJson(GameEntities& e, const Json::Value& json) {
 				auto target = e.targets.create();
 				target.entity = EditorTarget{
 					.position = levelTarget.position,
+					.initialPosition = levelTarget.position,
 					.radius = levelTarget.radius
 				};
 			}
@@ -266,6 +268,7 @@ bool tryLoadGameLevelFromJson(GameEntities& e, const Json::Value& json) {
 				auto trigger = e.triggers.create();
 				trigger.entity = EditorTrigger{
 					.position = levelTrigger.position,
+					.initialPosition = levelTrigger.position,
 					.color = levelTrigger.color,
 					.index = levelTrigger.index,
 				};
@@ -278,6 +281,7 @@ bool tryLoadGameLevelFromJson(GameEntities& e, const Json::Value& json) {
 				auto door = e.doors.create();
 				door.entity = EditorDoor{
 					.endpoints = { levelDoor.endpoint0, levelDoor.endpoint1 },
+					.initialEndpoints = { levelDoor.endpoint0, levelDoor.endpoint1 },
 					.triggerIndex = levelDoor.triggerIndex,
 					.openByDefault = levelDoor.openByDefault
 				};

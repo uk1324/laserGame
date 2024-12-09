@@ -31,4 +31,5 @@ struct GameState {
 	};
 	std::vector<Seg> segments;
 
+	Quat accumulatedTransformation = Quat::identity;
 };

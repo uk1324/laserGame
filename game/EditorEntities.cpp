@@ -11,6 +11,7 @@
 EditorWall EditorWall::DefaultInitialize::operator()() {
 	return EditorWall{
 		.endpoints = { Vec2(0.0f), Vec2(0.0f) },
+		.initialEndpoints = { Vec2(0.0f), Vec2(0.0f) },
 		.type = static_cast<EditorWallType>(-1)
 	};
 }
@@ -31,7 +32,8 @@ EditorMirror EditorMirror::DefaultInitialize::operator()() {
 
 EditorTarget EditorTarget::DefaultInitialize::operator()() {
 	return EditorTarget{
-		.position = Vec2(0.0f) ,
+		.position = Vec2(0.0f),
+		.initialPosition = Vec2(0.0f),
 		.radius = 1.0f
 	};
 }
@@ -44,11 +46,16 @@ EditorPortalPair EditorPortalPair::DefaultInitialize::operator()() {
 }
 
 EditorTrigger EditorTrigger::DefaultInitialize::operator()() {
-	return EditorTrigger{ .position = Vec2(0.0f), .color = Vec3(0.0f), .index = 0};
+	return EditorTrigger{ .position = Vec2(0.0f), .initialPosition = Vec2(0.0f), .color = Vec3(0.0f), .index = 0};
 }
 
 EditorDoor EditorDoor::DefaultInitialize::operator()() {
-	return EditorDoor{ .endpoints = { Vec2(0.0f), Vec2(1.0f) }, .triggerIndex = 0, .openByDefault = false };
+	return EditorDoor{ 
+		.endpoints = { Vec2(0.0f), Vec2(1.0f) }, 
+		.initialEndpoints = { Vec2(0.0f), Vec2(1.0f) },
+		.triggerIndex = 0, 
+		.openByDefault = false 
+	};
 }
 
 EditorEntityId::EditorEntityId(const EditorWallId& id) 

@@ -497,7 +497,7 @@ void Editor::targetCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 
 	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
 		auto target = e.targets.create();
-		target.entity = EditorTarget{ .position = cursorPos, .radius = targetCreateTool.targetRadius };
+		target.entity = EditorTarget{ .position = cursorPos, .initialPosition = cursorPos, .radius = targetCreateTool.targetRadius };
 		actions.add(new EditorActionCreateEntity(EditorEntityId(target.id)));
 		cursorCaptured = true;
 	}
@@ -574,6 +574,7 @@ void Editor::triggerCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		auto trigger = e.triggers.create();
 		trigger.entity = EditorTrigger{
 			.position = cursorPos,
+			.initialPosition = cursorPos,
 			.color = EditorTrigger::defaultColor.color,
 			.index = 0,
 		};
@@ -825,6 +826,7 @@ void Editor::doorCreateToolUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		auto entity = e.doors.create();
 		entity.entity = EditorDoor{ 
 			.endpoints = { result->endpoints[0], result->endpoints[1] },
+			.initialEndpoints = { result->endpoints[0], result->endpoints[1] },
 			.triggerIndex = 0,
 			.openByDefault = false
 		};
@@ -1137,7 +1139,11 @@ std::optional<EditorWall> Editor::WallCreateTool::update(bool down, bool cancelD
 	if (!wall.has_value()) {
 		return std::nullopt;
 	}
-	return EditorWall{ .endpoints = { wall->endpoints[0], wall->endpoints[1] }, .type = wallType };
+	return EditorWall{ 
+		.endpoints = { wall->endpoints[0], wall->endpoints[1] },  
+		.initialEndpoints = { wall->endpoints[0], wall->endpoints[1] },
+		.type = wallType 
+	};
 }
 
 void Editor::WallCreateTool::render(GameRenderer& renderer, Vec2 cursorPos) {

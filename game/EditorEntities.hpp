@@ -6,6 +6,8 @@
 #include <engine/Math/Color.hpp>
 #include <View.hpp>
 
+// Storing intial positions so the errors in the static objects don't accumulate from movement. If I store the intial positions then I can apply the transformation to the initial position. One objects that can be modified like mirrors the error can accumulate, but they won't break the level, because the user can move them anyway.
+
 struct ColorEntry {
 	Vec3 color;
 	const char* name;
@@ -28,6 +30,7 @@ struct EditorWall {
 	bool operator==(const EditorWall&) const = default;
 
 	Vec2 endpoints[2];
+	Vec2 initialEndpoints[2];
 	EditorWallType type;
 };
 using EditorWallId = EntityArrayId<EditorWall>;
@@ -114,6 +117,7 @@ struct EditorTarget {
 
 	static constexpr auto defaultRadius = 0.1f;
 	Vec2 position;
+	Vec2 initialPosition;
 	f32 radius;
 
 	bool activated = false;
@@ -171,6 +175,7 @@ struct EditorTrigger {
 	bool operator==(const EditorTrigger&) const = default;
 
 	Vec2 position;
+	Vec2 initialPosition;
 	Vec3 color;
 	i32 index;
 
@@ -200,6 +205,7 @@ struct EditorDoor {
 	bool operator==(const EditorDoor&) const = default;
 
 	Vec2 endpoints[2];
+	Vec2 initialEndpoints[2];
 	i32 triggerIndex;
 	bool openByDefault;
 

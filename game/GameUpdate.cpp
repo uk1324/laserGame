@@ -1,6 +1,7 @@
 #include "GameUpdate.hpp"
 #include <engine/Math/Constants.hpp>
 #include <array>
+#include <engine/Input/Input.hpp>
 #include <game/Constants.hpp>
 #include <game/Stereographic.hpp>
 #include <game/Animation.hpp>
@@ -58,6 +59,179 @@ void GameState::update(GameEntities& e) {
 		trigger->activated = false;
 	}
 	laserSegmentsToDraw.clear();
+
+	static f32 angle = 0.0f;
+	const auto direction = Vec2::oriented(angle);
+	Dbg::line(Vec2(0.0f), direction * 0.1f, 0.01f, Color3::CYAN);
+	const auto rotationSpeed = TAU<f32> * 1.5f;
+	const auto da = rotationSpeed * Constants::dt;
+	if (Input::isKeyHeld(KeyCode::A)) {
+		angle += da;
+	}
+	if (Input::isKeyHeld(KeyCode::D)) {
+		angle -= da;
+	}
+	const auto movementSpeed = 2.0f;
+	auto movement = [&direction](f32 speed) {
+		return Quat(speed * Constants::dt, cross(Vec3(0.0f, 0.0f, 1.0f), Vec3(direction.x, direction.y, 0.0f)));
+	};
+
+	std::optional<Quat> transformationChange;
+	if (Input::isKeyHeld(KeyCode::W)) {
+		transformationChange = movement(movementSpeed);
+	} 
+	if (Input::isKeyHeld(KeyCode::S)) {
+		transformationChange = movement(-movementSpeed);
+	}
+	if (transformationChange.has_value()) {
+		accumulatedTransformation = *transformationChange * accumulatedTransformation;
+		accumulatedTransformation = accumulatedTransformation.normalized();
+	}
+	
+	auto applyTransformation = [](Vec2 v, Quat transformation) {
+		return toStereographic(transformation * fromStereographic(v));
+	};
+
+	auto transformWallLikeObject = [&applyTransformation](const Vec2* initialEndpoints, Vec2* endpoints, Quat transformation) {
+		bool bothOutside = true;
+		for (i32 i = 0; i < 2; i++) {
+			endpoints[i] = applyTransformation(initialEndpoints[i], transformation);
+			bothOutside &= endpoints[i].length() > Constants::boundary.radius;
+		}
+		if (bothOutside) {
+			for (i32 i = 0; i < 2; i++) {
+				auto& endpoint = endpoints[i];
+				endpoint = antipodalPoint(endpoint);
+			}
+		}
+	};
+
+	for (auto wall : e.walls) {
+		transformWallLikeObject(wall->initialEndpoints, wall->endpoints, accumulatedTransformation);
+	}
+
+	for (auto door : e.doors) {
+		transformWallLikeObject(door->initialEndpoints, door->endpoints, accumulatedTransformation);
+	}
+
+	for (auto trigger : e.triggers) {
+		trigger->position = applyTransformation(trigger->initialPosition, accumulatedTransformation);
+	}
+
+	for (auto target : e.targets) {
+		target->position = applyTransformation(target->initialPosition, accumulatedTransformation);
+	}
+
+	auto transformWithNormalAngle = [&applyTransformation](Vec2& position, f32& normalAngle, Quat transformation) {
+		const auto tangentAngle = normalAngle + PI<f32> / 2.0f;
+		const auto secondPoint = moveOnStereographicGeodesic(position, tangentAngle, 0.1f);
+
+		const auto initialLine = stereographicLine(position, secondPoint);
+
+		auto newPosition = applyTransformation(position, transformation);
+
+		bool flipped = false;
+		if (newPosition.length() > Constants::boundary.radius) {
+			flipped = true;
+			newPosition = antipodalPoint(newPosition);
+		}
+		const auto newSecondPoint = applyTransformation(secondPoint, transformation);
+
+		const auto newLine = stereographicLine(newPosition, newSecondPoint);
+
+		auto newNormal = stereographicLineNormalAt(newLine, newPosition);
+		//auto newNormal = normalAtEndpoint0(newPosition, newSecondPoint);
+
+		/*if (flipped) {
+			newNormal = -newNormal;
+		}*/
+
+		/*auto newTangent = -newNormal.rotBy90deg();
+		if (flipped) {
+			newTangent = -newTangent;
+		} 
+		if (dot(newTangent, newSecondPoint - newPosition) < 0.0f) {
+			newNormal = -newNormal;
+		}*/
+
+		const Vec2 pointOnNormalSide = position + Vec2::oriented(normalAngle) * 0.1f;
+		Vec2 newPointOnNormalSide = applyTransformation(pointOnNormalSide, transformation);
+		if (flipped) {
+			newPointOnNormalSide = antipodalPoint(newPointOnNormalSide);
+		}
+		/*Dbg::disk(pointOnNormalSide, 0.02f, Color3::RED);
+		Dbg::disk(newPointOnNormalSide, 0.02f, Color3::GREEN);*/
+		if (dot(newNormal, newPointOnNormalSide - newPosition) < 0.0f) {
+			newNormal = -newNormal;
+		}
+
+		//if ()
+		//if (flipped != (dot(newNormal, newPointOnNormalSide - newPosition) < 0.0f)) {
+		//	//CHECK_NOT_REACHED();
+		//	//newNormal = -newNormal;
+		//}
+		/*if (dot(newNormal, newPointOnNormalSide - newPosition) < 0.0f) {
+			newNormal = -newNormal;
+		}*/
+		
+		/*if (initialLine.type == StereographicLine::Type::LINE) {
+			const auto pointOnNormalSide = position + initialLine.lineNormal;
+			auto newPointOnNormalSide = applyTransformation(position, transformation);
+			if (newPointOnNormalSide.length() > Constants::boundary.radius) {
+				newPointOnNormalSide = antipodalPoint(newPointOnNormalSide);
+			}
+
+			if (newLine.type == StereographicLine::Type::LINE) {
+				if (dot(newNormal, newPointOnNormalSide - newPosition) < 0.0f) {
+					newNormal = -newNormal;
+				}
+			} else {
+				if (newPointOnNormalSide.distanceTo(newLine.circle.center) > newLine.circle.radius) {
+					newNormal = -newNormal;
+				}
+			}
+		} else {
+			const auto pointOnNormalSide = initialLine.circle.center;
+			auto newPointOnNormalSide = applyTransformation(position, transformation);
+			if (newPointOnNormalSide.length() > Constants::boundary.radius) {
+				newPointOnNormalSide = antipodalPoint(newPointOnNormalSide);
+			}
+
+			if (newLine.type == StereographicLine::Type::LINE) {
+				if (dot(newNormal, newPointOnNormalSide - newPosition) < 0.0f) {
+					newNormal = -newNormal;
+				}
+			} else {
+				if (newPointOnNormalSide.distanceTo(newLine.circle.center) > newLine.circle.radius) {
+					newNormal = -newNormal;
+				}
+			}
+		}*/
+		
+		/*if (newPosition.length() > Constants::boundary.radius) {
+			auto newNormal = normalAtEndpoint0(newPosition, newSecondPoint);
+
+			newPosition = antipodalPoint(newPosition);
+		}*/
+		position = newPosition;
+		normalAngle = newNormal.angle();
+	};
+
+	if (transformationChange.has_value()) {
+		for (auto mirror : e.mirrors) {
+			transformWithNormalAngle(mirror->center, mirror->normalAngle, *transformationChange);
+		}
+		for (auto portalPair : e.portalPairs) {
+			for (auto& portal : portalPair->portals) {
+				transformWithNormalAngle(portal.center, portal.normalAngle, *transformationChange);
+			}
+		}
+		for (auto laser : e.lasers) {
+			// Don't know why this works with a tangent angle without modifications. 
+			// It breaks if you try to add and subtruct pi/2 when you move into the boundary.
+			transformWithNormalAngle(laser->position, laser->angle, *transformationChange);
+		}
+	}
 
 	for (const auto& laser : e.lasers) {
 		/*renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
@@ -197,7 +371,7 @@ void GameState::update(GameEntities& e) {
 			};
 
 			for (const auto& wall : e.walls) {
-				processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], EditorEntityId(wall.id));
+				processSplitLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], EditorEntityId(wall.id));
 			}
 
 			// For this to work create a reflecting wall anywhere.

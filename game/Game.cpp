@@ -195,30 +195,32 @@ void Game::reset() {
 
 bool Game::areObjectsInValidState() {
 	std::vector<StereographicSegment> movableObjects;
+	auto addSplitSegmentTo = [](std::vector<StereographicSegment>& v, Vec2 e0, Vec2 e1) {
+		const auto segments = splitStereographicSegment(e0, e1);
+		for (const auto& segment : segments) {
+			v.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
+		}
+	};
+
 	for (const auto& mirror : e.mirrors) {
 		const auto endpoints = mirror->calculateEndpoints();
-		const auto segments = splitStereographicSegment(endpoints[0], endpoints[1]);
-		for (const auto& segment : segments) {
-			movableObjects.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
-		}
+		addSplitSegmentTo(movableObjects, endpoints[0], endpoints[1]);
 	}
+
 	for (const auto& portalPair : e.portalPairs) {
 		for (const auto& portal : portalPair->portals) {
 			const auto endpoints = portal.endpoints();
-			const auto segments = splitStereographicSegment(endpoints[0], endpoints[1]);
-			for (const auto& segment : segments) {
-				movableObjects.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
-			}
+			addSplitSegmentTo(movableObjects, endpoints[0], endpoints[1]);
 		}
 	}
 	std::vector<StereographicSegment> staticObjects;
 	for (const auto& wall : e.walls) {
-		staticObjects.push_back(StereographicSegment(wall->endpoints[0], wall->endpoints[1]));
+		addSplitSegmentTo(staticObjects, wall->endpoints[0], wall->endpoints[1]);
 	}
 	for (const auto& door : e.doors) {
 		const auto segments = door->segments();
 		for (const auto& segment : segments) {
-			staticObjects.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
+			addSplitSegmentTo(staticObjects, segment.endpoints[0], segment.endpoints[1]);
 		}
 	}
 
