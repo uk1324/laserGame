@@ -140,6 +140,7 @@ struct EditorPortal {
 	EditorPortalWallType wallType;
 	bool positionLocked;
 	bool rotationLocked;
+	bool orientationReversing = false;
 
 	bool operator==(const EditorPortal&) const = default;
 

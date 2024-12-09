@@ -10,6 +10,13 @@
 #include <Array2d.hpp>
 #include <engine/Math/Interpolation.hpp>
 
+auto areNearlyAntipodal(Vec2 e0, Vec2 e1, f32 epsilon) {
+	return
+		(abs(e0.length() - 1.0f) < epsilon) &&
+		(abs(e1.length() - 1.0f) < epsilon) &&
+		(e0 + e1).length() < epsilon;
+};
+
 Vec2 snapPositionsOutsideBoundary(Vec2 v) {
 	const auto length = v.length();
 	//const auto maxAllowedLength = Constants::boundary.radius - 0.001f;
@@ -32,15 +39,23 @@ void GameState::snapObjectPositionsInsideBoundary(GameEntities& e) {
 			portal.center = snapPositionsOutsideBoundary(portal.center);
 		}
 	}
+	auto snapAntipodalPoints = [](Vec2& e0, Vec2& e1) {
+		if (areNearlyAntipodal(e0, e1, 0.01f)) {
+			e0 = -e0;
+		}
+	};
+
 	for (auto wall : e.walls) {
 		for (auto& endpoint : wall->endpoints) {
 			endpoint = snapPositionsOutsideBoundary(endpoint);
 		}
+		snapAntipodalPoints(wall->endpoints[0], wall->endpoints[1]);
 	}
 	for (auto door : e.doors) {
 		for (auto& endpoint : door->endpoints) {
 			endpoint = snapPositionsOutsideBoundary(endpoint);
 		}
+		snapAntipodalPoints(door->endpoints[0], door->endpoints[1]);
 	}
 	for (auto target : e.targets) {
 		target->position = snapPositionsOutsideBoundary(target->position);
@@ -322,19 +337,7 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 			};
 
 			auto doReflection = [&] {
-				//const auto r = 0.3f;
-
-				//const auto r0 = angleRangeBetweenPointsOnCircle(Vec2(0.0f), laserTangentAtHitPoint, normalAtHitPoint);
-				///*Dbg::circleArc(laserDirection.angle(), normalAtHitPoint.angle(), hit.point, 0.05f, 0.01f, Color3::RED);*/
-				//Dbg::circleArc(r0.min, r0.max, hit.point, r / 2.0f, 0.01f / 2.0f, Color3::RED);
-
 				laserDirection = laserTangentAtHitPoint.reflectedAroundNormal(hitObjectNormalAtHitPoint);
-
-				//const auto r1 = angleRangeBetweenPointsOnCircle(Vec2(0.0f), laserDirection, normalAtHitPoint);
-				///*Dbg::circleArc(laserDirection.angle(), normalAtHitPoint.angle(), hit.point, 0.05f, 0.01f, Color3::RED);*/
-				//Dbg::circleArc(r1.min, r1.max, hit.point, r / 2.0f, 0.01f / 2.0f, Vec3(1.0f) - Color3::RED);
-
-				//Dbg::line(hit.point, hit.point + normalAtHitPoint.normalized() * r, 0.01f, Color3::GREEN);
 				laserPosition = hit.point;
 				hitOnLastIteration = EditorEntity{ hit.id, hit.index };
 				//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
@@ -418,6 +421,14 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 					dist *= -1.0f;
 				}
 
+				if (inPortal.orientationReversing) {
+					dist *= -1.0f;
+				}
+				if (outPortal.orientationReversing) {
+					dist *= -1.0f;
+				}
+
+
 				laserPosition = moveOnStereographicGeodesic(outPortal.center, outPortal.normalAngle + PI<f32> / 2.0f, dist);
 				bool outMirrored = false;
 				// If the out point is out of the boundary the make it antipodal.
@@ -455,12 +466,18 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 					laserDirectionAngle += PI<f32>;
 				}*/
 				laserDirection = Vec2::oriented(laserDirectionAngle);
-				if (hit.objectMirrored) {
+				if (hit.objectMirrored xor outMirrored xor inPortal.orientationReversing xor outPortal.orientationReversing) {
 					laserDirection = laserDirection.reflectedAroundNormal(outPortalNormalAtOutPoint);
 				}
-				if (outMirrored) {
+				/*if (outMirrored) {
 					laserDirection = laserDirection.reflectedAroundNormal(outPortalNormalAtOutPoint);
 				}
+				if (inPortal.orientationReversing) {
+					laserDirection = laserDirection.reflectedAroundNormal(outPortalNormalAtOutPoint);
+				}
+				if (outPortal.orientationReversing) {
+					laserDirection = laserDirection.reflectedAroundNormal(outPortalNormalAtOutPoint);
+				}*/
 
 				hitOnLastIteration = EditorEntity{ hit.id, outPortalIndex };
 				return HitResult::CONTINUE;
@@ -561,13 +578,6 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 			return midpoint;
 		};
 
-		auto areNearlyAntipodal = [](Vec2 e0, Vec2 e1) {
-			return
-				(abs(e0.length() - 1.0f) < 0.01f) &&
-				(abs(e1.length() - 1.0f) < 0.01f) &&
-				(e0 + e1).length() < 0.01f;
-		};
-
 		auto processLaserSegmentEndpoints = [&](Vec2 e0, Vec2 e1) {
 			auto projectOntoLine = [&](Vec2 p) {
 				if (laserLine.type == StereographicLine::Type::CIRCLE) {
@@ -584,7 +594,7 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 			e0 = projectOntoLine(e0);
 			e1 = projectOntoLine(e1);
 
-			const auto nearlyAntipodal = areNearlyAntipodal(e0, e1);
+			const auto nearlyAntipodal = areNearlyAntipodal(e0, e1, 0.01f);
 			if (!nearlyAntipodal) {
 				const auto s = Segment{ e0, e1, laser.color };
 				processLaserSegment(s);

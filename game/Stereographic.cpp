@@ -475,12 +475,20 @@ StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const
 	const auto intersections = stereographicLineVsStereographicLineIntersection(a.line, b.line);
 
 	StaticList<Vec2, 2> result;
+
 	for (const auto& intersection : intersections) {
 		if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection, epsilon) &&
 			intersectionsOnSegment(b.endpoints[0], b.endpoints[1], intersection, epsilon)) {
 			result.add(intersection);
 		}
 	}
+
+	//for (const auto& intersection : intersections) {
+	//	if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection, epsilon) &&
+	//		intersectionsOnSegment(b.endpoints[0], b.endpoints[1], intersection, epsilon)) {
+	//		result.add(intersection);
+	//	}
+	//}
 	return result;
 }
 

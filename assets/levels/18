@@ -2,23 +2,45 @@
     "walls": [
         {
             "endpoint0": [
-                -0.707107,
-                -0.707107
+                0,
+                0
             ],
             "endpoint1": [
-                0.707107,
-                0.707107
+                0.7071068,
+                0.7071068
             ],
             "type": 1
         },
         {
             "endpoint0": [
-                -0.707107,
-                0.707107
+                0,
+                0
             ],
             "endpoint1": [
-                0.707107,
-                -0.707107
+                0.7071068,
+                -0.7071068
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0,
+                0
+            ],
+            "endpoint1": [
+                -0.70710665,
+                -0.7071069
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0,
+                0
+            ],
+            "endpoint1": [
+                -0.70710677,
+                0.70710677
             ],
             "type": 1
         }
@@ -35,9 +57,11 @@
                 1
             ],
             "angle": 1.5708,
-            "positionLocked": true
+            "positionLocked": true,
+            "rotationLocked": false
         }
     ],
+    "mirrors": [],
     "targets": [
         {
             "position": [
@@ -77,6 +101,5 @@
                 "wallType": 2
             }
         }
-    ],
-    "triggers": []
+    ]
 }

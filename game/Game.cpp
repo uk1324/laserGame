@@ -115,6 +115,7 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 			}
 			position = newPosition;
 			normalAngle = newNormal.angle();
+			return flipped;
 		};
 
 		if (transformationChange.has_value()) {
@@ -123,7 +124,10 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 			}
 			for (auto portalPair : e.portalPairs) {
 				for (auto& portal : portalPair->portals) {
-					transformWithNormalAngle(portal.center, portal.normalAngle, *transformationChange);
+					// When a portal moves through the boundary it reversed orientation.
+					if (transformWithNormalAngle(portal.center, portal.normalAngle, *transformationChange)) {
+						portal.orientationReversing = !portal.orientationReversing;
+					}
 				}
 			}
 			for (auto laser : e.lasers) {
