@@ -164,16 +164,23 @@ StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
 
 bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine, f32 epsilon) {
 	if (line.type == StereographicLine::Type::CIRCLE) {
-		auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
-		// arcLength = radius * angle
-		// angle = arcLength / radius.
-		const auto angleEpsilon = epsilon / line.circle.radius;
-		// I found a bug and the epsilon break thing even more for some reason. The level is just a chaotic laser. Not sure why it passes through. It shouldn't happen in normal gameplay so I won't bother with it for now.
-		angleRange.min -= angleEpsilon;
-		angleRange.max += angleEpsilon;
-		// TODO: Maybe clamp if min switches to max.
+		const auto e0 = fromStereographic(endpoint0);
+		const auto e1 = fromStereographic(endpoint1);
+		const auto p = fromStereographic(pointThatLiesOnLine);
+		Vec3 t = e1 - e0;
+		f32 along = dot(p, t);
 
-		return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle());
+		return along >= dot(e0, t) && along <= dot(e1, t);
+		//auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
+		//// arcLength = radius * angle
+		//// angle = arcLength / radius.
+		//const auto angleEpsilon = epsilon / line.circle.radius;
+		//// I found a bug and the epsilon break thing even more for some reason. The level is just a chaotic laser. Not sure why it passes through. It shouldn't happen in normal gameplay so I won't bother with it for now.
+		//angleRange.min -= angleEpsilon;
+		//angleRange.max += angleEpsilon;
+		//// TODO: Maybe clamp if min switches to max.
+
+		//return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle());
 	} else {
 		const auto lineDirection = (endpoint1 - endpoint0).normalized();
 		if (lineDirection == Vec2(0.0f)) {
@@ -465,11 +472,11 @@ StaticList<Vec2, 2> stereographicSegmentVsCircleIntersection(const Stereographic
 	//return result;
 }
 
-bool intersectionsOnSegment(Vec2 e0, Vec2 e1, Vec2 i, f32 epsilon = 0.0f) {
-	const auto dir = (e1 - e0).normalized();
-	const auto along = dot(i, dir);
-	return along > dot(e0, dir) - epsilon && along < dot(e1, dir) + epsilon;
-}
+//bool intersectionsOnSegment(Vec2 e0, Vec2 e1, Vec2 i, f32 epsilon = 0.0f) {
+//	const auto dir = (e1 - e0).normalized();
+//	const auto along = dot(i, dir);
+//	return along > dot(e0, dir) - epsilon && along < dot(e1, dir) + epsilon;
+//}
 
 StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const StereographicSegment& a, const StereographicSegment& b, f32 epsilon) {
 	const auto intersections = stereographicLineVsStereographicLineIntersection(a.line, b.line);
@@ -477,8 +484,8 @@ StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const
 	StaticList<Vec2, 2> result;
 
 	for (const auto& intersection : intersections) {
-		if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection, epsilon) &&
-			intersectionsOnSegment(b.endpoints[0], b.endpoints[1], intersection, epsilon)) {
+		if (isPointOnLineAlsoOnStereographicSegment(a.line, a.endpoints[0], a.endpoints[1], intersection, epsilon) &&
+			isPointOnLineAlsoOnStereographicSegment(b.line, b.endpoints[0], b.endpoints[1], intersection, epsilon)) {
 			result.add(intersection);
 		}
 	}
@@ -493,15 +500,27 @@ StaticList<Vec2, 2> stereographicSegmentVsStereographicSegmentIntersection(const
 }
 
 bool stereographicSegmentVsSegmentCollision(const StereographicSegment& a, Vec2 endpoint0, Vec2 endpoint1) {
+	auto intersectionsOnSegment = [](Vec2 e0, Vec2 e1, Vec2 i, f32 epsilon = 0.0f) {
+		const auto dir = (e1 - e0).normalized();
+		const auto along = dot(i, dir);
+		return along > dot(e0, dir) - epsilon && along < dot(e1, dir) + epsilon;
+	};
+
 	switch (a.line.type) {
 		using enum StereographicLine::Type;
 	case CIRCLE: {
 		const auto intersections = lineVsCircleIntersection(endpoint0, endpoint1 - endpoint0, a.line.circle);
 		for (const auto& intersection : intersections) {
-			if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection) &&
+
+			if (isPointOnLineAlsoOnStereographicSegment(a.line, a.endpoints[0], a.endpoints[1], intersection) &&
 				intersectionsOnSegment(endpoint0, endpoint1, intersection)) {
 				return true;
 			}
+
+			/*if (intersectionsOnSegment(a.endpoints[0], a.endpoints[1], intersection) &&
+				intersectionsOnSegment(endpoint0, endpoint1, intersection)) {
+				return true;
+			}*/
 		}
 		break;
 	}
@@ -515,6 +534,7 @@ bool stereographicSegmentVsSegmentCollision(const StereographicSegment& a, Vec2 
 }
 
 #include <game/Constants.hpp>
+#include <engine/Math/Color.hpp>
 
 StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 endpoint1) {
 	StaticList<SegmentEndpoints, 2> result;
@@ -532,7 +552,6 @@ StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 e
 	for (auto& intersection : intersections) {
 		intersection = intersection.normalized();
 	}
-	
 
 	if (intersections.size() != 1) {
 		// Don't know what to do here yet.
@@ -544,9 +563,11 @@ StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 e
 		return result;
 	}
 
+	//Dbg::disk(intersections[0], 0.03f, Color3::MAGENTA);
+
 	const auto epsilon = 0.05f;
 	auto addSegmentExtendedOutOfBoundary = [&](Vec2 pointInside, Vec2 pointOnBoundary) {
-		const auto tangent = tangentAtPointOnLine(line, pointOnBoundary, pointInside);
+		//const auto tangent = tangentAtPointOnLine(line, pointOnBoundary, pointInside);
 		/*Dbg::line(pointOnBoundary, pointOnBoundary + tangent.normalized() * 0.03f, 0.01f);
 		pointOnBoundary = moveOnStereographicGeodesic(pointOnBoundary, tangent.angle(), epsilon);
 		Dbg::disk(pointInside, 0.01f, Vec3(1.0f, 0.0f, 0.0f));

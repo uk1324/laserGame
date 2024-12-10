@@ -126,6 +126,8 @@ void GameRenderer::lockedCell(const LockedCells& cells, i32 index, Vec4 color) {
 
 void GameRenderer::renderClear() {
 	gfx.camera.zoom = 0.9f;
+	//ImGui::InputFloat("zoom", &gfx.camera.zoom);
+
 
 	if (settings.drawBackgrounds) {
 		renderBackground();
@@ -171,6 +173,9 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 		if (segment.ignore) {
 			continue;
 		}
+		/*for (const auto& e : segment.endpoints) {
+			Dbg::disk(e, 0.01f, Color3::RED);
+		}*/
 		drawnSegments++;
 		/*renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color, 0.5f), 0.05f);*/
 		stereographicSegment(segment.endpoints[0], segment.endpoints[1], segment.color);
@@ -185,7 +190,16 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 	//const auto darkRed = Vec3(255, 87, 51) / 255.0f;
 
 	for (const auto& wall : e.walls) {
-		this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
+		for (const auto& e : wall->endpoints) {
+			//Dbg::disk(e, 0.01f, Color3::RED);
+		
+		}
+		//this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
+		//const auto segments = splitStereographicSegment(wall->endpoints[0], wall->endpoints[1]);
+		/*for (const auto& segment : segments) {
+			this->wall(segment.endpoints[0], segment.endpoints[1], wallColor(wall->type), editor);*/
+			this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
+		//segments
 	}
 
 	for (const auto& door : e.doors) {
@@ -344,6 +358,8 @@ void GameRenderer::renderTilingBackground() {
 	glEnable(GL_BLEND);
 }
 
+#include <Dbg.hpp>
+
 void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, Vec3 color0, Vec3 color1, f32 width) {
 	//const auto l0 = endpoint0.length();
 	//const auto l1 = endpoint1.length();
@@ -359,16 +375,28 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 	Vec2 center(0.0f);
 	const auto chordCenter = (endpoint0 + endpoint1) / 2.0f;
 	const auto additionalWidth = 0.04f;
+	f32 rectangleHeight;
 	if (line.type == StereographicLine::Type::LINE) {
 		rectangleWidth = additionalWidth * 2.0f;
+		rectangleHeight = (endpoint1 - endpoint0).length() + additionalWidth;
 		center = chordCenter;
 	} else {
-		rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
+		/*rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
 		const auto circleCenterToChord = chordCenter - line.circle.center;
 		center = chordCenter + circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
+		const auto chordLength = endpoint0.distanceTo(endpoint1);*/
+		//// This tries to handle cases like for example antipodal 
+		/*if (abs(chordLength - line.circle.radius * 2.0f) < 0.2f) {
+			center = line.circle.center;
+			rectangleWidth = line.circle.radius * 2.0f;
+		}*/
+		center = line.circle.center;
+		rectangleWidth = line.circle.radius * 2.0f;
+		rectangleHeight = line.circle.radius * 2.0f;
 	}
 	const auto angle = (endpoint1 - endpoint0).angle();
-	const auto size = Vec2((endpoint1 - endpoint0).length() + additionalWidth, rectangleWidth + additionalWidth);
+	//const auto size = Vec2((endpoint1 - endpoint0).length() + additionalWidth, rectangleWidth + additionalWidth);
+	Vec2 size = Vec2(rectangleHeight + additionalWidth, rectangleWidth + additionalWidth);
 	StereographicLineInstance instance{
 		// The rectangle isn't the most optimal shape, could divide the shape into multiple parts to optimize further. When both ends are on the boundary the line coves quite a bit of the screen. Could make the rect calculation for parts of the curve and then rendering with the same endpoints specified.
 		.transform = gfx.camera.makeTransform(center, angle, size / 2.0f),
@@ -379,6 +407,9 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 		.color1 = color1,
 		.halfWidth = width / 2.0f
 	};
+	/*chk(test, false) {
+		Dbg::rectRotated(center, size, angle, 0.01f);
+	}*/
 	stereographicLines.push_back(instance);
 }
 
@@ -405,14 +436,15 @@ void GameRenderer::stereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, V
 	}
 
 	addStereographicSegmentComplex(endpoint0, endpoint1, color0, color1, width);
-	if (endpoint0.length() >= 1.0f || endpoint1.length() >= 1.0f) {
+	if (endpoint0.length() >= 1.0f - 0.01f || endpoint1.length() >= 1.0f - 0.01f) {
 		// This is done for example to make thing like walls on the boundary appear on both sides of the circle.
-		const auto line = stereographicLine(endpoint0, endpoint1);
-		const auto a0 = antipodalPoint(endpoint0);
+		const auto a0 = antipodalPoint(endpoint0); 
 		const auto a1 = antipodalPoint(endpoint1);
 		// Adding the antipodal line might create a lot of points the are renderered but lie outside the circle.
 		// The above no longer holds, because a stencil buffer is used.
 		addStereographicSegmentComplex(a0, a1, color1, color0, width);
+		/*Dbg::disk(a0, 0.01f, Color3::GREEN);
+		Dbg::disk(a1, 0.01f, Color3::GREEN);*/
 	}
 }
 

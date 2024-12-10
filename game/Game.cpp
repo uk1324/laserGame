@@ -62,7 +62,8 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 				endpoints[i] = applyTransformation(initialEndpoints[i], transformation);
 				bothOutside &= endpoints[i].length() > Constants::boundary.radius;
 			}
-			if (bothOutside) {
+
+			if (bothOutside) { 
 				for (i32 i = 0; i < 2; i++) {
 					auto& endpoint = endpoints[i];
 					endpoint = antipodalPoint(endpoint);

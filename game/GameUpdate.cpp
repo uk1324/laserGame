@@ -251,11 +251,19 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 			EditorEntityId id,
 			i32 index = 0) {
 
+				/*Dbg::disk(endpoint0, 0.03f, Color3::CYAN);
+				Dbg::disk(endpoint1, 0.03f, Color3::CYAN);*/
 				const auto segments = splitStereographicSegment(endpoint0, endpoint1);
 
 				if (segments.size() == 1) {
 					processLineSegmentIntersections(segments[0].endpoints[0], segments[0].endpoints[1], id, index, false);
 				} else if (segments.size() == 2) {
+					/*Dbg::disk(segments[0].endpoints[0], 0.01f, Color3::RED);
+					Dbg::disk(segments[0].endpoints[1], 0.01f, Color3::RED);
+
+					Dbg::disk(segments[1].endpoints[0], 0.01f, Color3::GREEN);
+					Dbg::disk(segments[1].endpoints[1], 0.01f, Color3::GREEN);*/
+
 					processLineSegmentIntersections(segments[0].endpoints[0], segments[0].endpoints[1], id, index, false);
 					processLineSegmentIntersections(segments[1].endpoints[0], segments[1].endpoints[1], id, index, true);
 				}

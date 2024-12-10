@@ -144,6 +144,11 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 		ImGui::TextDisabled("(?)");
 		ImGui::SetItemTooltip("You can modify existing entities by selecting them using the select tool.");
 
+		/*auto antipodalPointWarning = []() {
+			ImGui::TextDisabled("(!)");
+			ImGui::SetItemTooltip("Antipodal points on the boundary are actually the same point so .");
+		};*/
+
 		ImGui::SeparatorText("tool settings");
 		switch (selectedTool) {
 			using enum Tool;
