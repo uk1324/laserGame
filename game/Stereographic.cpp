@@ -163,36 +163,75 @@ StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
 #include <gfx2d/DbgGfx2d.hpp>
 
 bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine, f32 epsilon) {
-	if (line.type == StereographicLine::Type::CIRCLE) {
-		const auto e0 = fromStereographic(endpoint0);
-		const auto e1 = fromStereographic(endpoint1);
-		const auto p = fromStereographic(pointThatLiesOnLine);
-		Vec3 t = e1 - e0;
-		f32 along = dot(p, t);
+	// For this to work with endpoints that are at any point outside of the unit circle doing calculations on the stereographic projection circle or line won't work, because a large part of the circle might be outside the unit circle and the shortest angle in the model won't be the shortest angle on the sphere. 
+	// One issue with working on the sphere is that epsilons are in the wrong space. Because the points lie on the circle anyway the code also check if the point is epsilon distance from the endpoints.
 
-		return along >= dot(e0, t) && along <= dot(e1, t);
-		//auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
-		//// arcLength = radius * angle
-		//// angle = arcLength / radius.
-		//const auto angleEpsilon = epsilon / line.circle.radius;
-		//// I found a bug and the epsilon break thing even more for some reason. The level is just a chaotic laser. Not sure why it passes through. It shouldn't happen in normal gameplay so I won't bother with it for now.
-		//angleRange.min -= angleEpsilon;
-		//angleRange.max += angleEpsilon;
-		//// TODO: Maybe clamp if min switches to max.
-
-		//return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle());
-	} else {
-		const auto lineDirection = (endpoint1 - endpoint0).normalized();
-		if (lineDirection == Vec2(0.0f)) {
-			return false;
-		}
-		const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
-		const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
-		//const auto dAlong0 = dot(lineDirection, endpoint0);
-		//const auto dAlong1 = dot(lineDirection, endpoint1);
-		const auto intersectionDAlong = dot(lineDirection, pointThatLiesOnLine);
-		return intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1;
+	const auto e0 = fromStereographic(endpoint0);
+	const auto e1 = fromStereographic(endpoint1);
+	const auto p = fromStereographic(pointThatLiesOnLine);
+	Vec3 t = e1 - e0;
+	f32 along = dot(p, t);
+	Vec3 sphereCenterToChordCenter = (e0 + e1) / 2.0f;
+	const auto sign = dot(sphereCenterToChordCenter.normalized(), p);
+	// The case when the points are antipodal is ambigous return false.
+	if (sign == 0.0f) {
+		return false;
 	}
+	if (const auto oneTheWrongHemisphere = sign < 0.0f) {
+		return false;
+	}
+	/*auto arccosClamped = [](f32 v, f32 e) {
+		v = std::clamp(v, -1.0f, 1.0f);
+		return cos(std::clamp(acos(v) + e, 0.0f, PI<f32>));
+	};*/
+	/*return along >= dot(e0, t) && along <= dot(e1, t);*/
+	//auto stereographicProjection1d = [](f32 r) {
+	//	// https://en.wikipedia.org/wiki/Stereographic_projection
+	//	const auto z = 
+	//	const auto 
+	//};
+
+	//f32 along = 
+	return along >= dot(e0, t) && along <= dot(e1, t) 
+		|| distance(pointThatLiesOnLine, endpoint0) < epsilon
+		|| distance(pointThatLiesOnLine, endpoint0) < epsilon;
+	//return arccosClamped(along, 0.0f) >= arccosClamped(dot(e0, t), -epsilon) && along <= arccosClamped(dot(e1, t), epsilon);
+
+
+	//// Checks if a point is on the line or it's antipodal version.
+	//// A stereographic line is a great circle on the plane.
+	//// This projects points onto the chord (e0, e1) of the great circle.
+
+	//if (line.type == StereographicLine::Type::CIRCLE) {
+	//	const auto e0 = fromStereographic(endpoint0);
+	//	const auto e1 = fromStereographic(endpoint1);
+	//	const auto p = fromStereographic(pointThatLiesOnLine);
+	//	Vec3 t = e1 - e0;
+	//	f32 along = dot(p, t);
+
+	//	return along >= dot(e0, t) && along <= dot(e1, t);
+	//	//auto angleRange = angleRangeBetweenPointsOnCircle(line.circle.center, endpoint0, endpoint1);
+	//	//// arcLength = radius * angle
+	//	//// angle = arcLength / radius.
+	//	//const auto angleEpsilon = epsilon / line.circle.radius;
+	//	//// I found a bug and the epsilon break thing even more for some reason. The level is just a chaotic laser. Not sure why it passes through. It shouldn't happen in normal gameplay so I won't bother with it for now.
+	//	//angleRange.min -= angleEpsilon;
+	//	//angleRange.max += angleEpsilon;
+	//	//// TODO: Maybe clamp if min switches to max.
+
+	//	//return angleRange.isInRange((pointThatLiesOnLine - line.circle.center).angle());
+	//} else {
+	//	const auto lineDirection = (endpoint1 - endpoint0).normalized();
+	//	if (lineDirection == Vec2(0.0f)) {
+	//		return false;
+	//	}
+	//	const auto dAlong0 = dot(lineDirection, endpoint0) - epsilon;
+	//	const auto dAlong1 = dot(lineDirection, endpoint1) + epsilon;
+	//	//const auto dAlong0 = dot(lineDirection, endpoint0);
+	//	//const auto dAlong1 = dot(lineDirection, endpoint1);
+	//	const auto intersectionDAlong = dot(lineDirection, pointThatLiesOnLine);
+	//	return intersectionDAlong >= dAlong0 && intersectionDAlong <= dAlong1;
+	//}
 }
 
 /*

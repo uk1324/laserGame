@@ -344,15 +344,15 @@ void GameRenderer::renderTilingBackground() {
 	elapsed += Constants::dt;
 
 	shaderSetUniforms(tilingBackgroundShader, TilingBackgroundVertUniforms{ .aspectRatio = Window::aspectRatio() });
-	shaderSetUniforms(tilingBackgroundShader, TilingBackgroundFragUniforms{ 
+	shaderSetUniforms(tilingBackgroundShader, TilingBackgroundFragUniforms{
 		.time = elapsed,
 		.icosahedralIfTrueDodecahedralIfFalse = tilingBackgroundIcosahedralIfTrueDodecahedralIfFalse
-	});
+		});
 
 	//auto shaderArray = [](const char* name, i32 i) {
 	//	return name + std::string("[") + std::to_string(i) + "]";
 	//};
-	
+
 	TilingBackgroundInstance instance{};
 	drawInstances(tilingBackgroundVao, gfx.instancesVbo, constView(instance), quad2dPtDrawInstances);
 	glEnable(GL_BLEND);
@@ -374,29 +374,67 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 	f32 rectangleWidth;
 	Vec2 center(0.0f);
 	const auto chordCenter = (endpoint0 + endpoint1) / 2.0f;
-	const auto additionalWidth = 0.04f;
+	const auto additionalWidth = 0.08f;
 	f32 rectangleHeight;
+	//if (line.type == StereographicLine::Type::LINE) {
+	//	rectangleWidth = additionalWidth * 2.0f;
+	//	rectangleHeight = (endpoint1 - endpoint0).length() + additionalWidth;
+	//	center = chordCenter;
+	//} else {
+	//	/*rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
+	//	const auto circleCenterToChord = chordCenter - line.circle.center;
+	//	center = chordCenter + circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
+	//	const auto chordLength = endpoint0.distanceTo(endpoint1);*/
+	//	//// This tries to handle cases like for example antipodal 
+	//	/*if (abs(chordLength - line.circle.radius * 2.0f) < 0.2f) {
+	//		center = line.circle.center;
+	//		rectangleWidth = line.circle.radius * 2.0f;
+	//	}*/
+	//	center = line.circle.center;
+	//	rectangleWidth = line.circle.radius * 2.0f;
+	//	rectangleHeight = line.circle.radius * 2.0f;
+	//}
+	//const auto angle = (endpoint1 - endpoint0).angle();
+	////const auto size = Vec2((endpoint1 - endpoint0).length() + additionalWidth, rectangleWidth + additionalWidth);
+	//Vec2 size = Vec2(rectangleHeight + additionalWidth, rectangleWidth + additionalWidth);
+
+	f32 rectangleLength;
 	if (line.type == StereographicLine::Type::LINE) {
 		rectangleWidth = additionalWidth * 2.0f;
-		rectangleHeight = (endpoint1 - endpoint0).length() + additionalWidth;
+		rectangleLength = (endpoint1 - endpoint0).length();
 		center = chordCenter;
 	} else {
-		/*rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
-		const auto circleCenterToChord = chordCenter - line.circle.center;
-		center = chordCenter + circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
-		const auto chordLength = endpoint0.distanceTo(endpoint1);*/
-		//// This tries to handle cases like for example antipodal 
-		/*if (abs(chordLength - line.circle.radius * 2.0f) < 0.2f) {
-			center = line.circle.center;
-			rectangleWidth = line.circle.radius * 2.0f;
+		rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
+		auto circleCenterToChord = chordCenter - line.circle.center;
+		const auto midpoint = toStereographic(((fromStereographic(endpoint0) + fromStereographic(endpoint1)) / 2.0f).normalized());
+		/*const auto midpoint = toStereographic(((fromStereographic(endpoint0) + fromStereographic(endpoint1)) / 2.0f).normalized());
+		if (dot(midpoint - line.circle.center, circleCenterToChord) < 0.0f) {
+			circleCenterToChord = -circleCenterToChord;
 		}*/
-		center = line.circle.center;
-		rectangleWidth = line.circle.radius * 2.0f;
-		rectangleHeight = line.circle.radius * 2.0f;
+		/*if (isPointOnLineAlsoOnStereographicSegment(stereographicLine(endpoint0, endpoint1), endpoint0, endpoint1, line.circle.center + chordCenter.normalized()))*/
+		
+		const auto e0 = fromStereographic(endpoint0);
+		const auto e1 = fromStereographic(endpoint1);
+		Vec3 sphereCenterToChordCenter = (e0 + e1) / 2.0f;
+		const auto sign = dot(sphereCenterToChordCenter.normalized(), fromStereographic(line.circle.center + circleCenterToChord.normalized() * line.circle.radius));
+
+
+		/*if (sign > 0.0f)*/
+		
+		if (isPointOnLineAlsoOnStereographicSegment(stereographicLine(endpoint0, endpoint1), endpoint0, endpoint1, line.circle.center + circleCenterToChord.normalized() * line.circle.radius)) {
+			center = chordCenter + circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
+			rectangleLength = (endpoint1 - endpoint0).length();
+		} else {
+			rectangleWidth = 2.0f * line.circle.radius - rectangleWidth;
+			center = chordCenter - circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
+			rectangleLength = 2.0f * line.circle.radius;
+		}
+		
 	}
 	const auto angle = (endpoint1 - endpoint0).angle();
-	//const auto size = Vec2((endpoint1 - endpoint0).length() + additionalWidth, rectangleWidth + additionalWidth);
-	Vec2 size = Vec2(rectangleHeight + additionalWidth, rectangleWidth + additionalWidth);
+	const auto size = Vec2(rectangleLength + additionalWidth, rectangleWidth + additionalWidth);
+
+	// The bouding box isn't only for performance, because things like 2 sided mirrors are mirrored when wrapped around this is implemented in code on the cpu not on the gpu. If you draw a 2 sided mirror in fullscreen then the non mirrored version will draw over the mirrored version.
 	StereographicLineInstance instance{
 		// The rectangle isn't the most optimal shape, could divide the shape into multiple parts to optimize further. When both ends are on the boundary the line coves quite a bit of the screen. Could make the rect calculation for parts of the curve and then rendering with the same endpoints specified.
 		.transform = gfx.camera.makeTransform(center, angle, size / 2.0f),
@@ -407,9 +445,9 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 		.color1 = color1,
 		.halfWidth = width / 2.0f
 	};
-	/*chk(test, false) {
+	chk(test, false) {
 		Dbg::rectRotated(center, size, angle, 0.01f);
-	}*/
+	}
 	stereographicLines.push_back(instance);
 }
 

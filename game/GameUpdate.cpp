@@ -202,10 +202,13 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 					if (const auto outsideBoundary = intersection.length() > 1.0001f) {
 						continue;
 					}
+					//Dbg::disk(intersection, 0.02f, Color3::CYAN);
 
 					if (!isPointOnLineAlsoOnStereographicSegment(line, endpoint0, endpoint1, intersection, 0.01f)) {
 						continue;
 					}
+
+					//Dbg::disk(intersection, 0.01f, Color3::RED);
 
 					const auto distance = intersection.distanceTo(laserPosition);
 					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
@@ -271,6 +274,7 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 
 		for (const auto& wall : e.walls) {
 			processSplitLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], EditorEntityId(wall.id));
+			//processLineSegmentIntersections(wall->endpoints[0], wall->endpoints[1], EditorEntityId(wall.id));
 		}
 
 		for (const auto& mirror : e.mirrors) {
