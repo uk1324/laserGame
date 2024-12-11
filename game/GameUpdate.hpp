@@ -5,7 +5,7 @@
 struct GameState {
 	void snapObjectPositionsInsideBoundary(GameEntities& e);
 	void update(GameEntities& e);
-	void laserUpdate(EditorLaser& laser, GameEntities& e);
+	void laserUpdate(EditorLaser& laser, GameEntities& e, const std::vector<Vec2>& corners);
 
 	struct Segment {
 		Vec2 endpoints[2];

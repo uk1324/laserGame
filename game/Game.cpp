@@ -29,10 +29,14 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 		const auto direction = Vec2::oriented(transormationDirectionAngle);
 		const auto rotationSpeed = TAU<f32> *1.5f;
 		const auto da = rotationSpeed * Constants::dt;
-		if (Input::isKeyHeld(KeyCode::A)) {
+
+		const auto leftHeld = Input::isKeyHeld(KeyCode::A) || Input::isKeyHeld(KeyCode::LEFT);
+		const auto rightHeld = Input::isKeyHeld(KeyCode::D) || Input::isKeyHeld(KeyCode::RIGHT);
+
+		if (leftHeld) {
 			transormationDirectionAngle += da;
 		}
-		if (Input::isKeyHeld(KeyCode::D)) {
+		if (rightHeld) {
 			transormationDirectionAngle -= da;
 		}
 		const auto movementSpeed = 2.0f;
@@ -41,12 +45,19 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 		};
 
 		std::optional<Quat> transformationChange;
-		if (Input::isKeyHeld(KeyCode::W)) {
-			transformationChange = movement(movementSpeed);
+
+		const auto forwardHeld = Input::isKeyHeld(KeyCode::W) || Input::isKeyHeld(KeyCode::UP);
+		const auto backHeld = Input::isKeyHeld(KeyCode::S) || Input::isKeyHeld(KeyCode::DOWN);
+
+		if (!(forwardHeld && backHeld)) {
+			if (forwardHeld) {
+				transformationChange = movement(movementSpeed);
+			}
+			if (backHeld) {
+				transformationChange = movement(-movementSpeed);
+			}
 		}
-		if (Input::isKeyHeld(KeyCode::S)) {
-			transformationChange = movement(-movementSpeed);
-		}
+		
 		if (transformationChange.has_value()) {
 			accumulatedTransformation = *transformationChange * accumulatedTransformation;
 			accumulatedTransformation = accumulatedTransformation.normalized();
@@ -60,7 +71,7 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 			bool bothOutside = true;
 			for (i32 i = 0; i < 2; i++) {
 				endpoints[i] = applyTransformation(initialEndpoints[i], transformation);
-				bothOutside &= endpoints[i].length() > Constants::boundary.radius;
+				bothOutside &= endpoints[i].length() >= Constants::boundary.radius - 0.01f;
 			}
 
 			if (bothOutside) { 

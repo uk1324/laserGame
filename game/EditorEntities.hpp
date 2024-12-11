@@ -213,6 +213,7 @@ struct EditorDoor {
 	f32 openingT = 0.0f;
 
 	StaticList<EditorDoorSegment, 2> segments() const;
+	bool isFullyOpen() const;
 };
 using EditorDoorId = EntityArrayId<EditorDoor>;
 using DoorArray = EntityArray<EditorDoor, EditorDoor::DefaultInitialize>;

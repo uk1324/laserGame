@@ -72,14 +72,102 @@ void GameState::snapObjectPositionsInsideBoundary(GameEntities& e) {
 	}
 }
 
+auto pointNearlyOnGeodesic(const StereographicLine& line, Vec2 p, f32 epsilon) {
+	if (line.type == StereographicLine::Type::LINE) {
+		return pointsNearlyColinear(Vec2(0.0f), line.lineNormal.rotBy90deg(), p, epsilon);
+	} else {
+		return (abs(line.circle.center.distanceTo(p) - line.circle.radius) < epsilon);
+	}
+};
+
 void GameState::update(GameEntities& e) {
 	anyTargetsTurnedOn = false;
 
 	
 	laserSegmentsToDraw.clear();
+	
+	
+
+	auto nearlyOnTheSameGeodesic = [](const StereographicSegment& a, const StereographicSegment& b) {
+		if (a.line.type == StereographicLine::Type::LINE) {
+			return pointsNearlyColinear(a.endpoints[0], a.endpoints[1], b.endpoints[0], 0.001f) &&
+				pointsNearlyColinear(a.endpoints[0], a.endpoints[1], b.endpoints[1], 0.001f);
+		} else {
+			return (abs(a.line.circle.center.distanceTo(b.endpoints[0]) - a.line.circle.radius) < 0.001f) &&
+				(abs(a.line.circle.center.distanceTo(b.endpoints[1]) - a.line.circle.radius) < 0.001f);
+		}
+	};
+		
+	std::vector<Vec2> corners;
+	{
+		// Not using splitStereographicSegment, because there are issues with corners near the boundary not getting detected.
+		std::vector<StereographicSegment> segments;
+		for (const auto& wall : e.walls) {
+			/*const auto s = splitStereographicSegment(wall->endpoints[0], wall->endpoints[1]);
+			for (const auto& segment : s) {
+				segments.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
+			}*/
+ 			segments.push_back(StereographicSegment(wall->endpoints[0], wall->endpoints[1]));
+		}
+		for (const auto& door : e.doors) {
+			if (!door->isFullyOpen()) {
+				//const auto s = splitStereographicSegment(door->endpoints[0], door->endpoints[1]);
+				//for (const auto& segment : s) {
+				//	segments.push_back(StereographicSegment(segment.endpoints[0], segment.endpoints[1]));
+				//}
+
+				segments.push_back(StereographicSegment(door->endpoints[0], door->endpoints[1]));
+			}
+		}
+		for (i32 i = 0; i < segments.size(); i++) {
+			const auto& a = segments[i];
+			for (i32 j = i + 1; j < segments.size(); j++) {
+				const auto& b = segments[j];
+
+				if (nearlyOnTheSameGeodesic(a, b)) {
+					continue;
+				}
+
+				for (i32 m = 0; m < 2; m++) {
+					const auto& f = a.endpoints[m];
+					for (i32 n = 0; n < 2; n++) {
+						const auto& g = b.endpoints[n];
+
+						auto checkPair = [&corners](Vec2 f, Vec2 g) {
+							const auto isCorner = f.distanceTo(g) < 0.005f;
+							if (isCorner) {
+								corners.push_back(g);
+							}
+						};
+
+						checkPair(f, g);
+
+						bool fAntipodalFinite = f.length() > 0.01f;
+						bool gAntipodalFinite = g.length() > 0.01f;
+						if (fAntipodalFinite) {
+							checkPair(antipodalPoint(f), g);
+						}
+						if (gAntipodalFinite) {
+							checkPair(f, antipodalPoint(g));
+						}
+						if (fAntipodalFinite && gAntipodalFinite) {
+							checkPair(antipodalPoint(f), antipodalPoint(g));
+						}
+
+						// If the lines are on the same line then treat them as a single line and don't detect a corner.
+					}
+				}
+			}
+		}
+	}
+
+	for (const auto& corner : corners) {
+		//Dbg::disk(corner, 0.01f, Color3::CYAN);
+	}
+	//for (i32 i = 0; i < e.walls.)
 
 	for (const auto& laser : e.lasers) {
-		laserUpdate(laser.entity, e);
+		laserUpdate(laser.entity, e, corners);
 	}
 
 	for (auto& s : laserSegmentsToDraw) {
@@ -133,7 +221,7 @@ void GameState::update(GameEntities& e) {
 
 }
 
-void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
+void GameState::laserUpdate(EditorLaser& laser, GameEntities& e, const std::vector<Vec2>& corners) {
 	/*renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));*/
 
@@ -211,7 +299,7 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 					//Dbg::disk(intersection, 0.01f, Color3::RED);
 
 					const auto distance = intersection.distanceTo(laserPosition);
-					const auto distanceToWrappedAround = intersection.distanceSquaredTo(boundaryIntersectionWrappedAround);
+					const auto distanceToWrappedAround = intersection.distanceTo(boundaryIntersectionWrappedAround);
 
 					const auto hitLastTime = hitOnLastIteration.has_value() && hitOnLastIteration->id == id && hitOnLastIteration->partIndex == index;
 
@@ -294,9 +382,10 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 			const auto segments = door->segments();
 			for (const auto& segment : segments) {
 				// Should this include index? Probably not.
-				processLineSegmentIntersections(segment.endpoints[0], segment.endpoints[1], EditorEntityId(door.id));
+				processSplitLineSegmentIntersections(segment.endpoints[0], segment.endpoints[1], EditorEntityId(door.id));
 			}
 		}
+		// TODO: Could check if the intersection is near a cusp. First check if 2 lines are non nearly colinear by checking if either the 4 points are co circular or 4 points are coplanar then do nothing else check if the hit point is near any of the endpoints of multiple lines at the same time.
 
 		enum HitResult {
 			CONTINUE, END
@@ -557,11 +646,23 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 		// Double intersections can cause bugs. 
 		// If you have a corner then there is no real way to define a reflection and it probably doesn't really ma tter if a laser end there.
 		// A bigger issue is configurations like crosses made out of mirrors. Then If you point right at the intersection of 2 lines then if you process only one line intersection the laser will reflect and go through the other. One option would be to process the 2 reflections sequentially, but it probably doesn't matter much. Technically only one of the walls needs to be a mirror.
-		auto doubleIntersectionCheck = [](const Hit& hit, std::optional<f32> secondClosestDistance) {
+		auto doubleIntersectionCheck = [&corners](const Hit& hit, std::optional<f32> secondClosestDistance) {
 			// If the closest hit is to close to the laser position sometimes bugs happen.
 			if (hit.distance < 0.001f) {
 				// There was a bug where there was a wall mirror on the boundary and a laser hit it wrapped around. This kinda fixes the bug, but also ends the laser where it shouldn't really end. When designing a level to deal with this issue could just create the wall on both sides.
+				// 
+				// This fixes some things, but there are issues with lasers starting near the boundary going around the boundary and coming back to the same point. 
+				// In general thereare issues near the boundary that I am not sure how to handle. 
+				// If I turn this on it casues some issues, but if I don't it causes other issues.
+
+				// TODO: Maybe checking for near intersections with endpoints would work. It would at least be consistent and not dependent on the boundary.
 				//return true;
+			}
+
+			for (const auto& corner : corners) {
+				if (hit.point.distanceTo(corner) < 0.005f) {
+					return true;
+				}
 			}
 
 			if (!secondClosestDistance.has_value()) {
@@ -619,9 +720,70 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 			processLaserSegment(s1);
 		};
 
+
+		std::optional<f32> closestEndpointDistance;
+		std::optional<f32> closestEndpointToWrappedAroundDistance;
+		/*f32 closestEndpointDistance = std::numeric_limits<f32>::infinity();
+		f32 closestEndpointToWrappedAroundDistance = std::numeric_limits<f32>::infinity();*/
+		for (const auto& wall : e.walls) {
+			auto checkPoint = [&](Vec2 e) {
+				if (pointNearlyOnGeodesic(laserLine, e, 0.005f)) {
+					if (dot(e - laserPosition, laserDirection) > 0.0f) {
+						const auto distance = e.distanceTo(laserPosition);
+						if (!closestEndpointDistance.has_value() || distance < closestEndpointDistance) {
+							closestEndpointDistance = distance;
+						}
+					} else {
+						const auto distanceToWrappedAround = e.distanceTo(boundaryIntersectionWrappedAround);
+						if (!closestEndpointToWrappedAroundDistance.has_value() || distanceToWrappedAround < *closestEndpointToWrappedAroundDistance) {
+							closestEndpointToWrappedAroundDistance = distanceToWrappedAround;
+						}
+					}
+
+					//if (isPointOnLineAlsoOnStereographicSegment(laserLine, laserPosition, boundaryIntersection, e)) {
+					//	const auto distance = e.distanceTo(laserPosition);
+					//	closestEndpointDistance = std::min(closestEndpointDistance, distance);
+					//} else if (isPointOnLineAlsoOnStereographicSegment(laserLine, laserPosition, boundaryIntersectionWrappedAround, e)) {
+					//	const auto distanceToWrappedAround = e.distanceTo(boundaryIntersectionWrappedAround);
+					//	closestEndpointToWrappedAroundDistance = std::min(closestEndpointToWrappedAroundDistance, distanceToWrappedAround);
+					//}
+				}
+			};
+
+			for (const auto& e : wall->endpoints) {
+				/*const auto l = e.length();
+				const auto epsilon = 0.0001f;
+				if (l < 1.0f - epsilon) {
+					checkPoint(e);
+				} else if (l > 1.0f + epsilon) {
+					checkPoint(antipodalPoint(e));
+				} else {
+					checkPoint(e);
+					checkPoint(antipodalPoint(e));
+				}*/
+
+				if (e.length() >= 1.0f) {
+					checkPoint(antipodalPoint(e));
+				} else if (e.length() <= 1.0f) {
+					checkPoint(e);
+				}
+			}
+		}
+
+		if (!closest.has_value() && closestEndpointDistance.has_value()) {
+			break;
+		}
+		if (!closest.has_value() && !closestToWrappedAround.has_value() && closestEndpointToWrappedAroundDistance.has_value()) {
+			break;
+		}
+
 		if (closest.has_value()) {
 			processLaserSegmentEndpoints(laserPosition, closest->point);
-			
+
+			if (closestEndpointDistance.has_value() && closestEndpointDistance < closest->distance) {
+				break;
+			}
+
 			const auto result = processHit(*closest);
 			if (result == HitResult::END
 				|| doubleIntersectionCheck(*closest, secondClosestDistance)) {
@@ -631,6 +793,10 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 			processLaserSegmentEndpoints(laserPosition, boundaryIntersection);
 			processLaserSegmentEndpoints(boundaryIntersectionWrappedAround, closestToWrappedAround->point);
 
+			if (closestEndpointToWrappedAroundDistance.has_value() && closestEndpointToWrappedAroundDistance < closestToWrappedAround->distance) {
+				break;
+			}
+
 			const auto result = processHit(*closestToWrappedAround);
 			if (result == HitResult::END
 				|| doubleIntersectionCheck(*closestToWrappedAround, secondClosestToWrappedAroundDistance)) {
@@ -639,6 +805,7 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e) {
 		} else {
 			processLaserSegmentEndpoints(laserPosition, boundaryIntersection);
 			processLaserSegmentEndpoints(laserPosition, boundaryIntersectionWrappedAround);
+			return;
 		}
 	}
 }

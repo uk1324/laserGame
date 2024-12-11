@@ -34,13 +34,30 @@ std::optional<RaycastHit> circleRaycast(Vec2 rayStart, Vec2 rayEnd, const Circle
 
 // https://en.wikipedia.org/wiki/Stereographic_projection#First_formulation
 Vec2 toStereographic(Vec3 p) {
-	const auto d = 1.0f - p.z;
-	return Vec2(p.x / d, p.y / d);
+	using CalculationType = f64;
+	const auto x = CalculationType(p.x);
+	const auto y = CalculationType(p.y);
+	const auto z = CalculationType(p.z);
+	const auto d = CalculationType(1) - z;
+	const auto X = x / d;
+	const auto Y = y / d;
+	return Vec2(f32(X), f32(Y));
+
+	/*const auto d = 1.0f - p.z;
+	return Vec2(p.x / d, p.y / d);*/
 }
 
 Vec3 fromStereographic(Vec2 p) {
-	const auto d = p.x * p.x + p.y * p.y + 1.0f;
-	return (Vec3(2.0f * p.x, 2.0f * p.y, -1.0f + p.x * p.x + p.y * p.y) / d).normalized();
+	using CalculationType = f64;
+	const auto X = CalculationType(p.x);
+	const auto Y = CalculationType(p.y);
+	const auto d = X * X + Y * Y + CalculationType(1);
+	const auto x = CalculationType(2) * X;
+	const auto y = CalculationType(2) * Y;
+	const auto z = -CalculationType(1) + X * X + Y * Y;
+	return Vec3((Vec3T<CalculationType>(x, y, z) / d).normalized());
+	/*const auto d = p.x * p.x + p.y * p.y + 1.0f;
+	return (Vec3(2.0f * p.x, 2.0f * p.y, -1.0f + p.x * p.x + p.y * p.y) / d).normalized();*/
 }
 
 // The angle is such that when stereographically projected it equal the plane angle.
@@ -69,18 +86,31 @@ Vec2 moveOnStereographicGeodesic(Vec2 pos, f32 angle, f32 distance) {
 }
 
 Vec2 antipodalPoint(Vec2 p) {
-	const auto onSphere = fromStereographic(p);
+	
+	/*const auto onSphere = fromStereographic(p);
 	const auto r0 = toStereographic(-onSphere);
+	return r0;*/
+	using CalculationType = f64;
 
-	const auto a = 2.0f * (p.x * p.x + p.y * p.y);
+	const CalculationType x = CalculationType(p.x);
+	const CalculationType y = CalculationType(p.y);
+
+	const auto a = CalculationType(2) * (x * x + y * y);
+	const auto rx = -CalculationType(2) * x / a;
+	const auto ry = -CalculationType(2) * y / a;
+	return Vec2(f32(rx), f32(ry));
+	/*const auto r1 = Vec2(f32(-2.0f * p.x), f32(- 2.0f * p.y)) / a;
+	return r1;*/
+
+	/*const auto a = 2.0f * (p.x * p.x + p.y * p.y);
 	const auto r1 = Vec2(-2.0f * p.x, -2.0f * p.y) / a;
-	return r1;
+	return r1;*/
 }
 
 
 // https://www.johndcook.com/blog/2023/06/18/circle-through-three-points/
 Circle circleThroughPoints(Vec2 p0, Vec2 p1, Vec2 p2) {
-	const auto x1 = p0.x, y1 = p0.y, x2 = p1.x, y2 = p1.y, x3 = p2.x, y3 = p2.y;
+	/*const auto x1 = p0.x, y1 = p0.y, x2 = p1.x, y2 = p1.y, x3 = p2.x, y3 = p2.y;
 	const auto s1 = pow(x1, 2.0f) + pow(y1, 2.0f);
 	const auto s2 = pow(x2, 2.0f) + pow(y2, 2.0f);
 	const auto s3 = pow(x3, 2.0f) + pow(y3, 2.0f);
@@ -89,8 +119,19 @@ Circle circleThroughPoints(Vec2 p0, Vec2 p1, Vec2 p2) {
 	const auto m13 = s1 * x2 + s2 * x3 + s3 * x1 - (s2 * x1 + s3 * x2 + s1 * x3);
 	const auto x0 = 0.5f * m12 / m11;
 	const auto y0 = -0.5f * m13 / m11;
-	const auto r0 = sqrt(pow((x1 - x0), 2.0f) + pow((y1 - y0), 2.0f));
-	return Circle(Vec2(x0, y0), r0);
+	const auto r0 = sqrt(pow((x1 - x0), 2.0f) + pow((y1 - y0), 2.0f));*/
+	using CalculationType = f64;
+	const CalculationType x1 = p0.x, y1 = p0.y, x2 = p1.x, y2 = p1.y, x3 = p2.x, y3 = p2.y;
+	const CalculationType s1 = pow(x1, CalculationType(2.0)) + pow(y1, CalculationType(2.0));
+	const CalculationType s2 = pow(x2, CalculationType(2.0)) + pow(y2, CalculationType(2.0));
+	const CalculationType s3 = pow(x3, CalculationType(2.0)) + pow(y3, CalculationType(2.0));
+	const CalculationType m11 = x1 * y2 + x2 * y3 + x3 * y1 - (x2 * y1 + x3 * y2 + x1 * y3);
+	const CalculationType m12 = s1 * y2 + s2 * y3 + s3 * y1 - (s2 * y1 + s3 * y2 + s1 * y3);
+	const CalculationType m13 = s1 * x2 + s2 * x3 + s3 * x1 - (s2 * x1 + s3 * x2 + s1 * x3);
+	const CalculationType x0 = CalculationType(0.5) * m12 / m11;
+	const CalculationType y0 = -CalculationType(0.5) * m13 / m11;
+	const CalculationType r0 = sqrt(pow((x1 - x0), CalculationType(2.0)) + pow((y1 - y0), CalculationType(2.0)));
+	return Circle(Vec2(f32(x0), f32(y0)), f32(r0));
 }
 
 std::optional<Circle> circleThroughPointsWithNormalAngle(Vec2 p0, f32 angle0, Vec2 p1) {
@@ -132,7 +173,7 @@ Circle stereographicLineOld(Vec2 p0, Vec2 p1) {
 	return circleThroughPoints(p0, p1, antipodal);
 }
 
-bool nearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2) {
+bool pointsNearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2, f32 epsilon) {
 	// https://math.stackexchange.com/questions/405966/if-i-have-three-points-is-there-an-easy-way-to-tell-if-they-are-collinear
 	// https://stackoverflow.com/questions/65396833/testing-three-points-for-collinearity-in-a-numerically-robust-way
 	const auto l0 = p0.distanceTo(p1);
@@ -141,7 +182,7 @@ bool nearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2) {
 	const auto longestSide = std::max(l0, std::max(l1, l2));
 	const auto parallelogramArea = abs(det(p1 - p0, p2 - p0));
 	const auto parallelogramHeight = parallelogramArea / longestSide;
-	return parallelogramHeight < 0.0005f;
+	return parallelogramHeight < epsilon;
 }
 
 StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
@@ -154,7 +195,7 @@ StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
 	}
 
 
-	if (nearlyColinear(p0, p1, p2)) {
+	if (pointsNearlyColinear(p0, p1, p2, 0.0005f)) {
 		return StereographicLine((p0 - p1).rotBy90deg().normalized());
 	}
 	return stereographicLineOld(p0, p1);
@@ -162,6 +203,7 @@ StereographicLine stereographicLine(Vec2 p0, Vec2 p1) {
 
 #include <gfx2d/DbgGfx2d.hpp>
 
+// Istead of splitting segments into 2 parts could use this function without the onRightHemisphere check, but this wouldn't work for 2 sided things, because the other side is mirrored.
 bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2 endpoint0, Vec2 endpoint1, Vec2 pointThatLiesOnLine, f32 epsilon) {
 	// For this to work with endpoints that are at any point outside of the unit circle doing calculations on the stereographic projection circle or line won't work, because a large part of the circle might be outside the unit circle and the shortest angle in the model won't be the shortest angle on the sphere. 
 	// One issue with working on the sphere is that epsilons are in the wrong space. Because the points lie on the circle anyway the code also check if the point is epsilon distance from the endpoints.
@@ -173,13 +215,8 @@ bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2
 	f32 along = dot(p, t);
 	Vec3 sphereCenterToChordCenter = (e0 + e1) / 2.0f;
 	const auto sign = dot(sphereCenterToChordCenter.normalized(), p);
-	// The case when the points are antipodal is ambigous return false.
-	if (sign == 0.0f) {
-		return false;
-	}
-	if (const auto oneTheWrongHemisphere = sign < 0.0f) {
-		return false;
-	}
+	// The case when the points are antipodal and sign = 0 is ambigous return false.
+	const auto onRightHemisphere = sign > 0.0f;
 	/*auto arccosClamped = [](f32 v, f32 e) {
 		v = std::clamp(v, -1.0f, 1.0f);
 		return cos(std::clamp(acos(v) + e, 0.0f, PI<f32>));
@@ -192,9 +229,9 @@ bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2
 	//};
 
 	//f32 along = 
-	return along >= dot(e0, t) && along <= dot(e1, t) 
+	return (along >= dot(e0, t) && along <= dot(e1, t) && onRightHemisphere)
 		|| distance(pointThatLiesOnLine, endpoint0) < epsilon
-		|| distance(pointThatLiesOnLine, endpoint0) < epsilon;
+		|| distance(pointThatLiesOnLine, endpoint1) < epsilon;
 	//return arccosClamped(along, 0.0f) >= arccosClamped(dot(e0, t), -epsilon) && along <= arccosClamped(dot(e1, t), epsilon);
 
 
@@ -351,60 +388,75 @@ f32 eucledianDistanceToStereographicSegment(Vec2 e0, Vec2 e1, Vec2 eucledianPoin
 // https://stackoverflow.com/questions/55816902/finding-the-intersection-of-two-circles
 StaticList<Vec2, 2> circleVsCircleIntersection(const Circle& c0, const Circle& c1) {
 	StaticList<Vec2, 2> out;
+	using CalculationType = f64;
+	const CalculationType r0 = CalculationType(c0.radius);
+	const CalculationType r1 = CalculationType(c1.radius);
+	const CalculationType d = distance(Vec2T<CalculationType>(c0.center), Vec2T<CalculationType>(c1.center));
 
-	const auto d = distance(c0.center, c1.center);
-	if (d > c0.radius + c1.radius) {
+	if (d > r0 + r1) {
 		return out;
 	}
 
-	if (d < std::abs(c0.radius - c1.radius)) {
+	if (d < std::abs(r0 - r1)) {
 		return out;
 	}
 	
-	if (d == 0.0f) {
+	if (d == CalculationType(0.0)) {
 		return out;
 	}
 
-	const auto a = (pow(c0.radius, 2.0f) - pow(c1.radius, 2.0f) + pow(d, 2.0f)) / (2.0f * d);
-	const auto h = sqrt(pow(c0.radius, 2.0f) - pow(a, 2.0f));
-	const auto x0 = c0.center.x;
-	const auto y0 = c0.center.y;
-	const auto x1 = c1.center.x;
-	const auto y1 = c1.center.y;
+	const CalculationType a = (pow(c0.radius, CalculationType(2.0)) - pow(c1.radius, CalculationType(2.0)) + pow(d, CalculationType(2.0))) / (CalculationType(2.0) * d);
+	const CalculationType h = sqrt(pow(c0.radius, CalculationType(2.0)) - pow(a, CalculationType(2.0)));
 
-    const auto x2 = x0 + a * (x1 - x0) / d;
-    const auto y2 = y0 + a * (y1 - y0) / d;
+	const CalculationType x0 = CalculationType(c0.center.x);
+	const CalculationType y0 = CalculationType(c0.center.y);
+	const CalculationType x1 = CalculationType(c1.center.x);
+	const CalculationType y1 = CalculationType(c1.center.y);
 
-    const auto x3 = x2 + h * (y1 - y0) / d;
-    const auto y3 = y2 - h * (x1 - x0) / d;
-    const auto x4 = x2 - h * (y1 - y0) / d;
-	const auto y4 = y2 + h * (x1 - x0) / d;
+    const CalculationType x2 = x0 + a * (x1 - x0) / d;
+    const CalculationType y2 = y0 + a * (y1 - y0) / d;
 
-	out.add(Vec2(x3, y3));
-	out.add(Vec2(x4, y4));
+    const CalculationType x3 = x2 + h * (y1 - y0) / d;
+    const CalculationType y3 = y2 - h * (x1 - x0) / d;
+    const CalculationType x4 = x2 - h * (y1 - y0) / d;
+	const CalculationType y4 = y2 + h * (x1 - x0) / d;
+
+	out.add(Vec2(f32(x3), f32(y3)));
+	out.add(Vec2(f32(x4), f32(y4)));
+	return out;
+}
+
+template<typename T> 
+StaticList<Vec2T<T>, 2> lineCircleIntersection(Vec2T<T> linePoint, Vec2T<T> lineDirection, Vec2T<T> circleCenter, T circleRadius) {
+	StaticList<Vec2T<T>, 2> out;
+
+	const auto start = linePoint - circleCenter;
+	const auto
+		a = dot(lineDirection, lineDirection),
+		b = dot(start, lineDirection) * T(2),
+		c = dot(start, start) - circleRadius * circleRadius;
+	const auto discriminant = b * b - T(4) * a * c;
+	if (discriminant < T(0)) {
+		return out;
+	}
+
+	const auto sqrtDiscriminant = sqrt(discriminant);
+	const auto
+		t0 = (-b + sqrtDiscriminant) / a / T(2),
+		t1 = (-b - sqrtDiscriminant) / a / T(2);
+
+	out.add(linePoint + lineDirection * t0);
+	out.add(linePoint + lineDirection * t1);
 	return out;
 }
 
 StaticList<Vec2, 2> lineVsCircleIntersection(Vec2 linePoint, Vec2 lineDirection, const Circle& circle) {
 	StaticList<Vec2, 2> out;
 
-	const auto start = linePoint - circle.center;
-	const auto
-		a = dot(lineDirection, lineDirection),
-		b = dot(start, lineDirection) * 2.0f,
-		c = dot(start, start) - circle.radius * circle.radius;
-	const auto discriminant = b * b - 4.0f * a * c;
-	if (discriminant < 0.0f) {
-		return out;
+	const auto result = lineCircleIntersection(Vec2T<f64>(linePoint), Vec2T<f64>(lineDirection), Vec2T<f64>(circle.center), f64(circle.radius));
+	for (const auto& point : result) {
+		out.add(Vec2(point));
 	}
-
-	const auto sqrtDiscriminant = sqrt(discriminant);
-	const auto
-		t0 = (-b + sqrtDiscriminant) / a / 2.0f,
-		t1 = (-b - sqrtDiscriminant) / a / 2.0f;
-
-	out.add(linePoint + lineDirection * t0);
-	out.add(linePoint + lineDirection * t1);
 	return out;
 }
 
@@ -581,6 +633,11 @@ StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 e
 	const auto insideBoundary0 = endpoint0.length() < Constants::boundary.radius;
 	const auto insideBoundary1 = endpoint1.length() < Constants::boundary.radius;
 
+	if (!insideBoundary0 && !insideBoundary1) {
+		result.add(SegmentEndpoints(antipodalPoint(endpoint0), antipodalPoint(endpoint1)));
+		return result;
+	}
+
 	if (insideBoundary0 && insideBoundary1) {
 		result.add(SegmentEndpoints(endpoint0, endpoint1));
 		return result;
@@ -614,15 +671,17 @@ StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 e
 		result.add(SegmentEndpoints(pointInside, pointOnBoundary));
 	};
 	
+	const auto intersection = intersections[0].normalized();
+
 	// TODO: Code in game update relies on the order these are added. First the segment inside next the one wrapped around.
 	if (insideBoundary0) {
-		addSegmentExtendedOutOfBoundary(endpoint0, intersections[0]);
-		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint1), -intersections[0]);
+		addSegmentExtendedOutOfBoundary(endpoint0, intersection);
+		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint1), -intersection);
 		/*result.add(SegmentEndpoints(endpoint0, intersections[0]));
 		result.add(SegmentEndpoints(antipodalPoint(endpoint1), -intersections[0]));*/
 	} else {
-		addSegmentExtendedOutOfBoundary(endpoint1, intersections[0]);
-		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint0), -intersections[0]);
+		addSegmentExtendedOutOfBoundary(endpoint1, intersection);
+		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint0), -intersection);
 		//result.add(SegmentEndpoints(endpoint1, intersections[0]));
 		//result.add(SegmentEndpoints(antipodalPoint(endpoint0), -intersections[0]));
 	}

@@ -66,6 +66,8 @@ Circle circleThroughPointsWithCenter(Vec2 center, Vec2 p0, Vec2 p1);
 
 StereographicLine stereographicLineThroughPointWithTangent(Vec2 p, f32 tangentAngle, f32 translation = 0.1f);
 
+bool pointsNearlyColinear(Vec2 p0, Vec2 p1, Vec2 p2, f32 epsilon);
+
 Circle stereographicLineOld(Vec2 p0, Vec2 p1);
 StereographicLine stereographicLine(Vec2 p0, Vec2 p1);
 

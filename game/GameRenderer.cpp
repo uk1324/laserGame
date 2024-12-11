@@ -177,6 +177,7 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 			Dbg::disk(e, 0.01f, Color3::RED);
 		}*/
 		drawnSegments++;
+		
 		/*renderer.stereographicSegment(segment.endpoints[0], segment.endpoints[1], Vec4(segment.color, 0.5f), 0.05f);*/
 		stereographicSegment(segment.endpoints[0], segment.endpoints[1], segment.color);
 	}
@@ -196,9 +197,11 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 		}
 		//this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
 		//const auto segments = splitStereographicSegment(wall->endpoints[0], wall->endpoints[1]);
-		/*for (const auto& segment : segments) {
-			this->wall(segment.endpoints[0], segment.endpoints[1], wallColor(wall->type), editor);*/
-			this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
+		//for (const auto& segment : segments) {
+		//	this->wall(segment.endpoints[0], segment.endpoints[1], wallColor(wall->type), editor);
+		//	//this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
+		//}
+		this->wall(wall->endpoints[0], wall->endpoints[1], wallColor(wall->type), editor);
 		//segments
 	}
 
@@ -399,8 +402,8 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 	//Vec2 size = Vec2(rectangleHeight + additionalWidth, rectangleWidth + additionalWidth);
 
 	f32 rectangleLength;
-	if (line.type == StereographicLine::Type::LINE) {
-		rectangleWidth = additionalWidth * 2.0f;
+ 	if (line.type == StereographicLine::Type::LINE) {
+		rectangleWidth = 0.0f;
 		rectangleLength = (endpoint1 - endpoint0).length();
 		center = chordCenter;
 	} else {
@@ -420,7 +423,7 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 
 
 		/*if (sign > 0.0f)*/
-		
+		// this could probably be implemented using the separation order relation instead, but I am not sure how to implement that.
 		if (isPointOnLineAlsoOnStereographicSegment(stereographicLine(endpoint0, endpoint1), endpoint0, endpoint1, line.circle.center + circleCenterToChord.normalized() * line.circle.radius)) {
 			center = chordCenter + circleCenterToChord.normalized() * (rectangleWidth / 2.0f);
 			rectangleLength = (endpoint1 - endpoint0).length();
@@ -468,13 +471,37 @@ void GameRenderer::stereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1, V
 	}
 
 	if (abs(endpoint0.length() - 1.0f) < 0.001f && abs(endpoint1.length() - 1.0f) < 0.001f && (endpoint0 + endpoint1).length() < 0.001f) {
+		// Split lines into 2 parts so antipodal points don't cause issues.
 		addStereographicSegmentComplex(endpoint0, Vec2(0.0f), color0, color1, width);
 		addStereographicSegmentComplex(endpoint1, Vec2(0.0f), color0, color1, width);
 		return;
 	}
 
+	const auto segments = splitStereographicSegment(endpoint0, endpoint1);
+	if (segments.size() == 1) {
+		const auto& segment = segments[0];
+		addStereographicSegmentComplex(segment.endpoints[0], segment.endpoints[1], color0, color1, width);
+
+		if (endpoint0.length() >= 1.0f - 0.01f || endpoint1.length() >= 1.0f - 0.01f && !(endpoint0.length() < 0.01f || endpoint1.length() < 0.01f)) {
+			// This is done for example to make thing like walls on the boundary appear on both sides of the circle.
+			const auto a0 = antipodalPoint(endpoint0);
+			const auto a1 = antipodalPoint(endpoint1);
+			// Adding the antipodal line might create a lot of points the are renderered but lie outside the circle.
+			// The above no longer holds, because a stencil buffer is used.
+			addStereographicSegmentComplex(a0, a1, color1, color0, width);
+			/*Dbg::disk(a0, 0.01f, Color3::GREEN);
+			Dbg::disk(a1, 0.01f, Color3::GREEN);*/
+		}
+
+	} else {
+		addStereographicSegmentComplex(segments[0].endpoints[0], segments[0].endpoints[1], color0, color1, width);
+		addStereographicSegmentComplex(segments[1].endpoints[0], segments[1].endpoints[1], color1, color0, width);
+	}
+	//for (const auto& segment : segments) {
+	//	
+	//}
 	addStereographicSegmentComplex(endpoint0, endpoint1, color0, color1, width);
-	if (endpoint0.length() >= 1.0f - 0.01f || endpoint1.length() >= 1.0f - 0.01f) {
+	if ((endpoint0.length() >= 1.0f - 0.01f || endpoint1.length() >= 1.0f - 0.01f) && !(endpoint0.length() < 0.05f || endpoint1.length() < 0.05f)) {
 		// This is done for example to make thing like walls on the boundary appear on both sides of the circle.
 		const auto a0 = antipodalPoint(endpoint0); 
 		const auto a1 = antipodalPoint(endpoint1);

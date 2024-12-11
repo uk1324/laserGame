@@ -2,8 +2,8 @@
     "walls": [
         {
             "endpoint0": [
-                -1,
-                -8.742278e-08
+                0,
+                0
             ],
             "endpoint1": [
                 1,
@@ -54,6 +54,17 @@
                 -1
             ],
             "type": 1
+        },
+        {
+            "endpoint0": [
+                -1,
+                -8.742278e-08
+            ],
+            "endpoint1": [
+                0,
+                0
+            ],
+            "type": 1
         }
     ],
     "lasers": [
@@ -68,7 +79,8 @@
                 1
             ],
             "angle": -0.78539765,
-            "positionLocked": true
+            "positionLocked": true,
+            "rotationLocked": false
         },
         {
             "position": [
@@ -81,7 +93,8 @@
                 0
             ],
             "angle": 2.3561945,
-            "positionLocked": true
+            "positionLocked": true,
+            "rotationLocked": false
         }
     ],
     "targets": [

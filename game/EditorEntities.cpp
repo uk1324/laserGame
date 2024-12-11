@@ -400,6 +400,14 @@ StaticList<EditorDoorSegment, 2> EditorDoor::segments() const {
 	//const auto moveOnSphericalGeodesic(midpoint, tangentAtMidpoint.angle(), openAmount);
 }
 
+bool EditorDoor::isFullyOpen() const {
+	if (openByDefault) {
+		return openingT == 0.0f;
+	} else {
+		return openingT == 1.0f;
+	}
+}
+
 void GameEntities::reset() {
 	walls.reset();
 	lasers.reset();
