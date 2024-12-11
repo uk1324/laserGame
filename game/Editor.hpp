@@ -97,7 +97,7 @@ struct Editor {
 		PORTAL_PAIR,
 		TRIGGER,
 		DOOR,
-		MODIFY_LOCKED_CELLS
+		//MODIFY_LOCKED_CELLS
 	};
 
 	struct WallLikeEntity {

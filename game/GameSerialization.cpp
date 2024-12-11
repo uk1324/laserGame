@@ -139,7 +139,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 	}
 
-	if (e.lockedCells.cells.size() > 0) {
+	/*if (e.lockedCells.cells.size() > 0) {
 		LevelLockedCells levelLockedCells{
 			.ringCount = e.lockedCells.ringCount,
 			.segmentCount = e.lockedCells.segmentCount
@@ -149,7 +149,7 @@ Json::Value saveGameLevelToJson(GameEntities& e) {
 		}
 		level[levelLockedCellsName] = toJson(levelLockedCells);
 
-	}
+	}*/
 	return level;
 }
 
@@ -288,14 +288,14 @@ bool tryLoadGameLevelFromJson(GameEntities& e, const Json::Value& json) {
 			}
 		}
 
-		if (json.contains(levelLockedCellsName)) {
+		/*if (json.contains(levelLockedCellsName)) {
 			auto levelLockedCells = fromJson<LevelLockedCells>(json.at(levelLockedCellsName));
 			e.lockedCells = LockedCells{
 				.cells = std::move(levelLockedCells.cells),
 				.segmentCount = levelLockedCells.segmentCount,
 				.ringCount = levelLockedCells.ringCount,
 			};
-		}
+		}*/
 
 	} catch (const Json::Value::Exception&) {
 		return false;

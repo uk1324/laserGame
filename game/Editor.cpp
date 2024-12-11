@@ -300,7 +300,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 			editorTargetRadiusInput(targetCreateTool.targetRadius);
 			break;
 
-		case MODIFY_LOCKED_CELLS: {
+		/*case MODIFY_LOCKED_CELLS: {
 			bool modified = false;
 			ImGui::TextDisabled("(?)");
 			ImGui::SetItemTooltip("Add cells with left click remove cells with right click.");
@@ -316,7 +316,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 				e.lockedCells.cells.clear();
 			}
 			break;
-		}
+		}*/
 			
 		case NONE:
 			break;
@@ -395,7 +395,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 		case PORTAL_PAIR: portalCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case TRIGGER: triggerCreateToolUpdate(cursorPos, cursorCaptured); break;
 		case DOOR: doorCreateToolUpdate(cursorPos, cursorCaptured); break;
-		case MODIFY_LOCKED_CELLS: modifyLockedCellsUpdate(cursorPos, cursorCaptured); break;
+		//case MODIFY_LOCKED_CELLS: modifyLockedCellsUpdate(cursorPos, cursorCaptured); break;
 		}
 	};
 
@@ -437,7 +437,7 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 	case PORTAL_PAIR: break;
 	case TRIGGER: break;
 	case DOOR: doorCreateTool.render(renderer, cursorPos); break;
-	case MODIFY_LOCKED_CELLS: modifyLockedCellsToolRender(renderer, cursorPos, cursorCaptured);
+	//case MODIFY_LOCKED_CELLS: modifyLockedCellsToolRender(renderer, cursorPos, cursorCaptured);
 	}
 
 	renderer.render(e, s, true, 0.0f, std::nullopt);
@@ -879,29 +879,29 @@ void Editor::modifyLockedCellsUpdate(Vec2 cursorPos, bool& cursorCaptured) {
 		return;
 	}
 
-	const auto index = e.lockedCells.getIndex(cursorPos);
+	//const auto index = e.lockedCells.getIndex(cursorPos);
 
-	if (!index.has_value()) {
-		return;
-	}
+	//if (!index.has_value()) {
+	//	return;
+	//}
 
-	if (Input::isMouseButtonDown(MouseButton::LEFT)) {
-		const auto notDuplicate = addWithoutDuplicating(e.lockedCells.cells, *index);
-		if (notDuplicate) {
-			actions.add(new EditorActionModifyLockedCells(true, *index));
-		}
-	}
+	//if (Input::isMouseButtonDown(MouseButton::LEFT)) {
+	//	const auto notDuplicate = addWithoutDuplicating(e.lockedCells.cells, *index);
+	//	if (notDuplicate) {
+	//		actions.add(new EditorActionModifyLockedCells(true, *index));
+	//	}
+	//}
 
-	if (Input::isMouseButtonDown(MouseButton::RIGHT)) {
-		const auto removed = tryRemove(e.lockedCells.cells, *index);
-		if (removed) {
-			actions.add(new EditorActionModifyLockedCells(false, *index));
-		}
-	}
+	//if (Input::isMouseButtonDown(MouseButton::RIGHT)) {
+	//	const auto removed = tryRemove(e.lockedCells.cells, *index);
+	//	if (removed) {
+	//		actions.add(new EditorActionModifyLockedCells(false, *index));
+	//	}
+	//}
 }
 
 void Editor::modifyLockedCellsToolRender(GameRenderer& renderer, Vec2 cursorPos, bool& cursorCaptured) {
-	if (cursorCaptured) {
+	/*if (cursorCaptured) {
 		return;
 	}
 
@@ -915,7 +915,7 @@ void Editor::modifyLockedCellsToolRender(GameRenderer& renderer, Vec2 cursorPos,
 	Vec4 color = GameRenderer::lockedCellColor;
 	color.w /= 2.0f;
 	renderer.lockedCell(e.lockedCells, *cellIndex, color);
-	renderer.gfx.drawFilledTriangles();
+	renderer.gfx.drawFilledTriangles();*/
 }
 
 void Editor::activateEntity(const EditorEntityId& id) {
@@ -984,11 +984,11 @@ void Editor::undoAction(const EditorAction& action) {
 
 	case MODIFY_LOCKED_CELLS: {
 		const auto& a = static_cast<const EditorActionModifyLockedCells&>(action);
-		if (a.added) {
+		/*if (a.added) {
 			tryRemove(e.lockedCells.cells, a.index);
 		} else {
 			addWithoutDuplicating(e.lockedCells.cells, a.index);
-		}
+		}*/
 		break;
 	}
 
@@ -1128,13 +1128,13 @@ void Editor::redoAction(const EditorAction& action) {
 	}
 
 	case MODIFY_LOCKED_CELLS: {
-		const auto& a = static_cast<const EditorActionModifyLockedCells&>(action);
+		/*const auto& a = static_cast<const EditorActionModifyLockedCells&>(action);
 		if (a.added) {
 			addWithoutDuplicating(e.lockedCells.cells, a.index);
 		} else {
 			tryRemove(e.lockedCells.cells, a.index);
 		}
-		break;
+		break;*/
 	}
 
 	}

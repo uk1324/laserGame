@@ -160,9 +160,9 @@ void GameRenderer::render(GameEntities& e, const GameState& s, bool editor, f32 
 
 
 	// If you triangulate things consistently that is if things share a side then they are made of triangles that share sides then you don't have to worry about gaps. When triangulating circular arc you just need to make sure that the number of discretization points is dependent only on the arc could make it constant or dependent on length for example.
-	for (const auto& cell : e.lockedCells.cells) {
+	/*for (const auto& cell : e.lockedCells.cells) {
 		lockedCell(e.lockedCells, cell, GameRenderer::lockedCellColor);
-	}
+	}*/
 	gfx.drawFilledTriangles();
 
 	// Given objects and alpha transparency doesn't add much. With thin lines its barerly visible. Also it causes flicker sometimes when double overlap from the same laser appears.

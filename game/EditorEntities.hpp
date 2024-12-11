@@ -304,7 +304,7 @@ struct GameEntities {
 	PortalPairArray portalPairs;
 	TriggerArray triggers;
 	DoorArray doors;
-	LockedCells lockedCells;
+	//LockedCells lockedCells;
 
 	void reset();
 };

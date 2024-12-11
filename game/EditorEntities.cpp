@@ -416,7 +416,7 @@ void GameEntities::reset() {
 	portalPairs.reset();
 	triggers.reset();
 	doors.reset();
-	lockedCells.reset();
+	//lockedCells.reset();
 }
 
 f32 LaserArrowhead::distanceTo(Vec2 v) const {

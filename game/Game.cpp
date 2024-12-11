@@ -372,7 +372,7 @@ bool Game::areObjectsInValidState() {
 		}
 	}
 
-	for (const auto& cell : e.lockedCells.cells) {
+	/*for (const auto& cell : e.lockedCells.cells) {
 		const auto cellBounds = e.lockedCells.cellBounds(cell);
 
 		for (const auto& laser : e.lasers) {
@@ -416,7 +416,7 @@ bool Game::areObjectsInValidState() {
 			}
 		}
 
-	}
+	}*/
 
 	return true;
 }
