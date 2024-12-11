@@ -125,6 +125,7 @@ void MainLoop::propagateSettings(const Settings& settings) {
 
 void MainLoop::previewEditorLevelInGame() {
 	switchToState(state, State::GAME);
+	atTransitionMidpoint(state, State::GAME);
 	const auto level = saveGameLevelToJson(editor.e);
 	game.tryLoadEditorPreviewLevel(level);
 }
@@ -146,7 +147,6 @@ void MainLoop::switchToState(State currentState, State newState) {
 		using enum State;
 	case GAME:
 		game.onSwitchToGame(audio);
-		atTransitionMidpoint(currentState, State::GAME);
 		break;
 
 	default:

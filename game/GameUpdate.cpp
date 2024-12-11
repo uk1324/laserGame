@@ -47,7 +47,7 @@ void GameState::snapObjectPositionsInsideBoundary(GameEntities& e) {
 
 	for (auto wall : e.walls) {
 		for (auto& endpoint : wall->endpoints) {
-			endpoint = snapPositionsOutsideBoundary(endpoint);
+			//endpoint = snapPositionsOutsideBoundary(endpoint);
 		}
 		snapAntipodalPoints(wall->endpoints[0], wall->endpoints[1]);
 	}
@@ -221,6 +221,7 @@ void GameState::update(GameEntities& e) {
 
 }
 
+// I tried many different things to correctly detect everything, but I can't think of any way to make it work in all cases. I have to choose between not detecting collision when they are there and detecting them when they aren't there. I think it might be better to choose detecting them when they aren't there.
 void GameState::laserUpdate(EditorLaser& laser, GameEntities& e, const std::vector<Vec2>& corners) {
 	/*renderer.gfx.disk(laser->position, 0.02f, movablePartColor(laser->positionLocked));
 		renderer.gfx.disk(laserDirectionGrabPoint(laser.entity), grabbableCircleRadius, movablePartColor(false));*/
@@ -441,9 +442,9 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e, const std::vect
 				laserDirection = laserTangentAtHitPoint.reflectedAroundNormal(hitObjectNormalAtHitPoint);
 				laserPosition = hit.point;
 				hitOnLastIteration = EditorEntity{ hit.id, hit.index };
-				//renderer.gfx.line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
-				//renderer.gfx.line(laserPosition, laserPosition + laserTangentAtIntersection * 0.2f, 0.01f, Color3::GREEN);
-				//renderer.gfx.line(laserPosition, laserPosition + mirrorNormal * 0.2f, 0.01f, Color3::RED);
+				/*Dbg::line(laserPosition, laserPosition + laserDirection * 0.2f, 0.01f, Color3::BLUE);
+				Dbg::line(laserPosition, laserPosition + laserTangentAtHitPoint * 0.2f, 0.01f, Color3::GREEN);
+				Dbg::line(laserPosition, laserPosition + hitObjectNormalAtHitPoint * 0.2f, 0.01f, Color3::RED);*/
 			};
 
 			switch (hit.id.type) {
@@ -656,7 +657,9 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e, const std::vect
 				// If I turn this on it casues some issues, but if I don't it causes other issues.
 
 				// TODO: Maybe checking for near intersections with endpoints would work. It would at least be consistent and not dependent on the boundary.
-				//return true;
+
+				// There are also cases when 2 mirror walls are next to eachother and one is hit right at the endpoint then the other might reflect the laser to the other side.
+				return true;
 			}
 
 			for (const auto& corner : corners) {
@@ -665,10 +668,13 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e, const std::vect
 				}
 			}
 
+
 			if (!secondClosestDistance.has_value()) {
 				return false;
 			}
+			// This creates false positives.
 			return std::abs(hit.distance - *secondClosestDistance) < 0.001f;
+			//return false;
 		};
 
 		// Sometimes the laser is properly calculated for collision, but when split into segments it stops working.
@@ -778,6 +784,7 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e, const std::vect
 		}
 
 		if (closest.has_value()) {
+			//Dbg::disk(closest->point, 0.01f, Color3::RED);
 			processLaserSegmentEndpoints(laserPosition, closest->point);
 
 			if (closestEndpointDistance.has_value() && closestEndpointDistance < closest->distance) {

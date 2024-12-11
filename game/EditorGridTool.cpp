@@ -230,7 +230,7 @@ EditorGridTool::SnapCursorResult EditorGridTool::snapCursorToPolarGrid(Vec2 curs
 	for (i32 iLine = 0; iLine < polarGridLineCount; iLine++) {
 		const auto t = f32(iLine) / f32(polarGridLineCount);
 		const auto a = t * TAU<f32>;
-		const auto p = Vec2::oriented(a);
+		const auto p = Vec2::oriented(a) * 1.1f;
 
 		const auto closestPointOnLine = LineSegment(Vec2(0.0f), p).closestPointTo(cursorPos);
 		const auto dist = distance(closestPointOnLine, cursorPos);

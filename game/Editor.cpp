@@ -167,10 +167,10 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 
 			case EditorEntityType::WALL: {
 				auto entity = e.walls.get(selectedId.wall());
-				auto old = *entity;
 				if (!entity.has_value()) {
 					break;
 				}
+				auto old = *entity;
 				// TODO: Should this add an modify action?
 				wallTypeCombo("type", entity->type);
 				if (old != *entity) {
@@ -181,10 +181,10 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 
 			case EditorEntityType::LASER: {
 				auto laser = e.lasers.get(selectedId.laser());
-				auto old = *laser;
 				if (!laser.has_value()) {
 					break;
 				}
+				auto old = *laser;
 				editorLaserColorCombo(laser->color);
 				ImGui::Checkbox("position locked", &laser->positionLocked);
 				ImGui::Checkbox("rotation locked", &laser->rotationLocked);
@@ -196,10 +196,10 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 
 			case EditorEntityType::MIRROR: {
 				auto mirror = e.mirrors.get(selectedId.mirror());
-				auto old = *mirror;
 				if (!mirror.has_value()) {
 					break;
 				}
+				auto old = *mirror;
 				editorMirrorLengthInput(mirror->length);
 				ImGui::Checkbox("position locked", &mirror->positionLocked);
 				editorMirrorWallTypeInput(mirror->wallType);
@@ -211,10 +211,10 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 
 			case EditorEntityType::TARGET: {
 				auto target = e.targets.get(selectedId.target());
-				auto old = *target;
 				if (!target.has_value()) {
 					break;
 				}
+				auto old = *target;
 				editorTargetRadiusInput(target->radius);
 				if (*target != old) {
 					selectTool.modifiedUsingGui |= true;
@@ -224,10 +224,10 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 
 			case EditorEntityType::PORTAL_PAIR: {
 				auto portalPair = e.portalPairs.get(selectedId.portalPair());
-				auto old = *portalPair;
 				if (!portalPair.has_value()) {
 					break;
 				}
+				auto old = *portalPair;
 				auto portalGui = [](EditorPortal& portal) {
 					ImGui::PushID(&portal);
 					ImGui::Combo("wall type", reinterpret_cast<int*>(&portal.wallType), "portal\0reflecting\0absorbing\0");
@@ -247,10 +247,10 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 
 			case EditorEntityType::TRIGGER: {
 				auto trigger = e.triggers.get(selectedId.trigger());
-				auto old = *trigger;
 				if (!trigger.has_value()) {
 					break;
 				}
+				auto old = *trigger;
 				editorTriggerColorCombo(trigger->color);
 				editorTriggerIndexInput("index", trigger->index);
 				if (*trigger != old) {
@@ -261,10 +261,10 @@ Editor::Result Editor::update(GameRenderer& renderer) {
 
 			case EditorEntityType::DOOR: {
 				auto door = e.doors.get(selectedId.door());
-				auto old = *door;
 				if (!door.has_value()) {
 					break;
 				}
+				auto old = *door;
 				editorTriggerIndexInput("trigger index", door->triggerIndex);
 				ImGui::Checkbox("open by default", &door->openByDefault);
 				if (old != *door) {
@@ -790,7 +790,7 @@ void Editor::saveSelectedEntityIfModified() {
 		auto entityId = id.lowerName(); \
 		auto entity = e.arrayName.get(entityId); \
 		if (!entity.has_value()) { \
-			CHECK_NOT_REACHED(); \
+			/*CHECK_NOT_REACHED();*/ \
 			break; \
 		} \
 		auto& old = selected.entityStateAtSelection.lowerName; \

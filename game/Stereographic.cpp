@@ -62,18 +62,39 @@ Vec3 fromStereographic(Vec2 p) {
 
 // The angle is such that when stereographically projected it equal the plane angle.
 Quat movementOnSphericalGeodesic(Vec3 pos, f32 angle, f32 distance) {
-	const auto a = atan2(pos.y, pos.x);
-	const auto up = Vec3(0.0f, 0.0f, 1.0f);
+	using CalculationType = f64;
+	const auto p = Vec3T<CalculationType>(pos);
+	const auto a = CalculationType(atan2(pos.y, pos.x));
+	const auto up = Vec3T<CalculationType>(0.0f, 0.0f, 1.0f);
 
-	Vec3 axis(0.0f, 1.0f, 0.0f);
-	if (pos != -up) {
-		axis = cross(pos, up).normalized();
+	Vec3T<CalculationType> axis(0.0f, 1.0f, 0.0f);
+	if (p != -up) {
+		axis = cross(p, up).normalized();
 	} else {
 		// It can be verified that this edge case works by placing a mirror at the center and then this case triggers.
 	}
 
 	// The formula for the angle was kinda derived through trial and error, but it matches the results of the correct method that isn't used, because it can't handle length specification. That version is available in previous commits in the mirror draw loop.
-	return Quat(-angle + a, pos) * Quat(distance, axis);
+	const auto result = (QuatT<CalculationType>(-angle + a, pos) * QuatT<CalculationType>(distance, axis)).normalized();
+	return Quat(
+		f32(result.x), 
+		f32(result.y), 
+		f32(result.z), 
+		f32(result.w)
+	);
+
+	//const auto a = atan2(pos.y, pos.x);
+	//const auto up = Vec3(0.0f, 0.0f, 1.0f);
+
+	//Vec3 axis(0.0f, 1.0f, 0.0f);
+	//if (pos != -up) {
+	//	axis = cross(pos, up).normalized();
+	//} else {
+	//	// It can be verified that this edge case works by placing a mirror at the center and then this case triggers.
+	//}
+
+	//// The formula for the angle was kinda derived through trial and error, but it matches the results of the correct method that isn't used, because it can't handle length specification. That version is available in previous commits in the mirror draw loop.
+	//return Quat(-angle + a, pos) * Quat(distance, axis);
 }
 
 Vec3 moveOnSphericalGeodesic(Vec3 pos, f32 angle, f32 distance) {
@@ -670,22 +691,69 @@ StaticList<SegmentEndpoints, 2> splitStereographicSegment(Vec2 endpoint0, Vec2 e
 		Dbg::disk(pointOnBoundary, 0.01f);*/
 		result.add(SegmentEndpoints(pointInside, pointOnBoundary));
 	};
-	
+
 	const auto intersection = intersections[0].normalized();
+
+	auto extendOverlappingWithBoundary = [&](Vec2 p) {
+		const auto epsilon = 0.002f;
+		if (line.type == StereographicLine::Type::LINE) {
+			Vec2 q = p + line.lineNormal.rotBy90deg() * epsilon;
+			if (q.length() > Constants::boundary.radius) {
+				q = p - line.lineNormal.rotBy90deg() * epsilon;
+			}
+			result.add(SegmentEndpoints(p, q));
+		} else {
+			const auto pAngle = (p - line.circle.center).angle();
+			const auto angleEpsilon = epsilon / line.circle.radius;
+			Vec2 q = Vec2::oriented(pAngle + angleEpsilon) * line.circle.radius + line.circle.center;
+			if (q.length() > Constants::boundary.radius) {
+				Vec2 q = Vec2::oriented(pAngle - angleEpsilon) * line.circle.radius + line.circle.center;
+			}
+			result.add(SegmentEndpoints(p, q));
+		}
+	};
 
 	// TODO: Code in game update relies on the order these are added. First the segment inside next the one wrapped around.
 	if (insideBoundary0) {
 		addSegmentExtendedOutOfBoundary(endpoint0, intersection);
 		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint1), -intersection);
+		/*addSegmentExtendedOutOfBoundary(endpoint0, intersection);
+		if (endpoint1 == intersection) {
+			extendOverlappingWithBoundary(intersection);
+		} else {
+			addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint1), -intersection);
+		}*/
+
 		/*result.add(SegmentEndpoints(endpoint0, intersections[0]));
 		result.add(SegmentEndpoints(antipodalPoint(endpoint1), -intersections[0]));*/
 	} else {
 		addSegmentExtendedOutOfBoundary(endpoint1, intersection);
 		addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint0), -intersection);
+		/*if (endpoint0 == intersection) {
+			extendOverlappingWithBoundary(intersection);
+		} else {
+			addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint0), -intersection);
+		}*/
 		//result.add(SegmentEndpoints(endpoint1, intersections[0]));
 		//result.add(SegmentEndpoints(antipodalPoint(endpoint0), -intersections[0]));
 	}
 	return result;
+
+	//const auto intersection = intersections[0].normalized();
+
+	//// TODO: Code in game update relies on the order these are added. First the segment inside next the one wrapped around.
+	//if (insideBoundary0) {
+	//	addSegmentExtendedOutOfBoundary(endpoint0, intersection);
+	//	addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint1), -intersection);
+	//	/*result.add(SegmentEndpoints(endpoint0, intersections[0]));
+	//	result.add(SegmentEndpoints(antipodalPoint(endpoint1), -intersections[0]));*/
+	//} else {
+	//	addSegmentExtendedOutOfBoundary(endpoint1, intersection);
+	//	addSegmentExtendedOutOfBoundary(antipodalPoint(endpoint0), -intersection);
+	//	//result.add(SegmentEndpoints(endpoint1, intersections[0]));
+	//	//result.add(SegmentEndpoints(antipodalPoint(endpoint0), -intersections[0]));
+	//}
+	//return result;
 }
 
 StaticList<Vec2, 2> splitStereographicCircle(Vec2 center, f32 radius) {
