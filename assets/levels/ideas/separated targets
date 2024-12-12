@@ -1,0 +1,139 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                0.33333328,
+                -0.5773503
+            ],
+            "endpoint1": [
+                0.4999999,
+                -0.86602545
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.4999999,
+                -0.86602545
+            ],
+            "endpoint1": [
+                0.8660254,
+                0.5
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.8660254,
+                0.5
+            ],
+            "endpoint1": [
+                0.57735026,
+                0.33333334
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.6666667,
+                0
+            ],
+            "endpoint1": [
+                1,
+                0
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.5773504,
+                -0.3333332
+            ],
+            "endpoint1": [
+                0.86602557,
+                -0.49999976
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                -0.46125284,
+                0.32541785
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.0293939,
+            "positionLocked": true,
+            "rotationLocked": true
+        },
+        {
+            "position": [
+                -0.8501905,
+                -0.12019941
+            ],
+            "color": [
+                0,
+                1,
+                0
+            ],
+            "angle": -1.1664554,
+            "positionLocked": true,
+            "rotationLocked": true
+        }
+    ],
+    "mirrors": [],
+    "targets": [
+        {
+            "position": [
+                0.5892558,
+                -0.58925545
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                0.8049382,
+                -0.21568236
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                0.80493814,
+                0.21568254
+            ],
+            "radius": 0.1
+        }
+    ],
+    "portalPairs": [
+        {
+            "portal0": {
+                "center": [
+                    -0.006185835,
+                    0.18860553
+                ],
+                "positionLocked": false,
+                "normalAngle": -0.22816741,
+                "rotationLocked": false,
+                "wallType": 0
+            },
+            "portal1": {
+                "center": [
+                    -0.29675555,
+                    -0.597088
+                ],
+                "positionLocked": false,
+                "normalAngle": 2.2645195,
+                "rotationLocked": false,
+                "wallType": 0
+            }
+        }
+    ],
+    "triggers": [],
+    "doors": []
+}

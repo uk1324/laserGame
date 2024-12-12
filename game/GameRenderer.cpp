@@ -448,9 +448,9 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 		.color1 = color1,
 		.halfWidth = width / 2.0f
 	};
-	chk(test, false) {
+	/*chk(test, false) {
 		Dbg::rectRotated(center, size, angle, 0.01f);
-	}
+	}*/
 	stereographicLines.push_back(instance);
 }
 

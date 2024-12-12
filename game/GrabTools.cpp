@@ -119,7 +119,8 @@ void LaserGrabTool::update(LaserArray& lasers, std::optional<EditorActions&> act
 			};
 
 
-			if (!laser->rotationLocked) {
+			const auto rotationLocked = enforceConstraints && laser->rotationLocked;
+			if (!rotationLocked) {
 				updateGrabbed(arrowhead.tip, arrowhead.tip.distanceTo(cursorPos) <= Constants::endpointGrabPointRadius, LaserGrabTool::LaserPart::DIRECTION);
 			}
 

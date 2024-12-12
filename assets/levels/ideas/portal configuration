@@ -1,0 +1,47 @@
+{
+    "walls": [],
+    "lasers": [
+        {
+            "position": [
+                0.297078,
+                -0.088928014
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 0.72874236,
+            "positionLocked": true,
+            "rotationLocked": false
+        }
+    ],
+    "mirrors": [],
+    "targets": [],
+    "portalPairs": [
+        {
+            "portal0": {
+                "center": [
+                    0.40719238,
+                    0.22867182
+                ],
+                "positionLocked": false,
+                "normalAngle": -2.2664683,
+                "rotationLocked": false,
+                "wallType": 2
+            },
+            "portal1": {
+                "center": [
+                    -0.06318789,
+                    0.10944974
+                ],
+                "positionLocked": false,
+                "normalAngle": 0.8078132,
+                "rotationLocked": false,
+                "wallType": 2
+            }
+        }
+    ],
+    "triggers": [],
+    "doors": []
+}
