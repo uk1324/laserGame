@@ -118,6 +118,10 @@ struct MainMenu {
 		i32 textId01;
 		i32 textId10;
 		i32 textId11;
+		i32 textId20;
+		i32 textId21;
+		i32 textId22;
+		i32 textId23;
 		// Grab yellow objects by holding down left click.
 		// Hit all the magenta circles using a laser to complete a level.
 		Button backButton;

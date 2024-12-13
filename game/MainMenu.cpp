@@ -123,6 +123,11 @@ MainMenu::MainMenu() {
 		ui.textId10 = ui.layout.addBlock(buttonSize);
 		ui.textId11 = ui.layout.addBlock(buttonSize);
 		ui.layout.addPadding(padding * 3.0f);
+		ui.textId20 = ui.layout.addBlock(buttonSize);
+		ui.textId21 = ui.layout.addBlock(buttonSize);
+		ui.textId22 = ui.layout.addBlock(buttonSize);
+		ui.textId23 = ui.layout.addBlock(buttonSize);
+		ui.layout.addPadding(padding * 3.0f);
 		ui.backButton = makeButton("back", ui.layout);
 	}
 }
@@ -401,6 +406,27 @@ MainMenu::HowToPlayScreenResult MainMenu::howToPlayScreenUpdate(GameRenderer& re
 	{
 		text.add("with a laser to complete a level.");
 		drawTextColored(renderer, text, ui.layout, ui.textId11);
+		text.clear();
+	}
+	{
+		text.add("Movement can be");
+		drawTextColored(renderer, text, ui.layout, ui.textId20);
+		text.clear();
+	}
+	{
+		text.add("enabled in the settings");
+		drawTextColored(renderer, text, ui.layout, ui.textId21);
+		text.clear();
+	}
+	{
+		text.add("To move use the arrow keys");
+		drawTextColored(renderer, text, ui.layout, ui.textId22);
+		text.clear();
+	}
+	{
+		text.add("or the WASD keys");
+		drawTextColored(renderer, text, ui.layout, ui.textId23);
+		text.clear();
 	}
 
 	if (BUTTON(ui.backButton)) result = HowToPlayScreenResult::BACK;
