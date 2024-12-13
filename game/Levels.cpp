@@ -33,7 +33,6 @@ Levels::Levels() {
 	A("22")
 	A("23")
 	A("24")
-	A("25")
 
 #undef A
 }

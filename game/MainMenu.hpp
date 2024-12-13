@@ -84,6 +84,7 @@ struct MainMenu {
 		SliderInput musicVolumeSlider;
 		ToggleButton drawBackgroundsButton;
 		ToggleButton fullscreenButton;
+		ToggleButton movementButton;
 		//i32 musicVolumeSliderIndex = INVALID;
 
 		Button backButton;

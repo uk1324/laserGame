@@ -6,19 +6,74 @@
                 -0.7071069
             ],
             "endpoint1": [
-                0,
-                0
+                -0.25881898,
+                -0.9659259
             ],
             "type": 1
         },
         {
             "endpoint0": [
-                0,
-                0
+                -0.172546,
+                -0.6439506
             ],
             "endpoint1": [
-                -0.70710677,
-                0.70710677
+                0.17254631,
+                -0.64395046
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.25881946,
+                -0.9659257
+            ],
+            "endpoint1": [
+                0.707107,
+                -0.70710653
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.707107,
+                -0.70710653
+            ],
+            "endpoint1": [
+                0.47140467,
+                -0.47140437
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.25881946,
+                -0.9659257
+            ],
+            "endpoint1": [
+                0.17254631,
+                -0.64395046
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                -0.25881898,
+                -0.9659259
+            ],
+            "endpoint1": [
+                -0.172546,
+                -0.6439506
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                -0.70710665,
+                -0.7071069
+            ],
+            "endpoint1": [
+                -0.47140443,
+                -0.4714046
             ],
             "type": 1
         }
@@ -26,30 +81,45 @@
     "lasers": [
         {
             "position": [
-                -0.5,
-                -4.371139e-08
+                -0.80493814,
+                -0.21568276
             ],
             "color": [
                 0,
                 0,
                 1
             ],
-            "angle": 1.1920929e-07,
-            "positionLocked": true
+            "angle": -1.2697839,
+            "positionLocked": true,
+            "rotationLocked": false
+        },
+        {
+            "position": [
+                0.8049382,
+                -0.21568236
+            ],
+            "color": [
+                0,
+                1,
+                0
+            ],
+            "angle": 4.3868318,
+            "positionLocked": true,
+            "rotationLocked": false
         }
     ],
     "targets": [
         {
             "position": [
-                -0.30614683,
-                0.7391036
+                -0.4166666,
+                -0.72168785
             ],
             "radius": 0.1
         },
         {
             "position": [
-                -0.3061465,
-                -0.73910373
+                0.4166666,
+                -0.72168785
             ],
             "radius": 0.1
         }
@@ -58,21 +128,21 @@
         {
             "portal0": {
                 "center": [
-                    0.6,
-                    0
+                    1.9874802e-09,
+                    -0.16666667
                 ],
                 "positionLocked": false,
-                "normalAngle": 3.1415927,
+                "normalAngle": -1.570075,
                 "rotationLocked": false,
                 "wallType": 2
             },
             "portal1": {
                 "center": [
-                    0.4,
-                    0
+                    -7.2852315e-09,
+                    0.16666667
                 ],
                 "positionLocked": false,
-                "normalAngle": 3.1415927,
+                "normalAngle": -1.56917,
                 "rotationLocked": false,
                 "wallType": 2
             }

@@ -8,7 +8,12 @@ struct [[Json]] SettingsGraphics {
 	bool fullscreen = `false`;
 }
 
+struct [[Json]] SettingsGameplay {
+	bool movementEnabled = `false`;
+}
+
 struct [[Json]] Settings {
 	SettingsAudio audio;
 	SettingsGraphics graphics;
+	SettingsGameplay gameplay;
 }

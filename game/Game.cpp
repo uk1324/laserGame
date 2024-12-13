@@ -10,7 +10,7 @@
 Game::Game() {
 }
 
-Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
+Game::Result Game::update(GameRenderer& renderer, GameAudio& audio, const SettingsGameplay& settings) {
 	Result result = ResultNone();
 
 	bool cursorCaptured = false;
@@ -25,7 +25,7 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	portalGrabTool.update(e.portalPairs, std::nullopt, cursorPos, cursorCaptured, cursorCaptured, enforceConstrains);
 
 	s.snapObjectPositionsInsideBoundary(e);
-	{
+	if (settings.movementEnabled) {
 		const auto direction = Vec2::oriented(transormationDirectionAngle);
 		const auto rotationSpeed = TAU<f32> *1.5f;
 		const auto da = rotationSpeed * Constants::dt;
@@ -219,7 +219,11 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio) {
 	previousFrameInvalidState = !objectsInValidState;
 
 	renderer.renderClear();
-	renderer.render(e, s, false, invalidGameStateAnimationT, transormationDirectionAngle);
+	std::optional<f32> movementDirection;
+	if (settings.movementEnabled) {
+		movementDirection = transormationDirectionAngle;
+	}
+	renderer.render(e, s, false, invalidGameStateAnimationT, movementDirection);
 
 	if (!isEditorPreviewLevelLoaded()) {
 		const auto uiResult = updateUi(renderer, audio, levelComplete);

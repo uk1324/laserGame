@@ -53,21 +53,11 @@
         {
             "positionLocked": false,
             "center": [
-                0.519615,
-                -0.3
+                0,
+                0
             ],
-            "normalAngle": 2.61799,
-            "wallType": 1,
-            "length": 0.6
-        },
-        {
-            "positionLocked": false,
-            "center": [
-                -0.519615,
-                -0.3
-            ],
-            "normalAngle": 0.523599,
-            "wallType": 1,
+            "normalAngle": 1.5708,
+            "wallType": 0,
             "length": 0.6
         }
     ],

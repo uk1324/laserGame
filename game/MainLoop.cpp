@@ -241,7 +241,7 @@ void MainLoop::stateUpdate(State stateToUpdate) {
 	}
 
 	case GAME: {
-		const auto result = game.update(renderer, audio);
+		const auto result = game.update(renderer, audio, settingsManager.settings.gameplay);
 		if (Input::isKeyDown(KeyCode::H)) {
 			doTransitionToLevel(0, TransitionEffectType::SLIDING);
 		}

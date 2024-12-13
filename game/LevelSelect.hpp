@@ -19,8 +19,8 @@ struct LevelSelect {
 
 	GameUiButton backButton;
 
-	static constexpr auto squareCountY = 5;
-	static constexpr auto squareCountX = 5;
+	static constexpr auto squareCountY = 4;
+	static constexpr auto squareCountX = 6;
 
 	Result update(GameRenderer& renderer, GameAudio& audio, const Levels& levels, const GameSave& save);
 };

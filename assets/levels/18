@@ -2,34 +2,12 @@
     "walls": [
         {
             "endpoint0": [
-                0,
-                0
-            ],
-            "endpoint1": [
-                0.7071068,
-                0.7071068
-            ],
-            "type": 1
-        },
-        {
-            "endpoint0": [
-                0,
-                0
-            ],
-            "endpoint1": [
-                0.7071068,
-                -0.7071068
-            ],
-            "type": 1
-        },
-        {
-            "endpoint0": [
-                0,
-                0
-            ],
-            "endpoint1": [
                 -0.70710665,
                 -0.7071069
+            ],
+            "endpoint1": [
+                0,
+                0
             ],
             "type": 1
         },
@@ -48,32 +26,30 @@
     "lasers": [
         {
             "position": [
-                8.34742e-09,
-                -0.7
+                -0.5,
+                -4.371139e-08
             ],
             "color": [
                 0,
                 0,
                 1
             ],
-            "angle": 1.5708,
-            "positionLocked": true,
-            "rotationLocked": false
+            "angle": 1.1920929e-07,
+            "positionLocked": true
         }
     ],
-    "mirrors": [],
     "targets": [
         {
             "position": [
-                -0.5,
-                -4.37114e-08
+                -0.30614683,
+                0.7391036
             ],
             "radius": 0.1
         },
         {
             "position": [
-                0.5,
-                0
+                -0.3061465,
+                -0.73910373
             ],
             "radius": 0.1
         }
@@ -82,21 +58,21 @@
         {
             "portal0": {
                 "center": [
-                    0.46194,
-                    0.191342
+                    0.6,
+                    0
                 ],
                 "positionLocked": false,
-                "normalAngle": -1.1781,
+                "normalAngle": 3.1415927,
                 "rotationLocked": false,
                 "wallType": 2
             },
             "portal1": {
                 "center": [
-                    -0.46194,
-                    0.191342
+                    0.4,
+                    0
                 ],
                 "positionLocked": false,
-                "normalAngle": -1.9635,
+                "normalAngle": 3.1415927,
                 "rotationLocked": false,
                 "wallType": 2
             }

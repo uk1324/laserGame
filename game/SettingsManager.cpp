@@ -4,10 +4,14 @@
 #include <game/WorkingDirectory.hpp>
 #include <fstream>
 
-const auto settingsPath = "cached/settings.json";
+
+static std::string settingsPath() {
+	const auto settingsPath = "cached/settings.json";
+	return (executableWorkingDirectory / settingsPath).string();
+}
 
 void SettingsManager::tryLoadSettings() {
-	const auto json = tryLoadJsonFromFile(settingsPath);
+	const auto json = tryLoadJsonFromFile(settingsPath());
 	if (!json.has_value()) {
 		settings = SettingsManager::defaultSettings;
 		return;
@@ -23,7 +27,7 @@ void SettingsManager::trySaveSettings() {
 	// TODO: Maybe move the saving to a worker thread.
 	std::filesystem::create_directory(executableWorkingDirectory / "./cached");
 	const auto jsonSettings = toJson(settings);
-	std::ofstream file(settingsPath);
+	std::ofstream file(settingsPath());
 	Json::print(file, jsonSettings);
 }
 

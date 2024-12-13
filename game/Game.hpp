@@ -15,7 +15,7 @@ struct Game {
 	using Result = std::variant<ResultNone, ResultGoToNextLevel, ResultSkipLevel, ResultGoToMainMenu>;
 
 	Game();
-	Result update(GameRenderer& renderer, GameAudio& audio);
+	Result update(GameRenderer& renderer, GameAudio& audio, const SettingsGameplay& settings);
 	std::optional<Result> updateUi(GameRenderer& r, GameAudio& audio, bool levelComplete);
 
 	void onSwitchToGame(GameAudio& audio);

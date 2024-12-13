@@ -92,6 +92,7 @@ MainMenu::MainMenu() {
 
 		ui.drawBackgroundsButton = toggleButton("backgrounds");
 		ui.fullscreenButton = toggleButton("fullscreen");
+		ui.movementButton = toggleButton("movement");
 
 		//soundSettingsUi.musicVolumeSliderIndex = addSliderInput(musicVolumeSliderName);
 		//soundSettingsUi.layout.addPadding(padding);
@@ -301,6 +302,7 @@ MainMenu::SettingsResult MainMenu::settingsUpdate(GameRenderer& renderer, GameAu
 	bool modified = false;
 	modified |= toggleButton(settings.graphics.drawBackgrounds, ui.drawBackgroundsButton);
 	modified |= toggleButton(settings.graphics.fullscreen, ui.fullscreenButton);
+	modified |= toggleButton(settings.gameplay.movementEnabled, ui.movementButton);
 	modified |= slider(settings.audio.soundEffectVolume, ui.soundEffectVolumeSlider, 0);
 	modified |= slider(settings.audio.musicVolume, ui.musicVolumeSlider, 1);
 
@@ -414,17 +416,17 @@ MainMenu::HowToPlayScreenResult MainMenu::howToPlayScreenUpdate(GameRenderer& re
 		text.clear();
 	}
 	{
-		text.add("enabled in the settings");
+		text.add("enabled in the settings.");
 		drawTextColored(renderer, text, ui.layout, ui.textId21);
 		text.clear();
 	}
 	{
-		text.add("To move use the arrow keys");
+		text.add("To move, use the arrow keys");
 		drawTextColored(renderer, text, ui.layout, ui.textId22);
 		text.clear();
 	}
 	{
-		text.add("or the WASD keys");
+		text.add("or the WASD keys.");
 		drawTextColored(renderer, text, ui.layout, ui.textId23);
 		text.clear();
 	}

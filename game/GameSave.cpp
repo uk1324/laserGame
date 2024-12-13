@@ -1,18 +1,23 @@
 #include "GameSave.hpp"
 #include <JsonFileIo.hpp>
 #include <game/Serialization.hpp>
+#include <game/WorkingDirectory.hpp>
 #include <filesystem>
 #include <fstream>
 
-const auto savePath = "cached/save.json";
 const auto completedName = "completed";
+
+static std::string savePath() {
+	const auto savePath = "cached/save.json";
+	return (executableWorkingDirectory / savePath).string();
+}
 
 // Storing it in an array like this instead of some bitfiled, because it makes it easier to modify levels without breaking things. The only thing that has to remain is the name.
 
 void GameSave::trySave() {
 	// TODO: Maybe move the saving to a worker thread.
-	std::filesystem::create_directory("./cached");
-	std::ofstream file(savePath);
+	std::filesystem::create_directory(executableWorkingDirectory / "./cached");
+	std::ofstream file(savePath());
 
 	auto json = Json::Value::emptyObject();
 	if (completedLevels.size() > 0) {
@@ -27,7 +32,7 @@ void GameSave::trySave() {
 }
 
 void GameSave::tryLoad() {
-	const auto json = tryLoadJsonFromFile(savePath);
+	const auto json = tryLoadJsonFromFile(savePath());
 	if (!json.has_value()) {
 		return;
 	}

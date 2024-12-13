@@ -1,0 +1,102 @@
+{
+    "walls": [
+        {
+            "endpoint0": [
+                -0.38268292,
+                -0.92387974
+            ],
+            "endpoint1": [
+                0.382684,
+                -0.923879
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                1.19249e-09,
+                -0.1
+            ],
+            "endpoint1": [
+                -0.1,
+                -8.74228e-09
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                -0.1,
+                -8.74228e-09
+            ],
+            "endpoint1": [
+                -4.37114e-09,
+                0.1
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                -4.37114e-09,
+                0.1
+            ],
+            "endpoint1": [
+                0.1,
+                0
+            ],
+            "type": 1
+        },
+        {
+            "endpoint0": [
+                0.1,
+                0
+            ],
+            "endpoint1": [
+                1.19249e-09,
+                -0.1
+            ],
+            "type": 1
+        }
+    ],
+    "lasers": [
+        {
+            "position": [
+                7.1549286e-09,
+                -0.6
+            ],
+            "color": [
+                0,
+                0,
+                1
+            ],
+            "angle": 1.5708,
+            "positionLocked": true
+        }
+    ],
+    "mirrors": [
+        {
+            "positionLocked": false,
+            "center": [
+                -0.5,
+                -4.37114e-08
+            ],
+            "normalAngle": 8.74228e-08,
+            "wallType": 1,
+            "length": 0.6
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                1.07324e-08,
+                -0.9
+            ],
+            "radius": 0.1
+        },
+        {
+            "position": [
+                -3.93403e-08,
+                0.9
+            ],
+            "radius": 0.1
+        }
+    ]
+}

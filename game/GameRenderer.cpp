@@ -378,7 +378,7 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 	Vec2 center(0.0f);
 	const auto chordCenter = (endpoint0 + endpoint1) / 2.0f;
 	const auto additionalWidth = 0.08f;
-	f32 rectangleHeight;
+	//f32 rectangleHeight;
 	//if (line.type == StereographicLine::Type::LINE) {
 	//	rectangleWidth = additionalWidth * 2.0f;
 	//	rectangleHeight = (endpoint1 - endpoint0).length() + additionalWidth;
