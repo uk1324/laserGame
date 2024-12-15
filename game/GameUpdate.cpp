@@ -611,6 +611,8 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e, const std::vect
 				const auto intersections = stereographicSegmentVsCircleIntersection(laserLine, segment.endpoints[0], segment.endpoints[1], circle);
 				/*const auto intersections = stereographicSegmentVsCircleIntersection(stereographicLine(segment.endpoints[0], segment.endpoints[1]), segment.endpoints[0], segment.endpoints[1], circle);*/
 				if (intersections.size() > 0) {
+					/*Dbg::disk(segment.endpoints[0], 0.01f, Color3::RED);
+					Dbg::disk(segment.endpoints[1], 0.01f, Color3::RED);*/
 					return true;
 				}
 			}
@@ -686,14 +688,19 @@ void GameState::laserUpdate(EditorLaser& laser, GameEntities& e, const std::vect
 		// The game update still works only the visuals break. This can be verified by putting a trigger there. The trigger collision code uses laserLine to check for collisions so it properly detects them.
 
 		auto laserSegmentMidpoint = [&](Vec2 e0, Vec2 e1) {
+			//return stereographicSegmentMidpoint(e0, e1); // Doesn't work with antipodal points, because it's ambigous.
 			const auto chordMidpoint = (e0 + e1) / 2.0f;
 			if (laserLine.type == StereographicLine::Type::LINE) {
 				return chordMidpoint;
 			}
-			auto midpoint = (chordMidpoint - laserLine.circle.center).normalized() * laserLine.circle.radius + laserLine.circle.center;
-			if (dot(laserDirection, midpoint) < 0.0f) {
-				midpoint = antipodalPoint(midpoint);
+			auto midpoint = laserLine.circle.center + (chordMidpoint - laserLine.circle.center).normalized() * laserLine.circle.radius;
+			if (midpoint.length() > Constants::boundary.radius) {
+				midpoint = laserLine.circle.center - (chordMidpoint - laserLine.circle.center).normalized() * laserLine.circle.radius;
 			}
+			// To check that tihs is actuall the midpoint and not is antipodal point on the circle could check the dot product of laser direction with (midpoint - laserPosition).
+			//if (dot(laserDirection, midpoint) < 0.0f) {
+			//	midpoint = antipodalPoint(midpoint);
+			//}
 			return midpoint;
 		};
 

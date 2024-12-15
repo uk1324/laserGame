@@ -51,6 +51,8 @@ std::optional<RaycastHit> circleRaycast(Vec2 rayStart, Vec2 rayEnd, const Circle
 Vec2 toStereographic(Vec3 p);
 Vec3 fromStereographic(Vec2 p);
 
+Vec2 stereographicSegmentMidpoint(Vec2 endpoint0, Vec2 endpoint1);
+
 // The angle is such that when stereographically projected it equal the plane angle.
 Quat movementOnSphericalGeodesic(Vec3 pos, f32 angle, f32 distance);
 Vec3 moveOnSphericalGeodesic(Vec3 pos, f32 angle, f32 distance);

@@ -57,6 +57,31 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio, const Settin
 				transformationChange = movement(-movementSpeed);
 			}
 		}
+		const auto angleChange = da * 0.3f;
+
+		const auto rotateLeftHeld = Input::isKeyHeld(KeyCode::Q);
+		const auto rotateRightHeld = Input::isKeyHeld(KeyCode::E);
+
+		//if (!(rotateLeftHeld && rotateRightHeld)) {
+		//	if (rotateLeftHeld) {
+		//		const auto rotation = Quat(angleChange, Vec3(0.0f, 0.0f, 1.0f));;
+		//		//transormationDirectionAngle -= angleChange;
+		//		if (transformationChange.has_value()) {
+		//			transformationChange = rotation * *transformationChange;
+		//		} else {
+		//			transformationChange = rotation;
+		//		}
+		//	} 
+		//	if (rotateRightHeld) {
+		//		const auto rotation = Quat(-angleChange, Vec3(0.0f, 0.0f, 1.0f));;
+		//		//transormationDirectionAngle -= angleChange;
+		//		if (transformationChange.has_value()) {
+		//			transformationChange = rotation * *transformationChange;
+		//		} else {
+		//			transformationChange = rotation;
+		//		}
+		//	}
+		//}
 		
 		if (transformationChange.has_value()) {
 			accumulatedTransformation = *transformationChange * accumulatedTransformation;
@@ -90,12 +115,20 @@ Game::Result Game::update(GameRenderer& renderer, GameAudio& audio, const Settin
 			transformWallLikeObject(door->initialEndpoints, door->endpoints, accumulatedTransformation);
 		}
 
+		auto applyTransformationAndFlip = [&applyTransformation](Vec2 pos, Quat transformation) {
+			pos = applyTransformation(pos, transformation);
+			if (pos.length() > Constants::boundary.radius) {
+				pos = antipodalPoint(pos);
+			}
+			return pos;
+		};
+
 		for (auto trigger : e.triggers) {
-			trigger->position = applyTransformation(trigger->initialPosition, accumulatedTransformation);
+			trigger->position = applyTransformationAndFlip(trigger->initialPosition, accumulatedTransformation);
 		}
 
 		for (auto target : e.targets) {
-			target->position = applyTransformation(target->initialPosition, accumulatedTransformation);
+			target->position = applyTransformationAndFlip(target->initialPosition, accumulatedTransformation);
 		}
 
 		auto transformWithNormalAngle = [&applyTransformation](Vec2& position, f32& normalAngle, Quat transformation) {
@@ -248,6 +281,7 @@ std::optional<Game::Result> Game::updateUi(GameRenderer& r, GameAudio& audio, bo
 
 		const auto pos = Ui::rectPositionRelativeToCorner(anchor, size, Ui::equalSizeReativeToX(r, 0.01f));
 
+		// I though about making it so that this check if the level was complete in any one of past n frames to prevent bugs where the arrows switches off and back on for a second, but that would allow breaking things like making solutions that are only work every other frame for example with doors. I though that maybe only doing the checking when goToNextLevelButtonActiveT = 1, but I don't think that would prevent any exploits.
 		updateConstantSpeedT(goToNextLevelButtonActiveT, 0.3f, levelComplete);
 
 		auto hover = Ui::isPointInRectPosSize(pos, size, uiCursorPos);

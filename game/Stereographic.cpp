@@ -233,6 +233,9 @@ bool isPointOnLineAlsoOnStereographicSegment(const StereographicLine& line, Vec2
 	const auto e1 = fromStereographic(endpoint1);
 	const auto p = fromStereographic(pointThatLiesOnLine);
 	Vec3 t = e1 - e0;
+	if (t == Vec3(0.0f)) {
+		return false;
+	}
 	f32 along = dot(p, t);
 	Vec3 sphereCenterToChordCenter = (e0 + e1) / 2.0f;
 	const auto sign = dot(sphereCenterToChordCenter.normalized(), p);

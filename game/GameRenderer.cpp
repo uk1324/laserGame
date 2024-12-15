@@ -409,7 +409,7 @@ void GameRenderer::addStereographicSegmentComplex(Vec2 endpoint0, Vec2 endpoint1
 	} else {
 		rectangleWidth = (line.circle.radius - distance(chordCenter, line.circle.center));
 		auto circleCenterToChord = chordCenter - line.circle.center;
-		const auto midpoint = toStereographic(((fromStereographic(endpoint0) + fromStereographic(endpoint1)) / 2.0f).normalized());
+		const auto midpoint = stereographicSegmentMidpoint(endpoint0, endpoint1);
 		/*const auto midpoint = toStereographic(((fromStereographic(endpoint0) + fromStereographic(endpoint1)) / 2.0f).normalized());
 		if (dot(midpoint - line.circle.center, circleCenterToChord) < 0.0f) {
 			circleCenterToChord = -circleCenterToChord;
